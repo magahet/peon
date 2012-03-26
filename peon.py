@@ -25,8 +25,7 @@ class MineCraftProtocol(object):
         #'\x05': self.ParseEntityEquipment,
 
         '\x06': self.ParseSpawn,
-
-        #'\x08': self.ParseUpdateHealth,
+        '\x08': self.ParseUpdateHealth,
         #'\x09': self.ParseRespawn,
 
         '\x0d': self.ParsePlayerPositionLook,
@@ -45,12 +44,16 @@ class MineCraftProtocol(object):
         '\x26': self.ParseEntityStatus,
         '\x28': self.ParseEntityMetadata,
         '\x2a': self.ParseRemoveEntityEffect,
+        '\x2b': self.ParseSetExperience,
         '\x32': self.ParseMapColumnAllocation,
+        '\x33': self.ParseMapChunks,
+        '\x35': self.ParseBlockChange,
         '\x3d': self.ParseSoundParticleEffect,
         '\x46': self.ParseChangeGameState,
         '\x36': self.ParseBlockAction,
         '\x67': self.ParseSetSlot,
         '\x68': self.ParseSetWindowItems,
+        '\x84': self.ParseUpdateTileEntity,
         '\xca': self.ParsePlayerAbility,
         '\xc8': self.ParseIncrementStatistic,
         '\xc9': self.ParsePlayerListItem,
@@ -60,8 +63,8 @@ class MineCraftProtocol(object):
     self._interesting = set([
         '\x01',
         '\x03',
-        '\x0d',
-        '\x32',
+        #'\x0d',
+        #'\x32',
         '\x33',
         '\x46',
         '\xc8',
@@ -250,7 +253,18 @@ class MineCraftProtocol(object):
     return (entityId, levelType, serverMode, dimension, difficulty, maxPlayers)
 
   def ParseSpawn(self):
-    return (self.UnpackInt32(), self.UnpackInt32(), self.UnpackInt32())
+    return (
+        self.UnpackInt32(),
+        self.UnpackInt32(),
+        self.UnpackInt32(),
+        )
+
+  def ParseUpdateHealth(self):
+    return (
+        self.UnpackInt16(),
+        self.UnpackInt16(),
+        self.UnpackFloat(),
+        )
 
   def ParsePlayerPositionLook(self):
     raw = self._buf[:32 + 8 + 1]
@@ -401,6 +415,13 @@ class MineCraftProtocol(object):
         self.UnpackInt8(),
         )
 
+  def ParseSetExperience(self):
+    return (
+        self.UnpackFloat(),
+        self.UnpackInt16(),
+        self.UnpackInt16(),
+        )
+
   def ParsePlayerAbility(self):
     return (
         self.UnpackInt8(),
@@ -430,6 +451,31 @@ class MineCraftProtocol(object):
     return (
         self.UnpackInt32(),
         self.UnpackInt32(),
+        self.UnpackInt8(),
+        )
+
+  def ParseMapChunks(self):
+    ret = [
+        self.UnpackInt32(),
+        self.UnpackInt32(),
+        self.UnpackInt8(),
+
+        self.UnpackInt16(),
+        self.UnpackInt16(),
+        ]
+    arraySize = self.UnpackInt32()
+    ret.append(self.UnpackInt32())  # "unused"
+    print "chunk size: ", arraySize
+    ret.append(self.Read(arraySize))
+    print "chunk size: ", len(ret[-1])
+    return ret
+
+  def ParseBlockChange(self):
+    return (
+        self.UnpackInt32(),
+        self.UnpackInt8(),
+        self.UnpackInt32(),
+        self.UnpackInt8(),
         self.UnpackInt8(),
         )
 
@@ -474,6 +520,17 @@ class MineCraftProtocol(object):
         self.Recv(1024)
       slots.append(self.UnpackSlot())
     return (window, slots)
+
+  def ParseUpdateTileEntity(self):
+    return (
+        self.UnpackInt32(),
+        self.UnpackInt16(),
+        self.UnpackInt32(),
+        self.UnpackInt8(),
+        self.UnpackInt32(),
+        self.UnpackInt32(),
+        self.UnpackInt32(),
+        )
 
 
   ##############################################################################
@@ -560,8 +617,9 @@ class MineCraftBot(MineCraftProtocol):
         )
 
 
-  def OnPlayerPositionLook(self, x, y, stance, z, yaw, pitch, onGround):
+  def OnPlayerPositionLook(self, x, stance, y, z, yaw, pitch, onGround):
     self._pos = Position(x, y, stance, z, yaw, pitch, onGround)
+    print "Pos: ", x, y, z, stance, yaw, pitch, onGround
     self.SendPositionLook()
 
 
@@ -576,7 +634,7 @@ def main():
   bot = MineCraftBot(host, port, username, password)
   last_pos_update = 0
   while True:
-    if time.time() - last_pos_update > 1:
+    if time.time() - last_pos_update > 0.05:
       bot.SendPositionLook()
       last_pos_update = time.time()
     bot.RecvPacket()
