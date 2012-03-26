@@ -13,46 +13,48 @@ class MineCraftProtocol(object):
   def __init__(self, sock):
     self._sock = sock
     self._buf = ""
-    self._handlers = {
-        '\x00': self.OnKeepAlive,
-        '\x01': self.OnLogin,
-        '\x02': self.OnHandshake,
-        '\x03': self.OnChatMessage,
-        '\x04': self.OnTimeUpdate,
+    self._parsers = {
+        '\x00': self.ParseKeepAlive,
+        '\x01': self.ParseLogin,
+        '\x02': self.ParseHandshake,
+        '\x03': self.ParseChatMessage,
+        '\x04': self.ParseTimeUpdate,
 
-        #'\x05': self.OnEntityEquipment,
+        #'\x05': self.ParseEntityEquipment,
 
-        '\x06': self.OnSpawn,
+        '\x06': self.ParseSpawn,
 
-        #'\x08': self.OnUpdateHealth,
-        #'\x09': self.OnRespawn,
+        #'\x08': self.ParseUpdateHealth,
+        #'\x09': self.ParseRespawn,
 
-        '\x0d': self.OnPlayerPositionLook,
-        '\x14': self.OnSpawnNamedEntity,
-        '\x15': self.OnSpawnDroppedItem,
-        '\x17': self.OnSpawnObjectVehicle,
-        '\x18': self.OnSpawnMob,
-        '\x1a': self.OnSpawnExperienceOrb,
-        '\x1c': self.OnEntityVelocity,
-        '\x1d': self.OnDestroyEntity,
-        '\x1f': self.OnEntityRelativeMove,
-        '\x20': self.OnEntityLook,
-        '\x21': self.OnEntityRelativeLookAndMove,
-        '\x22': self.OnEntityTeleport,
-        '\x23': self.OnEntityHeadLook,
-        '\x26': self.OnEntityStatus,
-        '\x28': self.OnEntityMetadata,
-        '\x2a': self.OnRemoveEntityEffect,
-        '\x32': self.OnMapColumnAllocation,
-        '\x3d': self.OnSoundParticleEffect,
-        '\x46': self.OnChangeGameState,
-        '\x36': self.OnBlockAction,
-        '\x67': self.OnSetSlot,
-        '\x68': self.OnSetWindowItems,
-        '\xca': self.OnPlayerAbility,
-        '\xc9': self.OnPlayerListItem,
-        '\xff': self.OnKick,
+        '\x0d': self.ParsePlayerPositionLook,
+        '\x14': self.ParseSpawnNamedEntity,
+        '\x15': self.ParseSpawnDroppedItem,
+        '\x17': self.ParseSpawnObjectVehicle,
+        '\x18': self.ParseSpawnMob,
+        '\x1a': self.ParseSpawnExperienceOrb,
+        '\x1c': self.ParseEntityVelocity,
+        '\x1d': self.ParseDestroyEntity,
+        '\x1f': self.ParseEntityRelativeMove,
+        '\x20': self.ParseEntityLook,
+        '\x21': self.ParseEntityRelativeLookAndMove,
+        '\x22': self.ParseEntityTeleport,
+        '\x23': self.ParseEntityHeadLook,
+        '\x26': self.ParseEntityStatus,
+        '\x28': self.ParseEntityMetadata,
+        '\x2a': self.ParseRemoveEntityEffect,
+        '\x32': self.ParseMapColumnAllocation,
+        '\x3d': self.ParseSoundParticleEffect,
+        '\x46': self.ParseChangeGameState,
+        '\x36': self.ParseBlockAction,
+        '\x67': self.ParseSetSlot,
+        '\x68': self.ParseSetWindowItems,
+        '\xca': self.ParsePlayerAbility,
+        '\xc9': self.ParsePlayerListItem,
+        '\xff': self.ParseKick,
         }
+
+    self._handlers = {}
 
   ##############################################################################
   # minecraft.net methods
@@ -88,15 +90,22 @@ class MineCraftProtocol(object):
   def RecvPacket(self):
     if len(self._buf) < 1024:
       self.Recv()
+    while not self._buf:
+      #print "len: ", len(self._buf)
+      self.Recv()
     ilk = self._buf[0]
     self._buf = self._buf[1:]
     #print hex(ord(ilk)), len(self._buf)
-    #print '\nReceived packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
+    print '\nReceived packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
     #for x in self._buf:
       #print hex(ord(x)), ' ',
     #print
     try:
-      return ilk, self._handlers[ilk]()
+      parsed = self._parsers[ilk]()
+      handler = self._handlers.get(ilk)
+      if handler:
+        handler(*parsed)
+      return ilk, parsed
     except KeyError:
       sys.stderr.write('unknown packet: %s\n' % hex(ord(ilk)))
       for i in self._buf[:30]:
@@ -106,9 +115,9 @@ class MineCraftProtocol(object):
   def WaitFor(self, ilk):
     gotten_ilk = None
     while gotten_ilk != ilk:
-      gotten_ilk, value = self.RecvPacket()
+      gotten_ilk, parsed = self.RecvPacket()
     print u'Got: %s' % hex(ord(gotten_ilk))
-    return value
+    return parsed
 
   def PackString(self, string):
     return struct.pack('!h', len(string)) + string.encode('utf_16_be')
@@ -209,26 +218,24 @@ class MineCraftProtocol(object):
     return string
 
   ##############################################################################
-  # Handlers
+  # Parsers
 
-  def OnKick(self):
+  def ParseKick(self):
     sys.stderr.write('Kicked: ' + self.UnpackString() + '\n')
     raise Exception()
 
-  def OnHandshake(self):
-    return self.UnpackString()
+  def ParseHandshake(self):
+    return (self.UnpackString(),)
 
-  def OnChatMessage(self):
+  def ParseChatMessage(self):
     chat = self.UnpackString()
     print "Chat:", chat
-    return chat
+    return (chat,)
 
-  def OnKeepAlive(self):
-    token = self.UnpackInt32()
-    self.SendKeepAlive(token)
-    return token
+  def ParseKeepAlive(self):
+    return (self.UnpackInt32(),)
 
-  def OnLogin(self):
+  def ParseLogin(self):
     entityId = self.UnpackInt32()
     trash = self.UnpackString()
     levelType = self.UnpackString()
@@ -239,10 +246,10 @@ class MineCraftProtocol(object):
     maxPlayers = self.UnpackUint8()
     return (entityId, levelType, serverMode, dimension, difficulty, maxPlayers)
 
-  def OnSpawn(self):
+  def ParseSpawn(self):
     return (self.UnpackInt32(), self.UnpackInt32(), self.UnpackInt32())
 
-  def OnPlayerPositionLook(self):
+  def ParsePlayerPositionLook(self):
     return (
         self.UnpackDouble(),
         self.UnpackDouble(),
@@ -253,7 +260,7 @@ class MineCraftProtocol(object):
         self.UnpackInt8(),
         )
 
-  def OnSpawnNamedEntity(self):
+  def ParseSpawnNamedEntity(self):
     return (
         self.UnpackInt32(),
         self.UnpackString(),
@@ -266,7 +273,7 @@ class MineCraftProtocol(object):
         self.UnpackInt16(),
         )
 
-  def OnSpawnDroppedItem(self):
+  def ParseSpawnDroppedItem(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt16(),
@@ -281,7 +288,7 @@ class MineCraftProtocol(object):
         self.UnpackInt8(),
         )
 
-  def OnSpawnObjectVehicle(self):
+  def ParseSpawnObjectVehicle(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt8(),
@@ -294,7 +301,7 @@ class MineCraftProtocol(object):
         self.UnpackInt16(),
         )
 
-  def OnSpawnMob(self):
+  def ParseSpawnMob(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt8(),
@@ -307,7 +314,7 @@ class MineCraftProtocol(object):
         self.UnpackMetadata(),
         )
 
-  def OnSpawnExperienceOrb(self):
+  def ParseSpawnExperienceOrb(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt32(),
@@ -316,7 +323,7 @@ class MineCraftProtocol(object):
         self.UnpackInt16(),
         )
 
-  def OnEntityVelocity(self):
+  def ParseEntityVelocity(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt16(),
@@ -324,37 +331,37 @@ class MineCraftProtocol(object):
         self.UnpackInt16(),
         )
 
-  def OnDestroyEntity(self):
+  def ParseDestroyEntity(self):
     return (
         self.UnpackInt32(),
         )
 
-  def OnEntityRelativeMove(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def OnEntityLook(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def OnEntityRelativeLookAndMove(self):
+  def ParseEntityRelativeMove(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt8(),
         self.UnpackInt8(),
         self.UnpackInt8(),
+        )
+
+  def ParseEntityLook(self):
+    return (
+        self.UnpackInt32(),
         self.UnpackInt8(),
         self.UnpackInt8(),
         )
 
-  def OnEntityTeleport(self):
+  def ParseEntityRelativeLookAndMove(self):
+    return (
+        self.UnpackInt32(),
+        self.UnpackInt8(),
+        self.UnpackInt8(),
+        self.UnpackInt8(),
+        self.UnpackInt8(),
+        self.UnpackInt8(),
+        )
+
+  def ParseEntityTeleport(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt32(),
@@ -364,56 +371,56 @@ class MineCraftProtocol(object):
         self.UnpackInt8(),
         )
 
-  def OnEntityHeadLook(self):
+  def ParseEntityHeadLook(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt8(),
         )
 
-  def OnEntityStatus(self):
+  def ParseEntityStatus(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt8(),
         )
 
-  def OnEntityMetadata(self):
+  def ParseEntityMetadata(self):
     return (
         self.UnpackInt32(),
         self.UnpackMetadata(),
         )
 
-  def OnRemoveEntityEffect(self):
+  def ParseRemoveEntityEffect(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt8(),
         )
 
-  def OnPlayerAbility(self):
+  def ParsePlayerAbility(self):
     return (
         self.UnpackInt8(),
         self.UnpackInt8(),
         self.UnpackInt8(),
         self.UnpackInt8())
 
-  def OnPlayerListItem(self):
+  def ParsePlayerListItem(self):
     return (
         self.UnpackString(),
         self.UnpackInt8(),
         self.UnpackInt16(),
         )
 
-  def OnTimeUpdate(self):
+  def ParseTimeUpdate(self):
     return (
         self.UnpackInt64(),)
 
-  def OnMapColumnAllocation(self):
+  def ParseMapColumnAllocation(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt32(),
         self.UnpackInt8(),
         )
 
-  def OnSoundParticleEffect(self):
+  def ParseSoundParticleEffect(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt32(),
@@ -422,13 +429,13 @@ class MineCraftProtocol(object):
         self.UnpackInt32(),
         )
 
-  def OnChangeGameState(self):
+  def ParseChangeGameState(self):
     return (
         self.UnpackInt8(),
         self.UnpackInt8(),
         )
 
-  def OnBlockAction(self):
+  def ParseBlockAction(self):
     return (
         self.UnpackInt32(),
         self.UnpackInt16(),
@@ -437,14 +444,14 @@ class MineCraftProtocol(object):
         self.UnpackInt8(),
         )
 
-  def OnSetSlot(self):
+  def ParseSetSlot(self):
     return (
         self.UnpackInt8(),
         self.UnpackInt16(),
         self.UnpackSlot(),
         )
 
-  def OnSetWindowItems(self):
+  def ParseSetWindowItems(self):
     window = self.UnpackInt8()
     slotCount = self.UnpackInt16()
     print "Array Size: ", slotCount
@@ -486,41 +493,49 @@ class MineCraftProtocol(object):
         )
 
 
+class MineCraftBot(MineCraftProtocol):
+
+  def __init__(self, host, port, username, password):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((host, port))
+    super(MineCraftBot, self).__init__(sock)
+
+    self._sessionId = self.GetSessionId(username, password)
+    print 'SessionId:', self._sessionId
+
+    self.SendHandshake(username, host, port)
+    self._serverId, = self.WaitFor('\x02')
+    print 'Serverid:', self._serverId
+
+    self.JoinServer(username, self._sessionId, self._serverId)
+
+    self.SendLogin(username)
+    print self.WaitFor('\x01')
+
+    print self.WaitFor('\x0d')
+
+    self._handlers = {
+        '\x00': self.OnKeepAlive,
+        }
+
+  def OnKeepAlive(self, token):
+    self.Send(
+        '\x00' +
+        pack('!i', token)
+        )
+
+
 def main():
-  HOST = '108.59.83.223'    # The remote host
-  PORT = 31337              # The same port as used by the server
-  PORT = 25565
-  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  s.connect((HOST, PORT))
-  #s.sendall('Hello, world')
-  #data = s.recv(1024)
-  #s.close()
-  #print 'Received', repr(data)
-  #pass
+  host = '108.59.83.223'    # The remote host
+  port = 31337              # The same port as used by the server
+  port = 25565
 
   username = u'johnbaruch'
   password = u'zoe77zoe'
-  prot = MineCraftProtocol(s)
 
-  sessionId = prot.GetSessionId(username, password)
-  print 'SessionId:', sessionId
-
-  prot.SendHandshake(username, HOST, PORT)
-  serverId = prot.WaitFor('\x02')
-  print 'Serverid:', serverId
-
-  prot.JoinServer(username, sessionId, serverId)
-
-  prot.SendLogin(u'johnbaruch')
-  print prot.WaitFor('\x01')
-
-  print prot.WaitFor('\x06')
-
-  print prot.WaitFor('\x0d')
-
+  bot = MineCraftBot(host, port, username, password)
   while True:
-    prot.RecvPacket()
-    #print prot.RecvPacket()[1]
+    bot.RecvPacket()
 
 
 if __name__ == '__main__':
