@@ -22,13 +22,16 @@ class MineCraftProtocol(object):
         '\x03': self.ParseChatMessage,
         '\x04': self.ParseTimeUpdate,
 
-        #'\x05': self.ParseEntityEquipment,
+        '\x05': self.ParseEntityEquipment,
 
         '\x06': self.ParseSpawn,
         '\x08': self.ParseUpdateHealth,
-        #'\x09': self.ParseRespawn,
+        '\x09': self.ParseRespawn,
+        '\x10': self.ParseHeldItemChange,
 
+        '\x0c': self.ParsePlayerLook,
         '\x0d': self.ParsePlayerPositionLook,
+        '\x12': self.ParseAnimation,
         '\x14': self.ParseSpawnNamedEntity,
         '\x15': self.ParseSpawnDroppedItem,
         '\x17': self.ParseSpawnObjectVehicle,
@@ -47,6 +50,7 @@ class MineCraftProtocol(object):
         '\x2b': self.ParseSetExperience,
         '\x32': self.ParseMapColumnAllocation,
         '\x33': self.ParseMapChunks,
+        '\x34': self.ParseMultiBlockChange,
         '\x35': self.ParseBlockChange,
         '\x3d': self.ParseSoundParticleEffect,
         '\x46': self.ParseChangeGameState,
@@ -63,9 +67,12 @@ class MineCraftProtocol(object):
     self._interesting = set([
         '\x01',
         '\x03',
+        '\x14',
+        '\x06',
+        '\x08',
         #'\x0d',
         #'\x32',
-        '\x33',
+        #'\x33',
         '\x46',
         '\xc8',
         '\xff',
@@ -116,7 +123,7 @@ class MineCraftProtocol(object):
   def RecvPacket(self):
     ilk = self.Read(1)
     #print hex(ord(ilk)), len(self._buf)
-    if ilk in self._interesting:
+    if ilk in self._interesting or True:
       print '\nReceived packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
     #for x in self._buf:
       #print hex(ord(x)), ' ',
@@ -266,10 +273,28 @@ class MineCraftProtocol(object):
         self.UnpackFloat(),
         )
 
+  def ParseRespawn(self):
+    return (
+        self.UnpackInt32(),
+        self.UnpackInt8(),
+        self.UnpackInt8(),
+        self.UnpackInt16(),
+        self.UnpackString(),
+        )
+
+  def ParseHeldItemChange(self):
+    return (
+        self.UnpackInt16(),
+        )
+
+  def ParsePlayerLook(self):
+    return (
+        self.UnpackFloat(),
+        self.UnpackFloat(),
+        self.UnpackInt8(),
+        )
+
   def ParsePlayerPositionLook(self):
-    raw = self._buf[:32 + 8 + 1]
-    #self._raw = '\x0d' + raw
-    #self.Send(self._raw)
     return (
         self.UnpackDouble(),
         self.UnpackDouble(),
@@ -277,6 +302,12 @@ class MineCraftProtocol(object):
         self.UnpackDouble(),
         self.UnpackFloat(),
         self.UnpackFloat(),
+        self.UnpackInt8(),
+        )
+
+  def ParseAnimation(self):
+    return (
+        self.UnpackInt32(),
         self.UnpackInt8(),
         )
 
@@ -447,6 +478,14 @@ class MineCraftProtocol(object):
     return (
         self.UnpackInt64(),)
 
+  def ParseEntityEquipment(self):
+    return (
+        self.UnpackInt32(),
+        self.UnpackInt16(),
+        self.UnpackInt16(),
+        self.UnpackInt16(),
+        )
+
   def ParseMapColumnAllocation(self):
     return (
         self.UnpackInt32(),
@@ -465,9 +504,17 @@ class MineCraftProtocol(object):
         ]
     arraySize = self.UnpackInt32()
     ret.append(self.UnpackInt32())  # "unused"
-    print "chunk size: ", arraySize
     ret.append(self.Read(arraySize))
-    print "chunk size: ", len(ret[-1])
+    return ret
+
+  def ParseMultiBlockChange(self):
+    ret = [
+        self.UnpackInt32(),
+        self.UnpackInt32(),
+        ]
+    self.UnpackInt16()
+    ret.append(self.Read(self.UnpackInt32()))
+    # TODO: parse the internals
     return ret
 
   def ParseBlockChange(self):
@@ -573,6 +620,7 @@ class MineCraftBot(MineCraftProtocol):
         }
     self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
 
+    """
     self._sessionId = self.GetSessionId(username, password)
     print 'sessionId:', self._sessionId
 
@@ -581,6 +629,7 @@ class MineCraftBot(MineCraftProtocol):
     print 'serverId:', self._serverId
 
     self.JoinServer(username, self._sessionId, self._serverId)
+    """
 
     print 'sending login...'
 
@@ -615,6 +664,7 @@ class MineCraftBot(MineCraftProtocol):
         #pack('!ddddffb', x, y, stance, z, yaw, pitch, onGround)
         pack('!ddddffb', *self._pos)
         )
+    #print self._pos
 
 
   def OnPlayerPositionLook(self, x, stance, y, z, yaw, pitch, onGround):
@@ -627,9 +677,12 @@ def main():
   host = '108.59.83.223'    # The remote host
   port = 31337              # The same port as used by the server
   port = 25565
+  port = 4000
 
   username = u'johnbaruch'
   password = u'zoe77zoe'
+
+  username = u'peon'
 
   bot = MineCraftBot(host, port, username, password)
   last_pos_update = 0
