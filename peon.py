@@ -34,6 +34,7 @@ class MineCraftProtocol(object):
         '\x12': self.ParseAnimation,
         '\x14': self.ParseSpawnNamedEntity,
         '\x15': self.ParseSpawnDroppedItem,
+        '\x16': self.ParseCollectItem,
         '\x17': self.ParseSpawnObjectVehicle,
         '\x18': self.ParseSpawnMob,
         '\x1a': self.ParseSpawnExperienceOrb,
@@ -65,14 +66,18 @@ class MineCraftProtocol(object):
         }
 
     self._interesting = set([
+        '\x00',
         '\x01',
         '\x03',
         '\x14',
         '\x06',
         '\x08',
+        '\x16',
         #'\x0d',
         #'\x32',
         #'\x33',
+        '\x34',
+        #'\x35',
         '\x46',
         '\xc8',
         '\xff',
@@ -123,7 +128,7 @@ class MineCraftProtocol(object):
   def RecvPacket(self):
     ilk = self.Read(1)
     #print hex(ord(ilk)), len(self._buf)
-    if ilk in self._interesting or True:
+    if ilk in self._interesting:
       print '\nReceived packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
     #for x in self._buf:
       #print hex(ord(x)), ' ',
@@ -180,10 +185,10 @@ class MineCraftProtocol(object):
 
   def UnpackString(self):
     strlen = self.UnpackInt16()
-    print 'strlen: ', strlen
+    #print 'strlen: ', strlen
     #print len(self._buf), strlen*2
     string = self.Read(strlen * 2).decode('utf_16_be')
-    print u'Got string: [%s]' % string
+    #print u'Got string: [%s]' % string
     return string
 
   def UnpackSlot(self):
@@ -337,6 +342,12 @@ class MineCraftProtocol(object):
         self.UnpackInt8(),
         self.UnpackInt8(),
         self.UnpackInt8(),
+        )
+
+  def ParseCollectItem(self):
+    return (
+        self.UnpackInt32(),
+        self.UnpackInt32(),
         )
 
   def ParseSpawnObjectVehicle(self):
@@ -617,6 +628,7 @@ class MineCraftBot(MineCraftProtocol):
     self._handlers = {
         '\x00': self.OnKeepAlive,
         '\x0d': self.OnPlayerPositionLook,
+        '\x35': self.OnBlockChange,
         }
     self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
 
@@ -636,7 +648,7 @@ class MineCraftBot(MineCraftProtocol):
     self.SendLogin(username)
     print self.WaitFor('\x01')
 
-    #print self.WaitFor('\x0d')
+    print self.WaitFor('\x0d')
 
   def OnKeepAlive(self, token):
     self.Send(
@@ -645,20 +657,6 @@ class MineCraftBot(MineCraftProtocol):
         )
 
   def SendPositionLook(self):
-    '''
-    self.Send(
-        '\x0a' +
-        #pack('!ddddffb', x, y, stance, z, yaw, pitch, onGround)
-        pack('!b', self._pos.on_ground)
-        )
-    self.Send(
-        '\x0d' +
-        #pack('!ddddffb', x, y, stance, z, yaw, pitch, onGround)
-        pack('!ddddffb', 0, 0, 0, 0, 0, 0, 0)
-        )
-
-    self.Send(self._raw)
-    '''
     self.Send(
         '\x0d' +
         #pack('!ddddffb', x, y, stance, z, yaw, pitch, onGround)
@@ -669,8 +667,38 @@ class MineCraftBot(MineCraftProtocol):
 
   def OnPlayerPositionLook(self, x, stance, y, z, yaw, pitch, onGround):
     self._pos = Position(x, y, stance, z, yaw, pitch, onGround)
-    print "Pos: ", x, y, z, stance, yaw, pitch, onGround
+    print "Pos: ", self._pos
     self.SendPositionLook()
+    self._pos = Position(self._pos.x, self._pos.y, self._pos.stance,
+        self._pos.z, self._pos.yaw, self._pos.pitch, 1)
+
+  def OnBlockChange(self, x, y, z, newType, newMeta):
+    if newType == 0:
+      final_y = self._pos.y - 1 #int(self._pos.y - 2)
+      print "new y:", final_y
+      print x, y, z, newType, newMeta
+      self._pos = Position(self._pos.x, final_y, final_y + 1,
+          self._pos.z, self._pos.yaw, self._pos.pitch, 1)
+      self.SendDig(self._pos.x, self._pos.z, self._pos.y - 1, 1)
+
+
+  def SendDig(self, x, z, y, face):
+    self.Send(
+        '\x0e' +
+        pack('!b', 0) +
+        pack('!i', x) +
+        pack('!b', y) +
+        pack('!i', z) +
+        pack('!b', face)
+        )
+    self.Send(
+        '\x0e' +
+        pack('!b', 2) +
+        pack('!i', x) +
+        pack('!b', y) +
+        pack('!i', z) +
+        pack('!b', face)
+        )
 
 
 def main():
@@ -685,11 +713,39 @@ def main():
   username = u'peon'
 
   bot = MineCraftBot(host, port, username, password)
+  bot.SendPositionLook()
   last_pos_update = 0
+  start_time = time.time()
+  print "start_y:", bot._pos.y
+  final_y = bot._pos.y - 1 #int(bot._pos.y - 2)
+  bot._pos = Position(bot._pos.x, final_y, final_y + 1,
+      bot._pos.z, bot._pos.yaw, bot._pos.pitch, 1)
+  bot.SendPositionLook()
+
+  until = time.time() + 10
+  while time.time() < until:
+    if time.time() - last_pos_update > 0.05:
+      bot.SendPositionLook()
+      last_pos_update = time.time()
+      #bot._pos = Position(bot._pos.x, final_y, final_y + 1,
+          #bot._pos.z, bot._pos.yaw, bot._pos.pitch, 1)
+      #('x', 'y', 'stance', 'z', 'yaw', 'pitch', 'on_ground'))
+    bot.RecvPacket()
+
+  last_dig = 0
   while True:
     if time.time() - last_pos_update > 0.05:
       bot.SendPositionLook()
       last_pos_update = time.time()
+      #bot._pos = Position(bot._pos.x, final_y, final_y + 1,
+          #bot._pos.z, bot._pos.yaw, bot._pos.pitch, 1)
+      #('x', 'y', 'stance', 'z', 'yaw', 'pitch', 'on_ground'))
+    if time.time() - last_dig > 20:
+      pos = bot._pos
+      bot.SendDig(pos.x, pos.z, pos.y - 1, 1)
+
+    #while len(bot._buf) > 10:
+      #print len(bot._buf)
     bot.RecvPacket()
 
 
