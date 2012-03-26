@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
+import collections
 import socket
 import struct
 import sys
+import time
 import urllib
 import urllib2
 
@@ -50,9 +52,21 @@ class MineCraftProtocol(object):
         '\x67': self.ParseSetSlot,
         '\x68': self.ParseSetWindowItems,
         '\xca': self.ParsePlayerAbility,
+        '\xc8': self.ParseIncrementStatistic,
         '\xc9': self.ParsePlayerListItem,
         '\xff': self.ParseKick,
         }
+
+    self._interesting = set([
+        '\x01',
+        '\x03',
+        '\x0d',
+        '\x32',
+        '\x33',
+        '\x46',
+        '\xc8',
+        '\xff',
+        ])
 
     self._handlers = {}
 
@@ -81,22 +95,26 @@ class MineCraftProtocol(object):
   # Protocol convenience methods
 
   def Send(self, packet):
-    print '\nSending packet: %s' % hex(ord(packet[0]))
+    if packet[0] in self._interesting:
+      print '\nSending packet: %s' % hex(ord(packet[0]))
     self._sock.sendall(packet)
 
   def Recv(self, size=1024):
     self._buf += self._sock.recv(size)
 
+  def Read(self, size):
+    while len(self._buf) < size:
+      #print "reading ", size, len(self._buf)
+      self._buf += self._sock.recv(1024)
+    ret = self._buf[:size]
+    self._buf = self._buf[size:]
+    return ret
+
   def RecvPacket(self):
-    if len(self._buf) < 1024:
-      self.Recv()
-    while not self._buf:
-      #print "len: ", len(self._buf)
-      self.Recv()
-    ilk = self._buf[0]
-    self._buf = self._buf[1:]
+    ilk = self.Read(1)
     #print hex(ord(ilk)), len(self._buf)
-    print '\nReceived packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
+    if ilk in self._interesting:
+      print '\nReceived packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
     #for x in self._buf:
       #print hex(ord(x)), ' ',
     #print
@@ -123,46 +141,38 @@ class MineCraftProtocol(object):
     return struct.pack('!h', len(string)) + string.encode('utf_16_be')
 
   def UnpackInt8(self):
-    value, = struct.unpack('!b', self._buf[:1])
-    self._buf = self._buf[1:]
+    value, = struct.unpack('!b', self.Read(1))
     return value
 
   def UnpackUint8(self):
-    value, = struct.unpack('!B', self._buf[:1])
-    self._buf = self._buf[1:]
+    value, = struct.unpack('!B', self.Read(1))
     return value
 
   def UnpackInt16(self):
-    value, = struct.unpack('!h', self._buf[:2])
-    self._buf = self._buf[2:]
+    value, = struct.unpack('!h', self.Read(2))
     return value
 
   def UnpackInt32(self):
-    value, = struct.unpack('!i', self._buf[:4])
-    self._buf = self._buf[4:]
+    value, = struct.unpack('!i', self.Read(4))
     return value
 
   def UnpackInt64(self):
-    value, = struct.unpack('!q', self._buf[:8])
-    self._buf = self._buf[8:]
+    value, = struct.unpack('!q', self.Read(8))
     return value
 
   def UnpackFloat(self):
-    value, = struct.unpack('!f', self._buf[:4])
-    self._buf = self._buf[4:]
+    value, = struct.unpack('!f', self.Read(4))
     return value
 
   def UnpackDouble(self):
-    value, = struct.unpack('!d', self._buf[:8])
-    self._buf = self._buf[8:]
+    value, = struct.unpack('!d', self.Read(8))
     return value
 
   def UnpackString(self):
     strlen = self.UnpackInt16()
     print 'strlen: ', strlen
     #print len(self._buf), strlen*2
-    string = self._buf[:strlen*2].decode('utf_16_be')
-    self._buf = self._buf[strlen*2:]
+    string = self.Read(strlen * 2).decode('utf_16_be')
     print u'Got string: [%s]' % string
     return string
 
@@ -186,8 +196,7 @@ class MineCraftProtocol(object):
       arraySize = self.UnpackInt16()
       print 'arraySize is: ', arraySize
       if arraySize != -1:
-        data = self._buf[:arraySize]
-        self._buf = self._buf[arraySize:]
+        data = self.Read(arraySize)
 
     return (itemId, itemCount, damage, data)
 
@@ -208,14 +217,8 @@ class MineCraftProtocol(object):
         return values
       key = 0x1F & what
       values.append((key, unpackers[what >> 5]()))
-
-    strlen = self.UnpackInt16()
-    print 'strlen: ', strlen
-    #print len(self._buf), strlen*2
-    string = self._buf[:strlen*2].decode('utf_16_be')
-    self._buf = self._buf[strlen*2:]
-    print u'Got string: [%s]' % string
-    return string
+    print 'WTF?'
+    return values
 
   ##############################################################################
   # Parsers
@@ -250,6 +253,9 @@ class MineCraftProtocol(object):
     return (self.UnpackInt32(), self.UnpackInt32(), self.UnpackInt32())
 
   def ParsePlayerPositionLook(self):
+    raw = self._buf[:32 + 8 + 1]
+    #self._raw = '\x0d' + raw
+    #self.Send(self._raw)
     return (
         self.UnpackDouble(),
         self.UnpackDouble(),
@@ -400,7 +406,14 @@ class MineCraftProtocol(object):
         self.UnpackInt8(),
         self.UnpackInt8(),
         self.UnpackInt8(),
-        self.UnpackInt8())
+        self.UnpackInt8(),
+        )
+
+  def ParseIncrementStatistic(self):
+    return (
+        self.UnpackInt32(),
+        self.UnpackInt8(),
+        )
 
   def ParsePlayerListItem(self):
     return (
@@ -486,12 +499,9 @@ class MineCraftProtocol(object):
         )
     self.Send(packet)
 
-  def SendKeepAlive(self, token=0):
-    self.Send(
-        '\x00' +
-        pack('!i', token)
-        )
 
+Position = collections.namedtuple('Position',
+    ('x', 'y', 'stance', 'z', 'yaw', 'pitch', 'on_ground'))
 
 class MineCraftBot(MineCraftProtocol):
 
@@ -500,29 +510,59 @@ class MineCraftBot(MineCraftProtocol):
     sock.connect((host, port))
     super(MineCraftBot, self).__init__(sock)
 
+    self._handlers = {
+        '\x00': self.OnKeepAlive,
+        '\x0d': self.OnPlayerPositionLook,
+        }
+    self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
+
     self._sessionId = self.GetSessionId(username, password)
-    print 'SessionId:', self._sessionId
+    print 'sessionId:', self._sessionId
 
     self.SendHandshake(username, host, port)
     self._serverId, = self.WaitFor('\x02')
-    print 'Serverid:', self._serverId
+    print 'serverId:', self._serverId
 
     self.JoinServer(username, self._sessionId, self._serverId)
+
+    print 'sending login...'
 
     self.SendLogin(username)
     print self.WaitFor('\x01')
 
-    print self.WaitFor('\x0d')
-
-    self._handlers = {
-        '\x00': self.OnKeepAlive,
-        }
+    #print self.WaitFor('\x0d')
 
   def OnKeepAlive(self, token):
     self.Send(
         '\x00' +
         pack('!i', token)
         )
+
+  def SendPositionLook(self):
+    '''
+    self.Send(
+        '\x0a' +
+        #pack('!ddddffb', x, y, stance, z, yaw, pitch, onGround)
+        pack('!b', self._pos.on_ground)
+        )
+    self.Send(
+        '\x0d' +
+        #pack('!ddddffb', x, y, stance, z, yaw, pitch, onGround)
+        pack('!ddddffb', 0, 0, 0, 0, 0, 0, 0)
+        )
+
+    self.Send(self._raw)
+    '''
+    self.Send(
+        '\x0d' +
+        #pack('!ddddffb', x, y, stance, z, yaw, pitch, onGround)
+        pack('!ddddffb', *self._pos)
+        )
+
+
+  def OnPlayerPositionLook(self, x, y, stance, z, yaw, pitch, onGround):
+    self._pos = Position(x, y, stance, z, yaw, pitch, onGround)
+    self.SendPositionLook()
 
 
 def main():
@@ -534,7 +574,11 @@ def main():
   password = u'zoe77zoe'
 
   bot = MineCraftBot(host, port, username, password)
+  last_pos_update = 0
   while True:
+    if time.time() - last_pos_update > 1:
+      bot.SendPositionLook()
+      last_pos_update = time.time()
     bot.RecvPacket()
 
 
