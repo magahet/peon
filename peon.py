@@ -806,7 +806,7 @@ class MineCraftBot(MineCraftProtocol):
 
   def OnPlayerPositionLook(self, x, stance, y, z, yaw, pitch, onGround):
     self._pos = Position(x, y, stance, z, yaw, pitch, onGround)
-    print "Pos: ", self._pos
+    print "Corrected Position: ", self._pos
     self.SendPositionLook()
     self._pos = Position(self._pos.x, self._pos.y, self._pos.stance,
         self._pos.z, self._pos.yaw, self._pos.pitch, 1)
@@ -842,6 +842,33 @@ class MineCraftBot(MineCraftProtocol):
         pack('!b', face)
         )
 
+  def MoveTo(self, x, z, y, speed=1.0, onGround=True):
+    def Dist(x, z, y):
+      return abs(self._pos.x - x) + abs(self._pos.z - z) + abs(self._pos.y - y)
+
+    def Go(x=None, z=None, y=None):
+      self._pos = Position(x, y, y+1, z,
+          self._pos.yaw, self._pos.pitch, onGround)
+
+    tau = 0.050
+    while Dist(x, z, y) > speed:
+      if self._pos.x - x > 0:
+        new_x = self._pos.x - speed * tau
+      else:
+        new_x = self._pos.x + speed * tau
+      if self._pos.z - z > 0:
+        new_z = self._pos.z - speed * tau
+      else:
+        new_z = self._pos.z + speed * tau
+      if self._pos.y - y > 0:
+        new_y = self._pos.y - speed * tau
+      else:
+        new_y = self._pos.y + speed * tau
+      Go(new_x, new_z, new_y)
+      #print self._pos
+      time.sleep(tau)
+    Go(x, z, y)
+
 
 def main():
   host = '108.59.83.223'    # The remote host
@@ -863,11 +890,23 @@ def main():
   while True:
     time.sleep(1)
     print 'Position: ', bot._pos.x, bot._pos.z, bot._pos.y
+    '''
     print (bot._pos.x/16, bot._pos.z/16)
     print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y)
     print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y - 1)
     print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y - 2)
     print bot.GetBlock(bot._pos.x, bot._pos.z, 0)
+    for i in range(bot._pos.y + 5):
+      print "  i: ", i,  bot.GetBlock(bot._pos.x, bot._pos.z, i)
+    '''
+    for dest in [
+        #(146, 248, 64),
+        (139.5, 256.5, 64),
+        (139.5, 256.5, 69),
+        #(139.5, 256.5, 64),
+        ]:
+      time.sleep(5)
+      bot.MoveTo(*dest)
     for i in range(bot._pos.y + 5):
       print "  i: ", i,  bot.GetBlock(bot._pos.x, bot._pos.z, i)
     continue
