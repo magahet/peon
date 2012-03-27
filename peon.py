@@ -1,9 +1,11 @@
 #!/usr/bin/python
 
 import collections
+import Queue
 import socket
 import struct
 import sys
+import threading
 import time
 import urllib
 import urllib2
@@ -15,6 +17,8 @@ class MineCraftProtocol(object):
   def __init__(self, sock):
     self._sock = sock
     self._buf = ""
+    self._sendQueue = Queue.Queue(10)
+
     self._parsers = {
         '\x00': self.ParseKeepAlive,
         '\x01': self.ParseLogin,
@@ -66,7 +70,7 @@ class MineCraftProtocol(object):
         }
 
     self._interesting = set([
-        '\x00',
+        #'\x00',
         '\x01',
         '\x03',
         '\x14',
@@ -75,7 +79,7 @@ class MineCraftProtocol(object):
         '\x16',
         #'\x0d',
         #'\x32',
-        #'\x33',
+        '\x33',
         '\x34',
         #'\x35',
         '\x46',
@@ -84,6 +88,12 @@ class MineCraftProtocol(object):
         ])
 
     self._handlers = {}
+
+    self._threads = [
+        threading.Thread(target=self._DoReadThread),
+        threading.Thread(target=self._DoSendThread),
+        ]
+
 
   ##############################################################################
   # minecraft.net methods
@@ -106,21 +116,39 @@ class MineCraftProtocol(object):
     url = 'http://session.minecraft.net/game/joinserver.jsp?' + data
     return urllib2.urlopen(url).read()
 
+
+  ##############################################################################
+  # Thread functions
+
+  def Start(self):
+    for thread in self._threads:
+      thread.daemon = True
+      thread.start()
+
+  def _DoReadThread(self):
+    while True:
+      #time.sleep(0.010)
+      self.RecvPacket()
+
+  def _DoSendThread(self):
+    while True:
+      #time.sleep(0.010)
+      #time.sleep(0.05)
+      self._sock.sendall(self._sendQueue.get())
+
+
   ##############################################################################
   # Protocol convenience methods
 
   def Send(self, packet):
     if packet[0] in self._interesting:
-      print '\nSending packet: %s' % hex(ord(packet[0]))
-    self._sock.sendall(packet)
-
-  def Recv(self, size=1024):
-    self._buf += self._sock.recv(size)
+      sys.stderr.write('\nSending packet: %s\n' % hex(ord(packet[0])))
+    self._sendQueue.put(packet)
 
   def Read(self, size):
     while len(self._buf) < size:
       #print "reading ", size, len(self._buf)
-      self._buf += self._sock.recv(1024)
+      self._buf += self._sock.recv(4096)
     ret = self._buf[:size]
     self._buf = self._buf[size:]
     return ret
@@ -135,6 +163,8 @@ class MineCraftProtocol(object):
     #print
     try:
       parsed = self._parsers[ilk]()
+      #if ilk in self._interesting:
+        #print '\nParsed packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
       handler = self._handlers.get(ilk)
       if handler:
         handler(*parsed)
@@ -188,7 +218,7 @@ class MineCraftProtocol(object):
     #print 'strlen: ', strlen
     #print len(self._buf), strlen*2
     string = self.Read(strlen * 2).decode('utf_16_be')
-    #print u'Got string: [%s]' % string
+    print u'Got string: [%s]' % string
     return string
 
   def UnpackSlot(self):
@@ -265,6 +295,7 @@ class MineCraftProtocol(object):
     return (entityId, levelType, serverMode, dimension, difficulty, maxPlayers)
 
   def ParseSpawn(self):
+    print len(self._buf)
     return (
         self.UnpackInt32(),
         self.UnpackInt32(),
@@ -574,8 +605,6 @@ class MineCraftProtocol(object):
     print "Array Size: ", slotCount
     slots = []
     for i in range(slotCount):
-      if len(self._buf) < 1024:
-        self.Recv(1024)
       slots.append(self.UnpackSlot())
     return (window, slots)
 
@@ -620,7 +649,7 @@ Position = collections.namedtuple('Position',
 
 class MineCraftBot(MineCraftProtocol):
 
-  def __init__(self, host, port, username, password):
+  def __init__(self, host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((host, port))
     super(MineCraftBot, self).__init__(sock)
@@ -631,7 +660,9 @@ class MineCraftBot(MineCraftProtocol):
         '\x35': self.OnBlockChange,
         }
     self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
+    self._threads.append(threading.Thread(target=self._DoPositionUpdateThread))
 
+  def Login(self, username, password):
     """
     self._sessionId = self.GetSessionId(username, password)
     print 'sessionId:', self._sessionId
@@ -646,9 +677,15 @@ class MineCraftBot(MineCraftProtocol):
     print 'sending login...'
 
     self.SendLogin(username)
-    print self.WaitFor('\x01')
+    #print self.WaitFor('\x01')
 
-    print self.WaitFor('\x0d')
+    #print self.WaitFor('\x0d')
+
+  def _DoPositionUpdateThread(self):
+    time.sleep(2)
+    while True:
+      time.sleep(0.050)
+      self.SendPositionLook()
 
   def OnKeepAlive(self, token):
     self.Send(
@@ -712,7 +749,23 @@ def main():
 
   username = u'peon'
 
-  bot = MineCraftBot(host, port, username, password)
+  #bot = MineCraftBot(host, port, username, password)
+  bot = MineCraftBot(host, port)
+  bot.Start()
+  bot.Login(username, password)
+  new_y = bot._pos.y #- 1 #int(bot._pos.y - 2)
+  new_x = bot._pos.x - 1 #int(bot._pos.y - 2)
+  while True:
+    time.sleep(1)
+    continue
+    #new_x = bot._pos.x - 1 #int(bot._pos.y - 2)
+    new_y = bot._pos.y - 1 #int(bot._pos.y - 2)
+    print bot._pos.y
+    bot._pos = Position(new_x, new_y, new_y + 1,
+        bot._pos.z, bot._pos.yaw, bot._pos.pitch, 1)
+
+
+  # Dig
   bot.SendPositionLook()
   last_pos_update = 0
   start_time = time.time()
