@@ -28,11 +28,15 @@ class ChunkColumn(object):
     self._skyLightData = skyLightData
     self._biome = biomeData
 
-  def GetBlock(x, z, y):
+  def GetBlock(self, x, z, y):
+    x, z, y = int(x), int(z), int(y)
+    #print x, z, y
+    #print x - self.chunkX * 16, z - self.chunkZ * 16, y
     offset = (       (x - self.chunkX * 16) +
               (16 *  (z - self.chunkZ * 16)) +
               (256 * (y))
              )
+    #print offset
     blockType = self._blocks[offset]
     return blockType
 
@@ -579,12 +583,12 @@ class MineCraftProtocol(object):
       data[0] = data[0][size:]
       return  ret
 
-    blocks = []
+    blocks = array.array('B')
     for i in range(16):
       if primaryBitMap & (1 << i):
-        blocks.append(PopByteArray(4096))
+        blocks.extend(PopByteArray(4096))
       else:
-        blocks.append(array.array('B', [0] * 4096))
+        blocks.extend([0] * 4096)
 
     meta = []
     for i in range(16):
@@ -774,10 +778,10 @@ class MineCraftBot(MineCraftProtocol):
     #print self.WaitFor('\x0d')
 
   def GetBlock(self, x, z, y):
-    chunk = self._chunks.get((x/16, z/16))
+    chunk = self._chunks.get((int(x/16), int(z/16)))
     if not chunk:
       return None
-    return chunk.GetBlock(x, z, y)
+    return chunk.GetBlock(int(x), int(z), int(y))
 
   def _DoPositionUpdateThread(self):
     time.sleep(2)
@@ -859,6 +863,13 @@ def main():
   while True:
     time.sleep(1)
     print 'Position: ', bot._pos.x, bot._pos.z, bot._pos.y
+    print (bot._pos.x/16, bot._pos.z/16)
+    print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y)
+    print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y - 1)
+    print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y - 2)
+    print bot.GetBlock(bot._pos.x, bot._pos.z, 0)
+    for i in range(bot._pos.y + 5):
+      print "  i: ", i,  bot.GetBlock(bot._pos.x, bot._pos.z, i)
     continue
     #new_x = bot._pos.x - 1 #int(bot._pos.y - 2)
     new_y = bot._pos.y - 1 #int(bot._pos.y - 2)
