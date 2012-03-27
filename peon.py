@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import array
 import collections
 import Queue
 import socket
@@ -9,9 +10,31 @@ import threading
 import time
 import urllib
 import urllib2
+import zlib
 
 from struct import pack, unpack
 
+
+class ChunkColumn(object):
+  def __init__(self, chunkX, chunkZ,
+      blockData, blockMeta, lightData, skyLightData, addArray, biomeData):
+    self.chunkX = chunkX
+    self.chunkZ = chunkZ
+    self._blocks = blockData
+    self._meta = blockMeta
+    self._light = lightData
+    self._skylight = skyLightData
+    self._addArray = addArray
+    self._skyLightData = skyLightData
+    self._biome = biomeData
+
+  def GetBlock(x, z, y):
+    offset = (       (x - self.chunkX * 16) +
+              (16 *  (z - self.chunkZ * 16)) +
+              (256 * (y))
+             )
+    blockType = self._blocks[offset]
+    return blockType
 
 class MineCraftProtocol(object):
   def __init__(self, sock):
@@ -79,7 +102,7 @@ class MineCraftProtocol(object):
         '\x16',
         #'\x0d',
         #'\x32',
-        '\x33',
+        #'\x33',
         '\x34',
         #'\x35',
         '\x46',
@@ -536,6 +559,73 @@ class MineCraftProtocol(object):
         )
 
   def ParseMapChunks(self):
+    chunkX = self.UnpackInt32()
+    chunkZ = self.UnpackInt32()
+    withBiome = self.UnpackInt8()
+    primaryBitMap = self.UnpackInt16()
+    addBitMap = self.UnpackInt16()
+
+    arraySize = self.UnpackInt32()
+    trash = self.UnpackInt32()  # "unused"
+
+    compressed = self.Read(arraySize)
+    data = [zlib.decompress(compressed)]
+    #print len(data[0]), hex(primaryBitMap)
+
+    def PopByteArray(size):
+      if len(data[0]) < size:
+        raise Exception('data not big enough!')
+      ret = array.array('B', data[0][:size])
+      data[0] = data[0][size:]
+      return  ret
+
+    blocks = []
+    for i in range(16):
+      if primaryBitMap & (1 << i):
+        blocks.append(PopByteArray(4096))
+      else:
+        blocks.append(array.array('B', [0] * 4096))
+
+    meta = []
+    for i in range(16):
+      if primaryBitMap & (1 << i):
+        meta.append(PopByteArray(2048))
+      else:
+        meta.append(array.array('B', [0] * 2048))
+
+    light = []
+    for i in range(16):
+      if primaryBitMap & (1 << i):
+        light.append(PopByteArray(2048))
+      else:
+        light.append(array.array('B', [0] * 2048))
+
+    skylight = []
+    for i in range(16):
+      if primaryBitMap & (1 << i):
+        skylight.append(PopByteArray(2048))
+      else:
+        skylight.append(array.array('B', [0] * 2048))
+
+    addArray = []
+    for i in range(16):
+      if addBitMap & (1 << i):
+        addArray.append(PopByteArray(2048))
+      else:
+        addArray.append(array.array('B', [0] * 2048))
+
+    if withBiome:
+      biome = PopByteArray(256)
+    else:
+      biome = None
+
+    if len(data[0]) > 0:
+      raise Exception('Unused bytes!')
+
+    return (ChunkColumn(chunkX, chunkZ,
+        blocks, meta, light, skylight, addArray, biome),)
+    return [chunkX, chunkZ, blocks, meta, light, skylight, addArray, biome]
+
     ret = [
         self.UnpackInt32(),
         self.UnpackInt32(),
@@ -602,7 +692,7 @@ class MineCraftProtocol(object):
   def ParseSetWindowItems(self):
     window = self.UnpackInt8()
     slotCount = self.UnpackInt16()
-    print "Array Size: ", slotCount
+    #print "Array Size: ", slotCount
     slots = []
     for i in range(slotCount):
       slots.append(self.UnpackSlot())
@@ -658,9 +748,11 @@ class MineCraftBot(MineCraftProtocol):
         '\x00': self.OnKeepAlive,
         '\x0d': self.OnPlayerPositionLook,
         '\x35': self.OnBlockChange,
+        '\x33': self.OnMapChunks,
         }
     self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
     self._threads.append(threading.Thread(target=self._DoPositionUpdateThread))
+    self._chunks = {}
 
   def Login(self, username, password):
     """
@@ -680,6 +772,12 @@ class MineCraftBot(MineCraftProtocol):
     #print self.WaitFor('\x01')
 
     #print self.WaitFor('\x0d')
+
+  def GetBlock(self, x, z, y):
+    chunk = self._chunks.get((x/16, z/16))
+    if not chunk:
+      return None
+    return chunk.GetBlock(x, z, y)
 
   def _DoPositionUpdateThread(self):
     time.sleep(2)
@@ -717,6 +815,9 @@ class MineCraftBot(MineCraftProtocol):
       self._pos = Position(self._pos.x, final_y, final_y + 1,
           self._pos.z, self._pos.yaw, self._pos.pitch, 1)
       self.SendDig(self._pos.x, self._pos.z, self._pos.y - 1, 1)
+
+  def OnMapChunks(self, chunk):
+    self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
 
 
   def SendDig(self, x, z, y, face):
@@ -757,6 +858,7 @@ def main():
   new_x = bot._pos.x - 1 #int(bot._pos.y - 2)
   while True:
     time.sleep(1)
+    print 'Position: ', bot._pos.x, bot._pos.z, bot._pos.y
     continue
     #new_x = bot._pos.x - 1 #int(bot._pos.y - 2)
     new_y = bot._pos.y - 1 #int(bot._pos.y - 2)
