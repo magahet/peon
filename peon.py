@@ -1075,11 +1075,15 @@ class MineCraftBot(MineCraftProtocol):
         return xzyB
 
     def WantSolid(x, z, y):
+      for xzyAdj, typeAdj in self.world.IterAdjacent(x, z, y):
+        if typeAdj in (8, 9, 10, 11): # lava, water
+          return True
+      if self.world.GetBlock(x, z, y + 1) in (12, 13): # sand, gravel
+        return True
+
       xFirst, xLast = xRange[0], xRange[1] - 1
       zFirst, zLast = zRange[0], zRange[1] - 1
-      #if xFirst < x < xLast and zFirst < z < zLast:
-        #return False
-      if x == xFirst or x == xLast:
+      if x == xFirst or x == xLast or z == zFirst + 1 or z == zLast - 1:
         return not (y % 5)
       if z == zFirst:
         return not ((x - xFirst + y) % 5)
