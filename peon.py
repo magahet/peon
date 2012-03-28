@@ -69,7 +69,7 @@ class World(object):
         (self.GetBlock(x, z, y - 2) in SOLID or
          self.GetBlock(x, z, y - 1) in SOLID) and
         self.GetBlock(x, z, y)     not in SOLID and
-        self.GetBlock(x, z, y + 1) not in SOLID
+        self.GetBlock(x, z, y + 1) == 0
         )
 
   def IsStandable(self, x, z, y):
@@ -84,7 +84,7 @@ class World(object):
     return (
         self.GetBlock(x, z, y - 1) in SOLID and
         self.GetBlock(x, z, y)     not in SOLID and
-        self.GetBlock(x, z, y + 1) not in SOLID
+        self.GetBlock(x, z, y + 1) == 0
         )
 
   def IterAdjacent(self, x, z, y):
@@ -103,7 +103,7 @@ class World(object):
     for xzy in adjacents:
       yield xzy, self.GetBlock(*xzy)
 
-  def FindNearest(self, xzy, condition):
+  def FindNearestStandable(self, xzy, condition):
     maxD = 100
     d = {}
     d[xzy] = 0
@@ -1091,49 +1091,56 @@ class MineCraftBot(MineCraftProtocol):
 
       xFirst, xLast = xRange[0], xRange[1] - 1
       zFirst, zLast = zRange[0], zRange[1] - 1
-      if x == xFirst or x == xLast or z == zFirst + 1 or z == zLast - 1:
-        return not (y % 5)
+      # Steps against z walls
       if z == zFirst:
         return not ((x - xFirst + y) % 5)
       if z == zLast:
         return not ((xLast - x + y) % 5)
+      # walkways on x walls, and flanking z-steps
+      if x == xFirst or x == xLast or z == zFirst + 1 or z == zLast - 1:
+        return not (y % 5)
       return False
 
-    for y in range(127, -1, -1):
-      for x in range(*xRange):
-        for z in range(*zRange):
-          blockXzy = Xzy(x, z, y)
-          self.WaitFor(lambda: self.world.GetBlock(*blockXzy) is not None)
-          blockType = self.world.GetBlock(*blockXzy)
-          if WantSolid(*blockXzy):
-            #print "Want block solid:", blockXzy, blockType
-            # TODO: place
-            continue
-          if blockType == 0:
-            continue
-          print "Wanna dig block:", blockXzy, blockType
-          botXzy = Xzy(self._pos.x, self._pos.z, self._pos.y)
-          nextXzy = self.world.FindNearest(botXzy,
-              functools.partial(Within, 1.5, blockXzy))
-          if not nextXzy:
-            print "But can't find a digging spot ;("
-            continue
-          print "Wanna go to:", nextXzy
-          path = self.world.FindPath(botXzy, nextXzy)
-          if not path:
-            print "But no path :("
-            continue
-          print "Moving to:", nextXzy
-          for xzy in path:
-            print "mini - Move to:", xzy
-            self.MoveTo(xzy.x + .5, xzy.z + .5, xzy.y + .2)
-          print "Digging:", blockXzy
-          self.SendDig(blockXzy.x, blockXzy.z, blockXzy.y, 1)
-          self.WaitFor(lambda: self.world.GetBlock(*blockXzy) == 0)
-          print "block broken!"
-          print
-          print
-          #time.sleep(5)
+    keepDigging = True
+    while keepDigging:
+      keepDigging = False
+      for y in range(127, -1, -1):
+        for x in range(*xRange):
+          for z in range(*zRange):
+            blockXzy = Xzy(x, z, y)
+            self.WaitFor(lambda: self.world.GetBlock(*blockXzy) is not None)
+            blockType = self.world.GetBlock(*blockXzy)
+            if WantSolid(*blockXzy):
+              #print "Want block solid:", blockXzy, blockType
+              # TODO: place
+              continue
+            if blockType == 0:
+              continue
+            print "Wanna dig block:", blockXzy, blockType
+            botXzy = Xzy(self._pos.x, self._pos.z, self._pos.y)
+            nextXzy = self.world.FindNearestStandable(botXzy,
+                functools.partial(Within, 2.5, blockXzy))
+            if not nextXzy:
+              print "But can't find a digging spot ;("
+              continue
+            print "Wanna go to:", nextXzy
+            path = self.world.FindPath(botXzy, nextXzy)
+            if not path:
+              print "But no path :("
+              continue
+            print "Moving to:", nextXzy
+            for xzy in path:
+              print "mini - Move to:", xzy
+              self.MoveTo(xzy.x + .5, xzy.z + .5, xzy.y + .05)
+            print "Digging:", blockXzy
+            self.SendDig(blockXzy.x, blockXzy.z, blockXzy.y, 1)
+            self.WaitFor(lambda: self.world.GetBlock(*blockXzy) == 0)
+            if self.world.GetBlock(*blockXzy) == 0:
+              keepDigging = True
+            print "block broken!"
+            print
+            print
+            #time.sleep(5)
 
 
 
@@ -1157,7 +1164,8 @@ def main():
   print "done!", bot._pos.x
 
   #bot.DigShaft( (130, 150), (240, 260) )
-  bot.DigShaft( (135, 150), (220, 235) )
+  #bot.DigShaft( (135, 150), (220, 235) )
+  bot.DigShaft( (160, 175), (250, 265) )
 
 
 if __name__ == '__main__':
