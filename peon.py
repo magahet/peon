@@ -2,6 +2,8 @@
 
 import array
 import collections
+import functools
+import math
 import Queue
 import socket
 import struct
@@ -26,6 +28,14 @@ class Xzy(collections.namedtuple('Xzy', ('x', 'z', 'y'))):
     return Xzy(self.x + x, self.z + z, self.y + y)
 
 
+def Dist(xzyA, xzyB):
+  return math.sqrt(
+      (xzyA.x - xzyB.x) * (xzyA.x - xzyB.x) +
+      (xzyA.z - xzyB.z) * (xzyA.z - xzyB.z) +
+      (xzyA.y - xzyB.y) * (xzyA.y - xzyB.y)
+      )
+
+
 class World(object):
   def __init__(self):
     self._chunks = {}
@@ -34,13 +44,19 @@ class World(object):
   def MapChunk(self, chunk):
     self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
 
+  def SetBlock(self, x, z, y, newType, newMeta):
+    chunk = self._chunks.get((int(x/16), int(z/16)))
+    if not chunk:
+      return None
+    return chunk.SetBlock(int(x), int(z), int(y), newType, newMeta)
+
   def GetBlock(self, x, z, y):
     chunk = self._chunks.get((int(x/16), int(z/16)))
     if not chunk:
       return None
     return chunk.GetBlock(int(x), int(z), int(y))
 
-  def IsStandable(self, x, z, y):
+  def IsJumpable(self, x, z, y):
     SOLID = set(range(1, 5) + [7] + range(12, 27))
     # LADDER =
 
@@ -52,6 +68,21 @@ class World(object):
     return (
         (self.GetBlock(x, z, y - 2) in SOLID or
          self.GetBlock(x, z, y - 1) in SOLID) and
+        self.GetBlock(x, z, y)     not in SOLID and
+        self.GetBlock(x, z, y + 1) not in SOLID
+        )
+
+  def IsStandable(self, x, z, y):
+    SOLID = set(range(1, 5) + [7] + range(12, 27))
+    # LADDER =
+
+    #print "types:", x, z, y, ':', 
+    #print self.GetBlock(x, z, y - 2),
+    #print self.GetBlock(x, z, y - 1),
+    #print self.GetBlock(x, z, y)    ,
+    #print self.GetBlock(x, z, y + 1)
+    return (
+        self.GetBlock(x, z, y - 1) in SOLID and
         self.GetBlock(x, z, y)     not in SOLID and
         self.GetBlock(x, z, y + 1) not in SOLID
         )
@@ -72,14 +103,37 @@ class World(object):
     for xzy in adjacents:
       yield xzy, self.GetBlock(*xzy)
 
+  def FindNearest(self, xzy, condition):
+    maxD = 100
+    d = {}
+    d[xzy] = 0
+    queue = [xzy]
+
+    while queue:
+      xzy = queue.pop(0)
+      xzyD = d[xzy]
+      if xzyD > maxD:
+        print "too far!"
+        break
+      if self.IsStandable(*xzy) and condition(xzy):
+        return xzy
+      for xzyAdj, blockAdj in self.IterAdjacent(*xzy):
+        if xzyAdj in d:
+          continue
+        if self.IsJumpable(*xzyAdj):
+          d[xzyAdj] = xzyD + 1
+          queue.append(xzyAdj)
+    return None
+
   def FindPath(self, xzyA, xzyB):
     # TODO: A*
     xzyA = Xzy(*xzyA)
     xzyB = Xzy(*xzyB)
     #print xzyA, xzyB
 
-    if not self.IsStandable(*xzyA) or not self.IsStandable(*xzyB):
-      print "not standable start or dest"
+    #if not self.IsStandable(*xzyA) or not self.IsStandable(*xzyB):
+    if not self.IsStandable(*xzyB):
+      print "not standable dest!"
       print xzyA, xzyB
       return None
 
@@ -91,7 +145,7 @@ class World(object):
       xzy = queue.pop(0)
       xzyD = d[xzy]
       for xzyAdj, blockAdj in self.IterAdjacent(*xzy):
-        if xzyAdj not in d and self.IsStandable(*xzyAdj):
+        if xzyAdj not in d and self.IsJumpable(*xzyAdj):
           d[xzyAdj] = xzyD + 1
           queue.append(xzyAdj)
 
@@ -125,16 +179,22 @@ class ChunkColumn(object):
     self._skyLightData = skyLightData
     self._biome = biomeData
 
-  def GetBlock(self, x, z, y):
+  def _GetOffset(self, x, z, y):
     x, z, y = int(x), int(z), int(y)
     #print x, z, y
     #print x - self.chunkX * 16, z - self.chunkZ * 16, y
-    offset = (       (x - self.chunkX * 16) +
-              (16 *  (z - self.chunkZ * 16)) +
-              (256 * (y))
-             )
-    #print offset
-    blockType = self._blocks[offset]
+    return (       (x - self.chunkX * 16) +
+            (16 *  (z - self.chunkZ * 16)) +
+            (256 * (y))
+           )
+
+  def SetBlock(self, x, z, y, newType, newMeta):
+    # TODO: what about extra 4 bits?
+    self._blocks[self._GetOffset(x, z, y)] = (newType & 0xff)
+    return newType
+
+  def GetBlock(self, x, z, y):
+    blockType = self._blocks[self._GetOffset(x, z, y)]
     return blockType
 
 class MineCraftProtocol(object):
@@ -205,7 +265,7 @@ class MineCraftProtocol(object):
         #'\x32',
         #'\x33',
         '\x34',
-        #'\x35',
+        '\x35',
         '\x46',
         '\xc8',
         '\xff',
@@ -217,6 +277,8 @@ class MineCraftProtocol(object):
         threading.Thread(target=self._DoReadThread),
         threading.Thread(target=self._DoSendThread),
         ]
+
+    self._recvCondition = threading.Condition()
 
 
   ##############################################################################
@@ -253,6 +315,8 @@ class MineCraftProtocol(object):
     while True:
       #time.sleep(0.010)
       self.RecvPacket()
+      with self._recvCondition:
+        self._recvCondition.notifyAll()
 
   def _DoSendThread(self):
     while True:
@@ -299,12 +363,14 @@ class MineCraftProtocol(object):
         sys.stderr.write('%s  ' % hex(ord(i)))
       raise
 
-  def WaitFor(self, ilk):
-    gotten_ilk = None
-    while gotten_ilk != ilk:
-      gotten_ilk, parsed = self.RecvPacket()
-    print u'Got: %s' % hex(ord(gotten_ilk))
-    return parsed
+  def WaitFor(self, what, timeout=30):
+    start = time.time()
+    with self._recvCondition:
+      while not what():
+        self._recvCondition.wait(timeout=2)
+        if time.time() - start > timeout:
+          return False
+    return True
 
   def PackString(self, string):
     return struct.pack('!h', len(string)) + string.encode('utf_16_be')
@@ -741,14 +807,34 @@ class MineCraftProtocol(object):
     return ret
 
   def ParseMultiBlockChange(self):
-    ret = [
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        ]
-    self.UnpackInt16()
-    # TODO: parse the array of blocks
-    ret.append(self.Read(self.UnpackInt32()))
-    return ret
+    blocks = []
+    chunkX = self.UnpackInt32()
+    chunkZ = self.UnpackInt32()
+
+    count = self.UnpackInt16()
+    size = self.UnpackInt32()
+
+    if count *4 != size:
+      print "WTF:", count, size
+    for i in range(count):
+      record = self.UnpackInt32()
+      meta = record & 0xf # 4 bits
+      record >> 4
+      blockId = record & 0xfff # 12 bits
+      record >> 12
+      y = record & 0xf # 8 bits
+      record >> 8
+      relativeZ  = record & 0xf # 4 bits
+      record >> 4
+      relativeX  = record & 0xf # 4 bits
+      record >> 4
+
+      blocks.append((chunkX * 16 + relativeX,
+                     chunkZ * 16 + relativeZ,
+                     y,
+                     blockId,
+                     meta))
+    return (blocks,)
 
   def ParseBlockChange(self):
     return (
@@ -835,8 +921,10 @@ class MineCraftProtocol(object):
     self.Send(packet)
 
 
-Position = collections.namedtuple('Position',
-    ('x', 'y', 'stance', 'z', 'yaw', 'pitch', 'on_ground'))
+class Position(collections.namedtuple('Position',
+    ('x', 'y', 'stance', 'z', 'yaw', 'pitch', 'on_ground'))):
+  def xzy(self):
+    return Xzy(self.x, self.z, self.y)
 
 class MineCraftBot(MineCraftProtocol):
 
@@ -852,8 +940,9 @@ class MineCraftBot(MineCraftProtocol):
     self._handlers = {
         '\x00': self.OnKeepAlive,
         '\x0d': self.OnPlayerPositionLook,
-        '\x35': self.OnBlockChange,
         '\x33': self.world.MapChunk,
+        '\x34': self.OnMultiBlockChange,
+        '\x35': self.OnBlockChange,
         }
 
   def Login(self, username, password):
@@ -878,7 +967,7 @@ class MineCraftBot(MineCraftProtocol):
   def _DoPositionUpdateThread(self):
     time.sleep(2)
     while True:
-      time.sleep(0.050)
+      time.sleep(0.010)
       self.SendPositionLook()
 
   def OnKeepAlive(self, token):
@@ -898,22 +987,30 @@ class MineCraftBot(MineCraftProtocol):
 
   def OnPlayerPositionLook(self, x, stance, y, z, yaw, pitch, onGround):
     self._pos = Position(x, y, stance, z, yaw, pitch, onGround)
-    print "Corrected Position: ", self._pos
+    print "Corrected Position: ", self._pos.x, self._pos.z, self._pos.y
     self.SendPositionLook()
     self._pos = Position(self._pos.x, self._pos.y, self._pos.stance,
         self._pos.z, self._pos.yaw, self._pos.pitch, 1)
 
+  def OnMultiBlockChange(self, blocks):
+    for x, z, y, newType, newMeta in blocks:
+      self.world.SetBlock(x, z, y, newType, newMeta)
+
   def OnBlockChange(self, x, y, z, newType, newMeta):
-    if newType == 0:
-      final_y = self._pos.y - 1 #int(self._pos.y - 2)
-      print "new y:", final_y
-      print x, y, z, newType, newMeta
-      #self._pos = Position(self._pos.x, final_y, final_y + 1,
-          #self._pos.z, self._pos.yaw, self._pos.pitch, 1)
-      #self.SendDig(self._pos.x, self._pos.z, self._pos.y - 1, 1)
+    self.world.SetBlock(x, z, y, newType, newMeta)
 
   def OnMapChunks(self, chunk):
     self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
+
+
+  def DoDig(self, x, z, y, face, retries=3):
+    bot.SendDig(x, z, y, 1)
+    for i in range(retries):
+      if bot.WaitFor(lambda: bot.world.GetBlock(*blockXzy) == 0):
+        return True
+      else:
+        print "retrying"
+        bot.SendDig(x, z, y, 1)
 
 
   def SendDig(self, x, z, y, face):
@@ -935,16 +1032,26 @@ class MineCraftBot(MineCraftProtocol):
         )
 
   def MoveTo(self, x, z, y, speed=4.25, onGround=True):
-    def Dist(x, z, y):
+    def MyDist(x, z, y):
       return abs(self._pos.x - x) + abs(self._pos.z - z) + abs(self._pos.y - y)
 
+    yaw = self._pos.yaw
     def Go(x=None, z=None, y=None):
       self._pos = Position(x, y, y+1, z,
-          self._pos.yaw, self._pos.pitch, onGround)
+          yaw, self._pos.pitch, onGround)
 
-    tau = 0.050
+    if z - self._pos.z > .9:
+      yaw = 0
+    if z - self._pos.z < - .9:
+      yaw = 180
+    if x - self._pos.x > .9:
+      yaw = 270
+    if x - self._pos.x < - .9:
+      yaw = 90
+
+    tau = 0.010
     delta = speed * tau
-    while Dist(x, z, y) > (delta * 2):
+    while MyDist(x, z, y) > (delta * 2):
       if self._pos.x - x > 0:
         new_x = self._pos.x - delta
       else:
@@ -962,6 +1069,61 @@ class MineCraftBot(MineCraftProtocol):
       time.sleep(tau)
     Go(x, z, y)
 
+  def DigShaft(self, xRange, zRange):
+    def Within(dist, xzyA, xzyB):
+      if Dist(xzyA, xzyB) < dist:
+        return xzyB
+
+    def WantSolid(x, z, y):
+      xFirst, xLast = xRange[0], xRange[1] - 1
+      zFirst, zLast = zRange[0], zRange[1] - 1
+      #if xFirst < x < xLast and zFirst < z < zLast:
+        #return False
+      if x == xFirst or x == xLast:
+        return not (y % 5)
+      if z == zFirst:
+        return not ((x - xFirst + y) % 5)
+      if z == xLast:
+        return not ((xLast - x + y) % 5)
+      return False
+
+    for y in range(127, -1, -1):
+      for x in range(*xRange):
+        for z in range(*zRange):
+          blockXzy = Xzy(x, z, y)
+          self.WaitFor(lambda: self.world.GetBlock(*blockXzy) is not None)
+          blockType = self.world.GetBlock(*blockXzy)
+          if WantSolid(*blockXzy):
+            print "Want block solid:", blockXzy, blockType
+            # TODO: place
+            continue
+          if blockType == 0:
+            continue
+          print "Wanna dig block:", blockXzy, blockType
+          botXzy = Xzy(self._pos.x, self._pos.z, self._pos.y)
+          nextXzy = self.world.FindNearest(botXzy,
+              functools.partial(Within, 1.5, blockXzy))
+          if not nextXzy:
+            print "But can't find a digging spot ;("
+            continue
+          print "Wanna go to:", nextXzy
+          path = self.world.FindPath(botXzy, nextXzy)
+          if not path:
+            print "But no path :("
+            continue
+          print "Moving to:", nextXzy
+          for xzy in path:
+            print "mini - Move to:", xzy
+            self.MoveTo(xzy.x + .5, xzy.z + .5, xzy.y + .2)
+          print "Digging:", blockXzy
+          self.SendDig(blockXzy.x, blockXzy.z, blockXzy.y, 1)
+          self.WaitFor(lambda: self.world.GetBlock(*blockXzy) == 0)
+          print "block broken!"
+          print
+          print
+          #time.sleep(5)
+
+
 
 def main():
   host = '108.59.83.223'    # The remote host
@@ -978,106 +1140,12 @@ def main():
   bot = MineCraftBot(host, port)
   bot.Start()
   bot.Login(username, password)
-  new_y = bot._pos.y #- 1 #int(bot._pos.y - 2)
-  new_x = bot._pos.x - 1 #int(bot._pos.y - 2)
-  xzyA = Xzy(139.5, 256.5, 64)
-  xzyB = Xzy(140.5, 240.5, 66)
-  while True:
-    print
-    time.sleep(3)
-    print 'going to:', xzyA
-    path = bot.world.FindPath(Xzy(bot._pos.x, bot._pos.z, bot._pos.y), xzyA)
-    if path:
-      for xzy in path:
-        bot.MoveTo(xzy.x + .5, xzy.z + .5, xzy.y)
-    print 'Arrived: ', bot._pos.x, bot._pos.z, bot._pos.y
 
-    time.sleep(3)
-    print 'going to:', xzyB
-    path = bot.world.FindPath(Xzy(bot._pos.x, bot._pos.z, bot._pos.y), xzyB)
-    if path:
-      for xzy in path:
-        bot.MoveTo(xzy.x + .5, xzy.z + .5, xzy.y)
-    print 'Arrived: ', bot._pos.x, bot._pos.z, bot._pos.y
+  bot.WaitFor(lambda: bot._pos.x != 0.0)
+  print "done!", bot._pos.x
 
-    continue
-
-    print 'Position: ', bot._pos.x, bot._pos.z, bot._pos.y
-    path = bot.world.FindPath(
-        (139.5, 256.5, 64),
-        (140.5, 240.5, 66),
-        )
-    # pp(path)
-    if path:
-      for xzy in path:
-        print xzy
-        print "  ",
-        for i in range(63, 68):
-          print " %2d" % bot.world.GetBlock(xzy.x, xzy.z, i),
-        print
-    '''
-    print (bot._pos.x/16, bot._pos.z/16)
-    print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y)
-    print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y - 1)
-    print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y - 2)
-    print bot.GetBlock(bot._pos.x, bot._pos.z, 0)
-    for i in range(bot._pos.y + 5):
-      print "  i: ", i,  bot.GetBlock(bot._pos.x, bot._pos.z, i)
-    '''
-    for dest in [
-        (146, 248, 64),
-        (139.5, 256.5, 64),
-        (139.5, 256.5, 69),
-        (139.5, 256.5, 64),
-        #(139.5, 256.5, 64),
-        ]:
-      time.sleep(1)
-      bot.MoveTo(*dest)
-    #for i in range(bot._pos.y + 5):
-      #print "  i: ", i,  bot.world.GetBlock(bot._pos.x, bot._pos.z, i)
-    continue
-    #new_x = bot._pos.x - 1 #int(bot._pos.y - 2)
-    new_y = bot._pos.y - 1 #int(bot._pos.y - 2)
-    print bot._pos.y
-    bot._pos = Position(new_x, new_y, new_y + 1,
-        bot._pos.z, bot._pos.yaw, bot._pos.pitch, 1)
-
-
-  # Dig
-  bot.SendPositionLook()
-  last_pos_update = 0
-  start_time = time.time()
-  print "start_y:", bot._pos.y
-  final_y = bot._pos.y - 1 #int(bot._pos.y - 2)
-  bot._pos = Position(bot._pos.x, final_y, final_y + 1,
-      bot._pos.z, bot._pos.yaw, bot._pos.pitch, 1)
-  bot.SendPositionLook()
-
-  until = time.time() + 10
-  while time.time() < until:
-    if time.time() - last_pos_update > 0.05:
-      bot.SendPositionLook()
-      last_pos_update = time.time()
-      #bot._pos = Position(bot._pos.x, final_y, final_y + 1,
-          #bot._pos.z, bot._pos.yaw, bot._pos.pitch, 1)
-      #('x', 'y', 'stance', 'z', 'yaw', 'pitch', 'on_ground'))
-    bot.RecvPacket()
-
-  last_dig = 0
-  while True:
-    if time.time() - last_pos_update > 0.05:
-      bot.SendPositionLook()
-      last_pos_update = time.time()
-      #bot._pos = Position(bot._pos.x, final_y, final_y + 1,
-          #bot._pos.z, bot._pos.yaw, bot._pos.pitch, 1)
-      #('x', 'y', 'stance', 'z', 'yaw', 'pitch', 'on_ground'))
-    if time.time() - last_dig > 20:
-      pos = bot._pos
-      bot.SendDig(pos.x, pos.z, pos.y - 1, 1)
-
-    #while len(bot._buf) > 10:
-      #print len(bot._buf)
-    bot.RecvPacket()
+  #bot.DigShaft( (130, 150), (240, 260) )
+  bot.DigShaft( (135, 150), (220, 235) )
 
 
 if __name__ == '__main__':
