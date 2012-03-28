@@ -842,7 +842,7 @@ class MineCraftBot(MineCraftProtocol):
         pack('!b', face)
         )
 
-  def MoveTo(self, x, z, y, speed=1.0, onGround=True):
+  def MoveTo(self, x, z, y, speed=4.25, onGround=True):
     def Dist(x, z, y):
       return abs(self._pos.x - x) + abs(self._pos.z - z) + abs(self._pos.y - y)
 
@@ -900,12 +900,13 @@ def main():
       print "  i: ", i,  bot.GetBlock(bot._pos.x, bot._pos.z, i)
     '''
     for dest in [
-        #(146, 248, 64),
+        (146, 248, 64),
         (139.5, 256.5, 64),
         (139.5, 256.5, 69),
+        (139.5, 256.5, 64),
         #(139.5, 256.5, 64),
         ]:
-      time.sleep(5)
+      time.sleep(1)
       bot.MoveTo(*dest)
     for i in range(bot._pos.y + 5):
       print "  i: ", i,  bot.GetBlock(bot._pos.x, bot._pos.z, i)
