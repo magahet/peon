@@ -73,9 +73,10 @@ class World(object):
       yield xzy, self.GetBlock(*xzy)
 
   def FindPath(self, xzyA, xzyB):
+    # TODO: A*
     xzyA = Xzy(*xzyA)
     xzyB = Xzy(*xzyB)
-    print xzyA, xzyB
+    #print xzyA, xzyB
 
     if not self.IsStandable(*xzyA) or not self.IsStandable(*xzyB):
       print "not standable start or dest"
@@ -745,8 +746,8 @@ class MineCraftProtocol(object):
         self.UnpackInt32(),
         ]
     self.UnpackInt16()
+    # TODO: parse the array of blocks
     ret.append(self.Read(self.UnpackInt32()))
-    # TODO: parse the internals
     return ret
 
   def ParseBlockChange(self):
@@ -942,19 +943,20 @@ class MineCraftBot(MineCraftProtocol):
           self._pos.yaw, self._pos.pitch, onGround)
 
     tau = 0.050
-    while Dist(x, z, y) > speed:
+    delta = speed * tau
+    while Dist(x, z, y) > (delta * 2):
       if self._pos.x - x > 0:
-        new_x = self._pos.x - speed * tau
+        new_x = self._pos.x - delta
       else:
-        new_x = self._pos.x + speed * tau
+        new_x = self._pos.x + delta
       if self._pos.z - z > 0:
-        new_z = self._pos.z - speed * tau
+        new_z = self._pos.z - delta
       else:
-        new_z = self._pos.z + speed * tau
+        new_z = self._pos.z + delta
       if self._pos.y - y > 0:
-        new_y = self._pos.y - speed * tau
+        new_y = self._pos.y - delta
       else:
-        new_y = self._pos.y + speed * tau
+        new_y = self._pos.y + delta
       Go(new_x, new_z, new_y)
       #print self._pos
       time.sleep(tau)
@@ -978,8 +980,28 @@ def main():
   bot.Login(username, password)
   new_y = bot._pos.y #- 1 #int(bot._pos.y - 2)
   new_x = bot._pos.x - 1 #int(bot._pos.y - 2)
+  xzyA = Xzy(139.5, 256.5, 64)
+  xzyB = Xzy(140.5, 240.5, 66)
   while True:
-    time.sleep(1)
+    print
+    time.sleep(3)
+    print 'going to:', xzyA
+    path = bot.world.FindPath(Xzy(bot._pos.x, bot._pos.z, bot._pos.y), xzyA)
+    if path:
+      for xzy in path:
+        bot.MoveTo(xzy.x + .5, xzy.z + .5, xzy.y)
+    print 'Arrived: ', bot._pos.x, bot._pos.z, bot._pos.y
+
+    time.sleep(3)
+    print 'going to:', xzyB
+    path = bot.world.FindPath(Xzy(bot._pos.x, bot._pos.z, bot._pos.y), xzyB)
+    if path:
+      for xzy in path:
+        bot.MoveTo(xzy.x + .5, xzy.z + .5, xzy.y)
+    print 'Arrived: ', bot._pos.x, bot._pos.z, bot._pos.y
+
+    continue
+
     print 'Position: ', bot._pos.x, bot._pos.z, bot._pos.y
     path = bot.world.FindPath(
         (139.5, 256.5, 64),
