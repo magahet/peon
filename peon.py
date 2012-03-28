@@ -12,7 +12,103 @@ import urllib
 import urllib2
 import zlib
 
+from pprint import pprint as pp
 from struct import pack, unpack
+
+class Xzy(collections.namedtuple('Xzy', ('x', 'z', 'y'))):
+  def __new__(cls, *args, **kwargs):
+    args = map(int, args)
+    for k, v in kwargs.iteritems():
+      kwargs[k] = int(v)
+    return super(Xzy, cls).__new__(cls, *args, **kwargs)
+
+  def Offset(self, x=0, z=0, y=0):
+    return Xzy(self.x + x, self.z + z, self.y + y)
+
+
+class World(object):
+  def __init__(self):
+    self._chunks = {}
+    pass
+
+  def MapChunk(self, chunk):
+    self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
+
+  def GetBlock(self, x, z, y):
+    chunk = self._chunks.get((int(x/16), int(z/16)))
+    if not chunk:
+      return None
+    return chunk.GetBlock(int(x), int(z), int(y))
+
+  def IsStandable(self, x, z, y):
+    SOLID = set(range(1, 5) + [7] + range(12, 27))
+    # LADDER =
+
+    #print "types:", x, z, y, ':', 
+    #print self.GetBlock(x, z, y - 2),
+    #print self.GetBlock(x, z, y - 1),
+    #print self.GetBlock(x, z, y)    ,
+    #print self.GetBlock(x, z, y + 1)
+    return (
+        (self.GetBlock(x, z, y - 2) in SOLID or
+         self.GetBlock(x, z, y - 1) in SOLID) and
+        self.GetBlock(x, z, y)     not in SOLID and
+        self.GetBlock(x, z, y + 1) not in SOLID
+        )
+
+  def IterAdjacent(self, x, z, y):
+    adjacents = [
+        # prefer down
+        Xzy(x, z, y - 1),
+        # front and back
+        Xzy(x + 1, z, y),
+        Xzy(x - 1, z, y),
+        # sides
+        Xzy(x, z + 1, y),
+        Xzy(x, z - 1, y),
+        # avoid up
+        Xzy(x, z, y + 1),
+        ]
+    for xzy in adjacents:
+      yield xzy, self.GetBlock(*xzy)
+
+  def FindPath(self, xzyA, xzyB):
+    xzyA = Xzy(*xzyA)
+    xzyB = Xzy(*xzyB)
+    print xzyA, xzyB
+
+    if not self.IsStandable(*xzyA) or not self.IsStandable(*xzyB):
+      print "not standable start or dest"
+      print xzyA, xzyB
+      return None
+
+    d = {}
+    d[xzyA] = 0
+    queue = [xzyA]
+
+    while queue and xzyB not in d:
+      xzy = queue.pop(0)
+      xzyD = d[xzy]
+      for xzyAdj, blockAdj in self.IterAdjacent(*xzy):
+        if xzyAdj not in d and self.IsStandable(*xzyAdj):
+          d[xzyAdj] = xzyD + 1
+          queue.append(xzyAdj)
+
+    if xzyB not in d:
+      print "dest not found"
+      return None
+
+    path = [xzyB]
+    while path[-1] != xzyA:
+      for xzyAdj, blockAdj in self.IterAdjacent(*path[-1]):
+        if xzyAdj in d and d[xzyAdj] < d[path[-1]]:
+          path.append(xzyAdj)
+          break
+    path.reverse()
+    return path
+
+
+
 
 
 class ChunkColumn(object):
@@ -748,15 +844,16 @@ class MineCraftBot(MineCraftProtocol):
     sock.connect((host, port))
     super(MineCraftBot, self).__init__(sock)
 
+    self.world = World()
+    self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
+
+    self._threads.append(threading.Thread(target=self._DoPositionUpdateThread))
     self._handlers = {
         '\x00': self.OnKeepAlive,
         '\x0d': self.OnPlayerPositionLook,
         '\x35': self.OnBlockChange,
-        '\x33': self.OnMapChunks,
+        '\x33': self.world.MapChunk,
         }
-    self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
-    self._threads.append(threading.Thread(target=self._DoPositionUpdateThread))
-    self._chunks = {}
 
   def Login(self, username, password):
     """
@@ -776,12 +873,6 @@ class MineCraftBot(MineCraftProtocol):
     #print self.WaitFor('\x01')
 
     #print self.WaitFor('\x0d')
-
-  def GetBlock(self, x, z, y):
-    chunk = self._chunks.get((int(x/16), int(z/16)))
-    if not chunk:
-      return None
-    return chunk.GetBlock(int(x), int(z), int(y))
 
   def _DoPositionUpdateThread(self):
     time.sleep(2)
@@ -816,9 +907,9 @@ class MineCraftBot(MineCraftProtocol):
       final_y = self._pos.y - 1 #int(self._pos.y - 2)
       print "new y:", final_y
       print x, y, z, newType, newMeta
-      self._pos = Position(self._pos.x, final_y, final_y + 1,
-          self._pos.z, self._pos.yaw, self._pos.pitch, 1)
-      self.SendDig(self._pos.x, self._pos.z, self._pos.y - 1, 1)
+      #self._pos = Position(self._pos.x, final_y, final_y + 1,
+          #self._pos.z, self._pos.yaw, self._pos.pitch, 1)
+      #self.SendDig(self._pos.x, self._pos.z, self._pos.y - 1, 1)
 
   def OnMapChunks(self, chunk):
     self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
@@ -890,6 +981,18 @@ def main():
   while True:
     time.sleep(1)
     print 'Position: ', bot._pos.x, bot._pos.z, bot._pos.y
+    path = bot.world.FindPath(
+        (139.5, 256.5, 64),
+        (140.5, 240.5, 66),
+        )
+    # pp(path)
+    if path:
+      for xzy in path:
+        print xzy
+        print "  ",
+        for i in range(63, 68):
+          print " %2d" % bot.world.GetBlock(xzy.x, xzy.z, i),
+        print
     '''
     print (bot._pos.x/16, bot._pos.z/16)
     print bot.GetBlock(bot._pos.x, bot._pos.z, bot._pos.y)
@@ -908,8 +1011,8 @@ def main():
         ]:
       time.sleep(1)
       bot.MoveTo(*dest)
-    for i in range(bot._pos.y + 5):
-      print "  i: ", i,  bot.GetBlock(bot._pos.x, bot._pos.z, i)
+    #for i in range(bot._pos.y + 5):
+      #print "  i: ", i,  bot.world.GetBlock(bot._pos.x, bot._pos.z, i)
     continue
     #new_x = bot._pos.x - 1 #int(bot._pos.y - 2)
     new_y = bot._pos.y - 1 #int(bot._pos.y - 2)
