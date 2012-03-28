@@ -1164,9 +1164,9 @@ def main():
   print "done!", bot._pos.x
 
   #bot.DigShaft( (130, 150), (240, 260) )
-  #bot.DigShaft( (135, 150), (220, 235) )
   bot.DigShaft( (160, 175), (250, 265) )
-
+  bot.DigShaft( (135, 150), (220, 235) )
+  bot.DigShaft( (130, 150), (240, 260) )
 
 if __name__ == '__main__':
   main()
