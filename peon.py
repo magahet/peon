@@ -958,11 +958,8 @@ class MineCraftBot(MineCraftProtocol):
     """
 
     print 'sending login...'
-
     self.SendLogin(username)
-    #print self.WaitFor('\x01')
-
-    #print self.WaitFor('\x0d')
+    self.FloatDown()
 
   def _DoPositionUpdateThread(self):
     time.sleep(2)
@@ -1069,6 +1066,17 @@ class MineCraftBot(MineCraftProtocol):
       time.sleep(tau)
     Go(x, z, y)
 
+  def FloatDown(self):
+    self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
+    self.WaitFor(lambda: self.world.GetBlock(
+      self._pos.x, self._pos.z, self._pos.y) is not None)
+    print "block:", self.world.GetBlock(self._pos.x, self._pos.z, self._pos.y)
+    while not self.world.IsStandable(self._pos.x, self._pos.z, self._pos.y):
+      print "floatin..."
+      self.MoveTo(int(self._pos.x) + .5, int(self._pos.z) + .5, self._pos.y - 1)
+      time.sleep(0.100)
+    print "block:", self.world.GetBlock(self._pos.x, self._pos.z, self._pos.y)
+
   def DigShaft(self, xRange, zRange):
     def Within(dist, xzyA, xzyB):
       if Dist(xzyA, xzyB) < dist:
@@ -1087,7 +1095,7 @@ class MineCraftBot(MineCraftProtocol):
         return not (y % 5)
       if z == zFirst:
         return not ((x - xFirst + y) % 5)
-      if z == xLast:
+      if z == zLast:
         return not ((xLast - x + y) % 5)
       return False
 
@@ -1098,7 +1106,7 @@ class MineCraftBot(MineCraftProtocol):
           self.WaitFor(lambda: self.world.GetBlock(*blockXzy) is not None)
           blockType = self.world.GetBlock(*blockXzy)
           if WantSolid(*blockXzy):
-            print "Want block solid:", blockXzy, blockType
+            #print "Want block solid:", blockXzy, blockType
             # TODO: place
             continue
           if blockType == 0:
@@ -1145,7 +1153,7 @@ def main():
   bot.Start()
   bot.Login(username, password)
 
-  bot.WaitFor(lambda: bot._pos.x != 0.0)
+  bot.FloatDown()
   print "done!", bot._pos.x
 
   #bot.DigShaft( (130, 150), (240, 260) )
