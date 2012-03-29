@@ -198,10 +198,18 @@ class ChunkColumn(object):
     return blockType
 
 class MineCraftProtocol(object):
-  def __init__(self, sock):
-    self._sock = sock
+  def __init__(self):
+    self._sock = None
+    self._sockGeneration = 0
+    self._recvCondition = threading.Condition()
     self._buf = ""
     self._sendQueue = Queue.Queue(10)
+
+    self._threads = []
+    self._threadFuncs = [
+        self._DoReadThread,
+        self._DoSendThread,
+        ]
 
     self._parsers = {
         '\x00': self.ParseKeepAlive,
@@ -273,13 +281,6 @@ class MineCraftProtocol(object):
 
     self._handlers = {}
 
-    self._threads = [
-        threading.Thread(target=self._DoReadThread),
-        threading.Thread(target=self._DoSendThread),
-        ]
-
-    self._recvCondition = threading.Condition()
-
 
   ##############################################################################
   # minecraft.net methods
@@ -306,23 +307,29 @@ class MineCraftProtocol(object):
   ##############################################################################
   # Thread functions
 
-  def Start(self):
-    for thread in self._threads:
+  def StartThreads(self):
+    for func in self._threadFuncs:
+      thread = threading.Thread(target=func)
       thread.daemon = True
       thread.start()
+      self._threads.append(thread)
+    return self
 
   def _DoReadThread(self):
-    while True:
-      #time.sleep(0.010)
-      self.RecvPacket()
-      with self._recvCondition:
-        self._recvCondition.notifyAll()
+    try:
+      myGeneration = self._sockGeneration
+      while myGeneration == self._sockGeneration:
+        self.RecvPacket()
+    finally:
+      print "ReadThread exiting"
 
   def _DoSendThread(self):
-    while True:
-      #time.sleep(0.010)
-      #time.sleep(0.05)
-      self._sock.sendall(self._sendQueue.get())
+    try:
+      myGeneration = self._sockGeneration
+      while myGeneration == self._sockGeneration:
+        self._sock.sendall(self._sendQueue.get())
+    finally:
+      print "SendThread exiting"
 
 
   ##############################################################################
@@ -356,7 +363,8 @@ class MineCraftProtocol(object):
       handler = self._handlers.get(ilk)
       if handler:
         handler(*parsed)
-      return ilk, parsed
+        with self._recvCondition:
+          self._recvCondition.notifyAll()
     except KeyError:
       sys.stderr.write('unknown packet: %s\n' % hex(ord(ilk)))
       for i in self._buf[:30]:
@@ -926,17 +934,20 @@ class Position(collections.namedtuple('Position',
   def xzy(self):
     return Xzy(self.x, self.z, self.y)
 
-class MineCraftBot(MineCraftProtocol):
 
-  def __init__(self, host, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
-    super(MineCraftBot, self).__init__(sock)
+class MineCraftBot(MineCraftProtocol):
+  def __init__(self, host, port, username='peon', password=None):
+    super(MineCraftBot, self).__init__()
+
+    self._host = host
+    self._port = port
+    self._username = username
+    self._password = password
 
     self.world = World()
     self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
 
-    self._threads.append(threading.Thread(target=self._DoPositionUpdateThread))
+    self._threadFuncs.append(self._DoPositionUpdateThread)
     self._handlers = {
         '\x00': self.OnKeepAlive,
         '\x0d': self.OnPlayerPositionLook,
@@ -945,27 +956,34 @@ class MineCraftBot(MineCraftProtocol):
         '\x35': self.OnBlockChange,
         }
 
-  def Login(self, username, password):
-    """
-    self._sessionId = self.GetSessionId(username, password)
-    print 'sessionId:', self._sessionId
+  def Login(self, authenticate=False):
+    self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self._sock.connect((self._host, self._port))
+    self._sockGeneration += 1
 
-    self.SendHandshake(username, host, port)
-    self._serverId, = self.WaitFor('\x02')
-    print 'serverId:', self._serverId
+    self.StartThreads()
 
-    self.JoinServer(username, self._sessionId, self._serverId)
-    """
+    if authenticate:
+      self._sessionId = self.GetSessionId(username, password)
+      print 'sessionId:', self._sessionId
+      self.SendHandshake(username, host, port)
+      raise NotImplemented
+      self._serverId, = self.WaitFor('\x02')
+      print 'serverId:', self._serverId
+      self.JoinServer(username, self._sessionId, self._serverId)
 
     print 'sending login...'
-    self.SendLogin(username)
-    self.FloatDown()
+    self.SendLogin(self._username)
 
   def _DoPositionUpdateThread(self):
-    time.sleep(2)
-    while True:
-      time.sleep(0.010)
-      self.SendPositionLook()
+    try:
+      self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
+      myGeneration = self._sockGeneration
+      while myGeneration == self._sockGeneration:
+        time.sleep(0.010)
+        self.SendPositionLook()
+    finally:
+      print "Position update thread exiting"
 
   def OnKeepAlive(self, token):
     self.Send(
@@ -1157,11 +1175,10 @@ def main():
 
   #bot = MineCraftBot(host, port, username, password)
   bot = MineCraftBot(host, port)
-  bot.Start()
-  bot.Login(username, password)
-
+  bot.Login()
   bot.FloatDown()
-  print "done!", bot._pos.x
+  print "Fired up and ready to go!"
+  print bot._pos
 
   #bot.DigShaft( (130, 150), (240, 260) )
   bot.DigShaft( (160, 175), (250, 265) )
