@@ -308,6 +308,7 @@ class MineCraftProtocol(object):
   # Thread functions
 
   def StartThreads(self):
+    self._threads = []
     for func in self._threadFuncs:
       thread = threading.Thread(target=func)
       thread.daemon = True
@@ -321,15 +322,17 @@ class MineCraftProtocol(object):
       while myGeneration == self._sockGeneration:
         self.RecvPacket()
     finally:
-      print "ReadThread exiting"
+      print "ReadThread exiting", myGeneration
 
   def _DoSendThread(self):
     try:
       myGeneration = self._sockGeneration
-      while myGeneration == self._sockGeneration:
-        self._sock.sendall(self._sendQueue.get())
+      sock = self._sock
+      queue = self._sendQueue
+      while myGeneration == self._sockGeneration and self._sock is not None:
+        sock.sendall(queue.get())
     finally:
-      print "SendThread exiting"
+      print "SendThread exiting", myGeneration
 
 
   ##############################################################################
@@ -341,9 +344,11 @@ class MineCraftProtocol(object):
     self._sendQueue.put(packet)
 
   def Read(self, size):
+    # TODO: this thread could live on
     while len(self._buf) < size:
       #print "reading ", size, len(self._buf)
-      self._buf += self._sock.recv(4096)
+      recieved = self._sock.recv(4096)
+      self._buf += recieved
     ret = self._buf[:size]
     self._buf = self._buf[size:]
     return ret
@@ -947,7 +952,11 @@ class MineCraftBot(MineCraftProtocol):
     self.world = World()
     self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
 
-    self._threadFuncs.append(self._DoPositionUpdateThread)
+    self._threadFuncs.extend([
+        #self._DoCrashThread,
+        self._DoWatchdogThread,
+        self._DoPositionUpdateThread,
+        ])
     self._handlers = {
         '\x00': self.OnKeepAlive,
         '\x0d': self.OnPlayerPositionLook,
@@ -975,6 +984,46 @@ class MineCraftBot(MineCraftProtocol):
     print 'sending login...'
     self.SendLogin(self._username)
 
+  def _DoCrashThread(self):
+    time.sleep(60)
+    while self._sock is not None:
+      #print 'BADIDEA'
+      #print self._buf
+      self._buf = '\x1bADIDEA'
+      #print self._buf
+      time.sleep(1)
+
+  def _DoWatchdogThread(self):
+    try:
+      myGeneration = self._sockGeneration
+      # Give everyone a bit of time to wake up
+      time.sleep(5)
+      while all(t.is_alive() for t in self._threads):
+        time.sleep(1)
+
+      print "somebody died!"
+      deadTime = time.time()
+      self._sock = None
+      self._sendQueue.put(None)
+      self._sendQueue = None
+
+      def OtherThreadIsAlive():
+        return len([t for t in self._threads if t.is_alive()]) > 1
+      while OtherThreadIsAlive() and time.time() - deadTime < 5:
+        time.sleep(1)
+      if OtherThreadIsAlive():
+        print "somebody won't die! oh well."
+      time.sleep(3)
+
+      self._buf = ''
+      self._sendQueue = Queue.Queue(10)
+      self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
+      print 'WatchDog: loggin in'
+      self.Login()
+      self.FloatDown()
+    finally:
+      print "Watchdog thread exiting", myGeneration
+
   def _DoPositionUpdateThread(self):
     try:
       self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
@@ -983,7 +1032,7 @@ class MineCraftBot(MineCraftProtocol):
         time.sleep(0.010)
         self.SendPositionLook()
     finally:
-      print "Position update thread exiting"
+      print "Position update thread exiting", myGeneration
 
   def OnKeepAlive(self, token):
     self.Send(
