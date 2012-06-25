@@ -682,7 +682,7 @@ class MineCraftBot(MineCraftProtocol):
     for xzy in blocks:
       yield xzy
 
-  def find_nearest_blocktype(self, start, types=[15]):
+  def iter_find_nearest_blocktype(self, start, types=[15]):
     height_dict = {
       14: 32, #gold
       15: 64, #iron
@@ -693,27 +693,19 @@ class MineCraftBot(MineCraftProtocol):
       height = 96
     else:
       height = max(height_list)
-
     height = max(height, start.y)
     checked_blocks = set([])
     unchecked_blocks = collections.deque([start])
-
     block_type = 0
-    print 'finding blocktypes:', types,
-    while block_type not in types:
-      if len(unchecked_blocks) == 0:
-        return None
-      if len(checked_blocks) % 1000 == 0:
-        sys.stdout.write('.')
-        sys.stdout.flush()
+    while len(unchecked_blocks) != 0:
       block = unchecked_blocks.popleft()
       checked_blocks.add(block)
       for block in self.get_adjacent_blocks(block, max_height=height):
         if block not in checked_blocks and block not in unchecked_blocks and self.world.GetBlock(*block) is not None:
           unchecked_blocks.append(block)
       block_type = self.world.GetBlock(*block)
-    print 
-    return block
+      if block_type in types:
+        yield block
 
   def help_find_blocks(self, start, types=[15], chat=True):
     self.nav_to(start.x, start.z, 200)
