@@ -1,0 +1,129 @@
+dec, hex, type
+00, 0, air
+01, 1, stone
+02, 2, grass block
+03, 3, dirt
+04, 4, cobblestone
+05, 5, wooden planks
+06, 6, saplings
+07, 7, bedrock
+08, 8, water
+09, 9, stationary water
+10, a, lava
+11, b, stationary lava
+12, c, sand
+13, d, gravel
+14, e, gold ore
+15, f, iron ore
+16, 10, coal ore
+17, 11, wood
+18, 12, leaves
+19, 13, sponge
+20, 14, glass
+21, 15, lapis lazuli ore
+22, 16, lapis lazuli block
+23, 17, dispenser
+24, 18, sandstone
+25, 19, note block
+26, 1a, bed
+27, 1b, powered rail
+28, 1c, detector rail
+29, 1d, sticky piston
+30, 1e, cobweb
+31, 1f, tall grass
+32, 20, dead bush
+33, 21, piston
+34, 22, piston extension
+35, 23, wool
+36, 24, block moved by piston
+37, 25, dandelion
+38, 26, rose
+39, 27, brown mushroom
+40, 28, red mushroom
+41, 29, block of gold
+42, 2a, block of iron
+43, 2b, double slabs
+44, 2c, slabs
+45, 2d, bricks
+46, 2e, tnt
+47, 2f, bookshelf
+48, 30, moss stone
+49, 31, obsidian
+50, 32, torch
+51, 33, fire
+52, 34, monster spawner
+53, 35, wooden stairs
+54, 36, chest
+55, 37, redstone wire
+56, 38, diamond ore
+57, 39, block of diamond
+58, 3a, crafting table
+59, 3b, wheat seeds
+60, 3c, farmland
+61, 3d, furnace
+62, 3e, burning furnace
+63, 3f, sign post
+64, 40, wooden door
+65, 41, ladders
+66, 42, rails
+67, 43, cobblestone stairs
+68, 44, wall sign
+69, 45, lever
+70, 46, stone pressure plate
+71, 47, iron door
+72, 48, wooden pressure plate
+73, 49, redstone ore
+74, 4a, glowing redstone ore
+75, 4b, redstone torch ("off" state)
+76, 4c, redstone torch ("on" state)
+77, 4d, stone button
+78, 4e, snow
+79, 4f, ice
+80, 50, snow block
+81, 51, cactus
+82, 52, clay block
+83, 53, sugar cane
+84, 54, jukebox
+85, 55, fence
+86, 56, pumpkin
+87, 57, netherrack
+88, 58, soul sand
+89, 59, glowstone block
+90, 5a, portal
+91, 5b, jack-o-lantern
+92, 5c, cake block
+93, 5d, redstone repeater ("off" state)
+94, 5e, redstone repeater ("on" state)
+95, 5f, locked chest
+96, 60, trapdoor
+97, 61, monster egg
+98, 62, stone bricks
+99, 63, huge brown mushroom
+100, 64, huge red mushroom
+101, 65, iron bars
+102, 66, glass pane
+103, 67, melon
+104, 68, pumpkin stem
+105, 69, melon stem
+106, 6a, vines
+107, 6b, fence gate
+108, 6c, brick stairs
+109, 6d, stone brick stairs
+110, 6e, mycelium
+111, 6f, lily pad
+112, 70, nether brick
+113, 71, nether brick fence
+114, 72, nether brick stairs
+115, 73, nether wart
+116, 74, enchantment table
+117, 75, brewing stand
+118, 76, cauldron
+119, 77, end portal
+120, 78, end portal frame
+121, 79, end stone
+122, 7a, dragon egg
+123, 7b, redstone lamp (inactive)
+124, 7c, redstone lamp (active)
+125, 7d, wooden double slab
+126, 7e, wooden slab
+127, 7f, cocoa plant

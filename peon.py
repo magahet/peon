@@ -1,6 +1,11 @@
 #!/usr/bin/python
 
-import array
+import json
+import re
+import numpy
+from scipy.spatial.distance import cityblock, pdist
+import pickle
+import csv
 import collections
 import functools
 import math
@@ -13,957 +18,93 @@ import time
 import urllib
 import urllib2
 import zlib
-
-from pprint import pprint as pp
-from struct import pack, unpack
-
-class Xzy(collections.namedtuple('Xzy', ('x', 'z', 'y'))):
-  def __new__(cls, *args, **kwargs):
-    args = map(int, args)
-    for k, v in kwargs.iteritems():
-      kwargs[k] = int(v)
-    return super(Xzy, cls).__new__(cls, *args, **kwargs)
-
-  def Offset(self, x=0, z=0, y=0):
-    return Xzy(self.x + x, self.z + z, self.y + y)
-
-
-def Dist(xzyA, xzyB):
-  return math.sqrt(
-      (xzyA.x - xzyB.x) * (xzyA.x - xzyB.x) +
-      (xzyA.z - xzyB.z) * (xzyA.z - xzyB.z) +
-      (xzyA.y - xzyB.y) * (xzyA.y - xzyB.y)
-      )
-
-
-class World(object):
-  def __init__(self):
-    self._chunks = {}
-    pass
-
-  def MapChunk(self, chunk):
-    self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
-
-  def SetBlock(self, x, z, y, newType, newMeta):
-    chunk = self._chunks.get((int(x/16), int(z/16)))
-    if not chunk:
-      return None
-    return chunk.SetBlock(int(x), int(z), int(y), newType, newMeta)
-
-  def GetBlock(self, x, z, y):
-    chunk = self._chunks.get((int(x/16), int(z/16)))
-    if not chunk:
-      return None
-    return chunk.GetBlock(int(x), int(z), int(y))
-
-  def IsJumpable(self, x, z, y):
-    SOLID = set(range(1, 5) + [7] + range(12, 27))
-    # LADDER =
-
-    #print "types:", x, z, y, ':', 
-    #print self.GetBlock(x, z, y - 2),
-    #print self.GetBlock(x, z, y - 1),
-    #print self.GetBlock(x, z, y)    ,
-    #print self.GetBlock(x, z, y + 1)
-    return (
-        (self.GetBlock(x, z, y - 2) in SOLID or
-         self.GetBlock(x, z, y - 1) in SOLID) and
-        self.GetBlock(x, z, y)     not in SOLID and
-        self.GetBlock(x, z, y + 1) == 0
-        )
-
-  def IsStandable(self, x, z, y):
-    SOLID = set(range(1, 5) + [7] + range(12, 27))
-    # LADDER =
-
-    #print "types:", x, z, y, ':', 
-    #print self.GetBlock(x, z, y - 2),
-    #print self.GetBlock(x, z, y - 1),
-    #print self.GetBlock(x, z, y)    ,
-    #print self.GetBlock(x, z, y + 1)
-    return (
-        self.GetBlock(x, z, y - 1) in SOLID and
-        self.GetBlock(x, z, y)     not in SOLID and
-        self.GetBlock(x, z, y + 1) == 0
-        )
-
-  def IterAdjacent(self, x, z, y):
-    adjacents = [
-        # prefer down
-        Xzy(x, z, y - 1),
-        # front and back
-        Xzy(x + 1, z, y),
-        Xzy(x - 1, z, y),
-        # sides
-        Xzy(x, z + 1, y),
-        Xzy(x, z - 1, y),
-        # avoid up
-        Xzy(x, z, y + 1),
-        ]
-    for xzy in adjacents:
-      yield xzy, self.GetBlock(*xzy)
-
-  def FindNearestStandable(self, xzy, condition):
-    maxD = 100
-    d = {}
-    d[xzy] = 0
-    queue = [xzy]
-
-    while queue:
-      xzy = queue.pop(0)
-      xzyD = d[xzy]
-      if xzyD > maxD:
-        print "too far!"
-        break
-      if self.IsStandable(*xzy) and condition(xzy):
-        return xzy
-      for xzyAdj, blockAdj in self.IterAdjacent(*xzy):
-        if xzyAdj in d:
-          continue
-        if self.IsJumpable(*xzyAdj):
-          d[xzyAdj] = xzyD + 1
-          queue.append(xzyAdj)
-    return None
-
-  def FindPath(self, xzyA, xzyB):
-    # TODO: A*
-    xzyA = Xzy(*xzyA)
-    xzyB = Xzy(*xzyB)
-    #print xzyA, xzyB
-
-    #if not self.IsStandable(*xzyA) or not self.IsStandable(*xzyB):
-    if not self.IsStandable(*xzyB):
-      print "not standable dest!"
-      print xzyA, xzyB
-      return None
-
-    d = {}
-    d[xzyA] = 0
-    queue = [xzyA]
-
-    while queue and xzyB not in d:
-      xzy = queue.pop(0)
-      xzyD = d[xzy]
-      for xzyAdj, blockAdj in self.IterAdjacent(*xzy):
-        if xzyAdj not in d and self.IsJumpable(*xzyAdj):
-          d[xzyAdj] = xzyD + 1
-          queue.append(xzyAdj)
-
-    if xzyB not in d:
-      print "dest not found"
-      return None
-
-    path = [xzyB]
-    while path[-1] != xzyA:
-      for xzyAdj, blockAdj in self.IterAdjacent(*path[-1]):
-        if xzyAdj in d and d[xzyAdj] < d[path[-1]]:
-          path.append(xzyAdj)
-          break
-    path.reverse()
-    return path
-
-
-
-
-
-class ChunkColumn(object):
-  def __init__(self, chunkX, chunkZ,
-      blockData, blockMeta, lightData, skyLightData, addArray, biomeData):
-    self.chunkX = chunkX
-    self.chunkZ = chunkZ
-    self._blocks = blockData
-    self._meta = blockMeta
-    self._light = lightData
-    self._skylight = skyLightData
-    self._addArray = addArray
-    self._skyLightData = skyLightData
-    self._biome = biomeData
-
-  def _GetOffset(self, x, z, y):
-    x, z, y = int(x), int(z), int(y)
-    #print x, z, y
-    #print x - self.chunkX * 16, z - self.chunkZ * 16, y
-    return (       (x - self.chunkX * 16) +
-            (16 *  (z - self.chunkZ * 16)) +
-            (256 * (y))
-           )
-
-  def SetBlock(self, x, z, y, newType, newMeta):
-    # TODO: what about extra 4 bits?
-    self._blocks[self._GetOffset(x, z, y)] = (newType & 0xff)
-    return newType
-
-  def GetBlock(self, x, z, y):
-    blockType = self._blocks[self._GetOffset(x, z, y)]
-    return blockType
-
-class MineCraftProtocol(object):
-  def __init__(self):
-    self._sock = None
-    self._sockGeneration = 0
-    self._recvCondition = threading.Condition()
-    self._buf = ""
-    self._sendQueue = Queue.Queue(10)
-
-    self._threads = []
-    self._threadFuncs = [
-        self._DoReadThread,
-        self._DoSendThread,
-        ]
-
-    self._parsers = {
-        '\x00': self.ParseKeepAlive,
-        '\x01': self.ParseLogin,
-        '\x02': self.ParseHandshake,
-        '\x03': self.ParseChatMessage,
-        '\x04': self.ParseTimeUpdate,
-
-        '\x05': self.ParseEntityEquipment,
-
-        '\x06': self.ParseSpawn,
-        '\x08': self.ParseUpdateHealth,
-        '\x09': self.ParseRespawn,
-        '\x10': self.ParseHeldItemChange,
-
-        '\x0c': self.ParsePlayerLook,
-        '\x0d': self.ParsePlayerPositionLook,
-        '\x12': self.ParseAnimation,
-        '\x14': self.ParseSpawnNamedEntity,
-        '\x15': self.ParseSpawnDroppedItem,
-        '\x16': self.ParseCollectItem,
-        '\x17': self.ParseSpawnObjectVehicle,
-        '\x18': self.ParseSpawnMob,
-        '\x1a': self.ParseSpawnExperienceOrb,
-        '\x1c': self.ParseEntityVelocity,
-        '\x1d': self.ParseDestroyEntity,
-        '\x1f': self.ParseEntityRelativeMove,
-        '\x20': self.ParseEntityLook,
-        '\x21': self.ParseEntityRelativeLookAndMove,
-        '\x22': self.ParseEntityTeleport,
-        '\x23': self.ParseEntityHeadLook,
-        '\x26': self.ParseEntityStatus,
-        '\x28': self.ParseEntityMetadata,
-        '\x2a': self.ParseRemoveEntityEffect,
-        '\x2b': self.ParseSetExperience,
-        '\x32': self.ParseMapColumnAllocation,
-        '\x33': self.ParseMapChunks,
-        '\x34': self.ParseMultiBlockChange,
-        '\x35': self.ParseBlockChange,
-        '\x3d': self.ParseSoundParticleEffect,
-        '\x46': self.ParseChangeGameState,
-        '\x36': self.ParseBlockAction,
-        '\x67': self.ParseSetSlot,
-        '\x68': self.ParseSetWindowItems,
-        '\x84': self.ParseUpdateTileEntity,
-        '\xca': self.ParsePlayerAbility,
-        '\xc8': self.ParseIncrementStatistic,
-        '\xc9': self.ParsePlayerListItem,
-        '\xff': self.ParseKick,
-        }
-
-    self._interesting = set([
-        #'\x00',
-        '\x01',
-        '\x03',
-        '\x14',
-        '\x06',
-        '\x08',
-        '\x16',
-        #'\x0d',
-        #'\x32',
-        #'\x33',
-        '\x34',
-        '\x35',
-        '\x46',
-        '\xc8',
-        '\xff',
-        ])
-
-    self._handlers = {}
-
-
-  ##############################################################################
-  # minecraft.net methods
-
-  def GetSessionId(self, username, password):
-    data = urllib.urlencode((
-        ('user', username),
-        ('password', password),
-        ('version', '1337'),
-        ))
-    sessionString = urllib2.urlopen('https://login.minecraft.net/', data).read()
-    return sessionString.split(':')[3]
-
-  def JoinServer(self, username, sessionId, serverId):
-    data = urllib.urlencode((
-        ('user', username),
-        ('sessionId', sessionId),
-        ('serverId', serverId),
-        ))
-    url = 'http://session.minecraft.net/game/joinserver.jsp?' + data
-    return urllib2.urlopen(url).read()
-
-
-  ##############################################################################
-  # Thread functions
-
-  def StartThreads(self):
-    self._threads = []
-    for func in self._threadFuncs:
-      thread = threading.Thread(target=func)
-      thread.daemon = True
-      thread.start()
-      self._threads.append(thread)
-    return self
-
-  def _DoReadThread(self):
-    try:
-      myGeneration = self._sockGeneration
-      while myGeneration == self._sockGeneration:
-        self.RecvPacket()
-    finally:
-      print "ReadThread exiting", myGeneration
-
-  def _DoSendThread(self):
-    try:
-      myGeneration = self._sockGeneration
-      sock = self._sock
-      queue = self._sendQueue
-      while myGeneration == self._sockGeneration and self._sock is not None:
-        sock.sendall(queue.get())
-    finally:
-      print "SendThread exiting", myGeneration
-
-
-  ##############################################################################
-  # Protocol convenience methods
-
-  def Send(self, packet):
-    if packet[0] in self._interesting:
-      sys.stderr.write('\nSending packet: %s\n' % hex(ord(packet[0])))
-    self._sendQueue.put(packet)
-
-  def Read(self, size):
-    # TODO: this thread could live on
-    while len(self._buf) < size:
-      #print "reading ", size, len(self._buf)
-      recieved = self._sock.recv(4096)
-      self._buf += recieved
-    ret = self._buf[:size]
-    self._buf = self._buf[size:]
-    return ret
-
-  def RecvPacket(self):
-    ilk = self.Read(1)
-    #print hex(ord(ilk)), len(self._buf)
-    if ilk in self._interesting:
-      print '\nReceived packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
-    #for x in self._buf:
-      #print hex(ord(x)), ' ',
-    #print
-    try:
-      parsed = self._parsers[ilk]()
-      #if ilk in self._interesting:
-        #print '\nParsed packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
-      handler = self._handlers.get(ilk)
-      if handler:
-        handler(*parsed)
-        with self._recvCondition:
-          self._recvCondition.notifyAll()
-    except KeyError:
-      sys.stderr.write('unknown packet: %s\n' % hex(ord(ilk)))
-      for i in self._buf[:30]:
-        sys.stderr.write('%s  ' % hex(ord(i)))
-      raise
-
-  def WaitFor(self, what, timeout=30):
-    start = time.time()
-    with self._recvCondition:
-      while not what():
-        self._recvCondition.wait(timeout=2)
-        if time.time() - start > timeout:
-          return False
-    return True
-
-  def PackString(self, string):
-    return struct.pack('!h', len(string)) + string.encode('utf_16_be')
-
-  def UnpackInt8(self):
-    value, = struct.unpack('!b', self.Read(1))
-    return value
-
-  def UnpackUint8(self):
-    value, = struct.unpack('!B', self.Read(1))
-    return value
-
-  def UnpackInt16(self):
-    value, = struct.unpack('!h', self.Read(2))
-    return value
-
-  def UnpackInt32(self):
-    value, = struct.unpack('!i', self.Read(4))
-    return value
-
-  def UnpackInt64(self):
-    value, = struct.unpack('!q', self.Read(8))
-    return value
-
-  def UnpackFloat(self):
-    value, = struct.unpack('!f', self.Read(4))
-    return value
-
-  def UnpackDouble(self):
-    value, = struct.unpack('!d', self.Read(8))
-    return value
-
-  def UnpackString(self):
-    strlen = self.UnpackInt16()
-    #print 'strlen: ', strlen
-    #print len(self._buf), strlen*2
-    string = self.Read(strlen * 2).decode('utf_16_be')
-    print u'Got string: [%s]' % string
-    return string
-
-  def UnpackSlot(self):
-    itemId = self.UnpackInt16()
-    if itemId == -1:
-      return (itemId,)
-    itemCount = self.UnpackInt8()
-    damage = self.UnpackInt16()
-
-    #return (itemId, itemCount, damage)
-
-    data = ''
-    # These certain items are capable of having damage/enchantments
-    if ((256 <= itemId <= 259) or
-        (267 <= itemId <= 279) or
-        (283 <= itemId <= 286) or
-        (290 <= itemId <= 294) or
-        (298 <= itemId <= 317) or
-        itemId == 261 or itemId == 359 or itemId == 346):
-      arraySize = self.UnpackInt16()
-      print 'arraySize is: ', arraySize
-      if arraySize != -1:
-        data = self.Read(arraySize)
-
-    return (itemId, itemCount, damage, data)
-
-  def UnpackMetadata(self):
-    unpackers = {
-        0: self.UnpackInt8,
-        1: self.UnpackInt16,
-        2: self.UnpackInt32,
-        3: self.UnpackFloat,
-        4: self.UnpackString,
-        5: lambda: (self.UnpackInt16, self.UnpackInt8, self.UnpackInt16),
-        6: lambda: (self.UnpackInt32(), self.UnpackInt32(), self.UnpackInt32()),
-        }
-    values = []
-    while True:
-      what = self.UnpackInt8()
-      if what == 127:
-        return values
-      key = 0x1F & what
-      values.append((key, unpackers[what >> 5]()))
-    print 'WTF?'
-    return values
-
-  ##############################################################################
-  # Parsers
-
-  def ParseKick(self):
-    sys.stderr.write('Kicked: ' + self.UnpackString() + '\n')
-    raise Exception()
-
-  def ParseHandshake(self):
-    return (self.UnpackString(),)
-
-  def ParseChatMessage(self):
-    chat = self.UnpackString()
-    print "Chat:", chat
-    return (chat,)
-
-  def ParseKeepAlive(self):
-    return (self.UnpackInt32(),)
-
-  def ParseLogin(self):
-    entityId = self.UnpackInt32()
-    trash = self.UnpackString()
-    levelType = self.UnpackString()
-    serverMode = self.UnpackInt32()
-    dimension = self.UnpackInt32()
-    difficulty = self.UnpackInt8()
-    trash = self.UnpackUint8()
-    maxPlayers = self.UnpackUint8()
-    return (entityId, levelType, serverMode, dimension, difficulty, maxPlayers)
-
-  def ParseSpawn(self):
-    print len(self._buf)
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        )
-
-  def ParseUpdateHealth(self):
-    return (
-        self.UnpackInt16(),
-        self.UnpackInt16(),
-        self.UnpackFloat(),
-        )
-
-  def ParseRespawn(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt16(),
-        self.UnpackString(),
-        )
-
-  def ParseHeldItemChange(self):
-    return (
-        self.UnpackInt16(),
-        )
-
-  def ParsePlayerLook(self):
-    return (
-        self.UnpackFloat(),
-        self.UnpackFloat(),
-        self.UnpackInt8(),
-        )
-
-  def ParsePlayerPositionLook(self):
-    return (
-        self.UnpackDouble(),
-        self.UnpackDouble(),
-        self.UnpackDouble(),
-        self.UnpackDouble(),
-        self.UnpackFloat(),
-        self.UnpackFloat(),
-        self.UnpackInt8(),
-        )
-
-  def ParseAnimation(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        )
-
-  def ParseSpawnNamedEntity(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackString(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt16(),
-        )
-
-  def ParseSpawnDroppedItem(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt16(),
-        self.UnpackInt8(),
-        self.UnpackInt16(),
-
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def ParseCollectItem(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        )
-
-  def ParseSpawnObjectVehicle(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt16(),
-        self.UnpackInt16(),
-        self.UnpackInt16(),
-        )
-
-  def ParseSpawnMob(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackMetadata(),
-        )
-
-  def ParseSpawnExperienceOrb(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt16(),
-        )
-
-  def ParseEntityVelocity(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt16(),
-        self.UnpackInt16(),
-        self.UnpackInt16(),
-        )
-
-  def ParseDestroyEntity(self):
-    return (
-        self.UnpackInt32(),
-        )
-
-  def ParseEntityRelativeMove(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def ParseEntityLook(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def ParseEntityRelativeLookAndMove(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def ParseEntityTeleport(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def ParseEntityHeadLook(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        )
-
-  def ParseEntityStatus(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        )
-
-  def ParseEntityMetadata(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackMetadata(),
-        )
-
-  def ParseRemoveEntityEffect(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        )
-
-  def ParseSetExperience(self):
-    return (
-        self.UnpackFloat(),
-        self.UnpackInt16(),
-        self.UnpackInt16(),
-        )
-
-  def ParsePlayerAbility(self):
-    return (
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def ParseIncrementStatistic(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        )
-
-  def ParsePlayerListItem(self):
-    return (
-        self.UnpackString(),
-        self.UnpackInt8(),
-        self.UnpackInt16(),
-        )
-
-  def ParseTimeUpdate(self):
-    return (
-        self.UnpackInt64(),)
-
-  def ParseEntityEquipment(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt16(),
-        self.UnpackInt16(),
-        self.UnpackInt16(),
-        )
-
-  def ParseMapColumnAllocation(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        )
-
-  def ParseMapChunks(self):
-    chunkX = self.UnpackInt32()
-    chunkZ = self.UnpackInt32()
-    withBiome = self.UnpackInt8()
-    primaryBitMap = self.UnpackInt16()
-    addBitMap = self.UnpackInt16()
-
-    arraySize = self.UnpackInt32()
-    trash = self.UnpackInt32()  # "unused"
-
-    compressed = self.Read(arraySize)
-    data = [zlib.decompress(compressed)]
-    #print len(data[0]), hex(primaryBitMap)
-
-    def PopByteArray(size):
-      if len(data[0]) < size:
-        raise Exception('data not big enough!')
-      ret = array.array('B', data[0][:size])
-      data[0] = data[0][size:]
-      return  ret
-
-    blocks = array.array('B')
-    for i in range(16):
-      if primaryBitMap & (1 << i):
-        blocks.extend(PopByteArray(4096))
-      else:
-        blocks.extend([0] * 4096)
-
-    meta = []
-    for i in range(16):
-      if primaryBitMap & (1 << i):
-        meta.append(PopByteArray(2048))
-      else:
-        meta.append(array.array('B', [0] * 2048))
-
-    light = []
-    for i in range(16):
-      if primaryBitMap & (1 << i):
-        light.append(PopByteArray(2048))
-      else:
-        light.append(array.array('B', [0] * 2048))
-
-    skylight = []
-    for i in range(16):
-      if primaryBitMap & (1 << i):
-        skylight.append(PopByteArray(2048))
-      else:
-        skylight.append(array.array('B', [0] * 2048))
-
-    addArray = []
-    for i in range(16):
-      if addBitMap & (1 << i):
-        addArray.append(PopByteArray(2048))
-      else:
-        addArray.append(array.array('B', [0] * 2048))
-
-    if withBiome:
-      biome = PopByteArray(256)
-    else:
-      biome = None
-
-    if len(data[0]) > 0:
-      raise Exception('Unused bytes!')
-
-    return (ChunkColumn(chunkX, chunkZ,
-        blocks, meta, light, skylight, addArray, biome),)
-    return [chunkX, chunkZ, blocks, meta, light, skylight, addArray, biome]
-
-    ret = [
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-
-        self.UnpackInt16(),
-        self.UnpackInt16(),
-        ]
-    arraySize = self.UnpackInt32()
-    ret.append(self.UnpackInt32())  # "unused"
-    ret.append(self.Read(arraySize))
-    return ret
-
-  def ParseMultiBlockChange(self):
-    blocks = []
-    chunkX = self.UnpackInt32()
-    chunkZ = self.UnpackInt32()
-
-    count = self.UnpackInt16()
-    size = self.UnpackInt32()
-
-    if count *4 != size:
-      print "WTF:", count, size
-    for i in range(count):
-      record = self.UnpackInt32()
-      meta = record & 0xf # 4 bits
-      record >> 4
-      blockId = record & 0xfff # 12 bits
-      record >> 12
-      y = record & 0xf # 8 bits
-      record >> 8
-      relativeZ  = record & 0xf # 4 bits
-      record >> 4
-      relativeX  = record & 0xf # 4 bits
-      record >> 4
-
-      blocks.append((chunkX * 16 + relativeX,
-                     chunkZ * 16 + relativeZ,
-                     y,
-                     blockId,
-                     meta))
-    return (blocks,)
-
-  def ParseBlockChange(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def ParseSoundParticleEffect(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        )
-
-  def ParseChangeGameState(self):
-    return (
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def ParseBlockAction(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt16(),
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt8(),
-        )
-
-  def ParseSetSlot(self):
-    return (
-        self.UnpackInt8(),
-        self.UnpackInt16(),
-        self.UnpackSlot(),
-        )
-
-  def ParseSetWindowItems(self):
-    window = self.UnpackInt8()
-    slotCount = self.UnpackInt16()
-    #print "Array Size: ", slotCount
-    slots = []
-    for i in range(slotCount):
-      slots.append(self.UnpackSlot())
-    return (window, slots)
-
-  def ParseUpdateTileEntity(self):
-    return (
-        self.UnpackInt32(),
-        self.UnpackInt16(),
-        self.UnpackInt32(),
-        self.UnpackInt8(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        self.UnpackInt32(),
-        )
-
-
-  ##############################################################################
-  # Senders
-
-  def SendHandshake(self, username, server, port):
-    self.Send(
-        '\x02' +
-        self.PackString(u'%s;%s;%d' % (username, server, port))
-        )
-
-  def SendLogin(self, username):
-    packet = (
-        '\x01' +
-        pack('!i', 29) +
-        self.PackString(username) +
-        self.PackString('') +
-        pack('!i', 0) +
-        pack('!i', 0) +
-        pack('!b', 0) +
-        pack('!B', 0) +
-        pack('!B', 0)
-        )
-    self.Send(packet)
-
-
-class Position(collections.namedtuple('Position',
-    ('x', 'y', 'stance', 'z', 'yaw', 'pitch', 'on_ground'))):
-  def xzy(self):
-    return Xzy(self.x, self.z, self.y)
-
+import random
+import itertools
+
+from mc import Slot, Window, Xzy, World, Position, ChunkColumn, MineCraftProtocol, Entity, Confirmation
+from optparse import OptionParser
+import ConfigParser
+import multiprocessing
+import atexit
+import os
+import astar
+
+class MoveException(Exception):
+  pass
 
 class MineCraftBot(MineCraftProtocol):
-  def __init__(self, host, port, username='peon', password=None):
+  def __init__(self, host, port, username, password=None):
     super(MineCraftBot, self).__init__()
 
     self._host = host
     self._port = port
     self._username = username
     self._password = password
+    self._serverId = None
+    self._status = 'idle'
+    self._food= 1
+    self._xp_bar = -1
+    self._xp_level = -1
+    self._xp_total = -1
 
     self.world = World()
+    self.windows = {}
     self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
+
+    self._entityId = None
+    self._levelType = None
+    self._serverMode = None
+    self._dimension = None
+    self._difficulty = None
+    self._maxPlayers = None
+    self._cursor_slot = Slot(itemId=-1, count=None, meta=None, data=None) 
+    self._action_id = itertools.count(1)
+    self._confirmations = {}
+    self.bot_file = os.path.join('/tmp', self._username)
 
     self._threadFuncs.extend([
         #self._DoCrashThread,
-        self._DoWatchdogThread,
+        #self._DoWatchdogThread,
         self._DoPositionUpdateThread,
         ])
     self._handlers = {
         '\x00': self.OnKeepAlive,
+        '\x01': self.OnLogin,
+        '\x02': self.OnHandshake,
+        '\x03': self.OnChatMessage,
+        '\x05': self.OnEntityEquipment,
+        '\x08': self.OnUpdateHealth,
         '\x0d': self.OnPlayerPositionLook,
+        '\x14': self.OnSpawnNamedEntity,
+        '\x18': self.OnSpawnMob,
+        '\x1d': self.OnDestroyEntity,
+        '\x1f': self.OnEntityRelativeMove,
+        '\x21': self.OnEntityLookRelativeMove,
+        '\x22': self.OnEntityTeleport,
+        '\x2b': self.OnSetExperience,
         '\x33': self.world.MapChunk,
         '\x34': self.OnMultiBlockChange,
         '\x35': self.OnBlockChange,
+        '\x67': self.OnSetSlot,
+        '\x68': self.OnSetWindowItems,
+        '\x6a': self.OnConfirmTransaction,
         }
+
+    if os.path.isfile(self.bot_file):
+      raise Exception("%s is already logged in" % self._username)
+
+    open(self.bot_file, 'w').close()
+    atexit.register(self.delbotfile)
+    
+    if password is None:
+      self.Login()
+    else:
+      self.Login(authenticate=True)
+
+    self.FloatDown()
+
+  def delbotfile(self):
+    os.remove(self.bot_file)
 
   def Login(self, authenticate=False):
     self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -973,13 +114,12 @@ class MineCraftBot(MineCraftProtocol):
     self.StartThreads()
 
     if authenticate:
-      self._sessionId = self.GetSessionId(username, password)
+      self._sessionId = self.GetSessionId(self._username, self._password)
       print 'sessionId:', self._sessionId
-      self.SendHandshake(username, host, port)
-      raise NotImplemented
-      self._serverId, = self.WaitFor('\x02')
+      self.SendHandshake(self._username, self._host, self._port)
+      self.WaitFor(lambda: self._serverId is not None)
       print 'serverId:', self._serverId
-      self.JoinServer(username, self._sessionId, self._serverId)
+      print 'joinserver status:', self.JoinServer(self._username, self._sessionId, self._serverId)
 
     print 'sending login...'
     self.SendLogin(self._username)
@@ -1018,8 +158,11 @@ class MineCraftBot(MineCraftProtocol):
       self._buf = ''
       self._sendQueue = Queue.Queue(10)
       self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
+      self.world = World()
+      self.windows = {}
       print 'WatchDog: loggin in'
       self.Login()
+      print 'WatchDog: floatin down'
       self.FloatDown()
     finally:
       print "Watchdog thread exiting", myGeneration
@@ -1031,122 +174,234 @@ class MineCraftBot(MineCraftProtocol):
       while myGeneration == self._sockGeneration:
         time.sleep(0.010)
         self.SendPositionLook()
+        if os.getppid() != self.parentPID:
+          print "Position update thread exiting", myGeneration
+          #sys.exit()
     finally:
-      print "Position update thread exiting", myGeneration
+      os.kill(self.parentPID, 0)
 
   def OnKeepAlive(self, token):
     self.Send(
         '\x00' +
-        pack('!i', token)
+        struct.pack('!i', token)
         )
 
-  def SendPositionLook(self):
-    self.Send(
-        '\x0d' +
-        #pack('!ddddffb', x, y, stance, z, yaw, pitch, onGround)
-        pack('!ddddffb', *self._pos)
-        )
-    #print self._pos
+  def SendPositionLook(self, pos=None):
+    if pos is None:
+      pos = self._pos
+    self.SendPlayerPositionAndLook(pos.x, pos.y, pos.stance, pos.z, pos.yaw, pos.pitch, pos.on_ground) 
 
+  def OnLogin(self, entityId, levelType, serverMode, dimension, difficulty, maxPlayers):
+      self._entityId = entityId
+      self._levelType = levelType
+      self._serverMode = serverMode
+      self._dimension = dimension
+      self._difficulty = difficulty
+      self._maxPlayers = maxPlayers
+
+  def OnHandshake(self, serverId):
+      self._serverId = serverId
+
+  def OnChatMessage(self, chat):
+    print u"Chat: %s" % chat
+    m = re.match('<\w+> peon, (.*)', chat)
+    if m is not None:
+        self.run_cmd(m.group(1))
+
+  def OnEntityEquipment(self, entity_id, slot_num, item_id, damage):
+    print 'Entity Equipment:', entity_id, slot_num, item_id, damage
+
+  def OnUpdateHealth(self, health, food, food_saturation):
+    self._health = health
+    self._food= food
+    self._food_saturation = food_saturation
+    if health <= 0:
+      self.WaitFor(lambda: self._dimension is not None)
+      self.SendRespawn(self._dimension, self._difficulty, self._levelType)
 
   def OnPlayerPositionLook(self, x, stance, y, z, yaw, pitch, onGround):
-    self._pos = Position(x, y, stance, z, yaw, pitch, onGround)
-    print "Corrected Position: ", self._pos.x, self._pos.z, self._pos.y
-    self.SendPositionLook()
-    self._pos = Position(self._pos.x, self._pos.y, self._pos.stance,
-        self._pos.z, self._pos.yaw, self._pos.pitch, 1)
+    pos = Position(x, y, stance, z, yaw, pitch, onGround)
+    print "Corrected Position: ", pos.x, pos.z, pos.y
+    self.SendPositionLook(pos)
+    self._pos = Position(x, y, stance, z, yaw, pitch, 1)
+
+  def OnSpawnNamedEntity(self, eid, player_name, x, y, z, yaw, pitch, current_item):
+    self.world._entities[eid] = Entity(
+      eid, 0, x, y, z, yaw, pitch, player_name=player_name, current_item=current_item)
+
+  def OnSpawnMob(self, eid, etype, x, y, z, yaw, pitch, head_yaw, metadata):
+    self.world._entities[eid] = Entity(
+      eid, etype, x, y, z, yaw, pitch, head_yaw=head_yaw, metadata=metadata)
+
+  def OnDestroyEntity(self, eid):
+    if eid in self.world._entities:
+      del self.world._entities[eid]
+
+  def OnEntity(self, eid):
+    return
+
+  def OnEntityRelativeMove(self, eid, x, y, z):
+    if eid in self.world._entities:
+      self.world._entities[eid].Move(x, y, z)
+
+  def OnEntityLookRelativeMove(self, eid, x, y, z, yaw, pitch):
+    if eid in self.world._entities:
+      self.world._entities[eid].Move(x, y, z)
+
+  def OnEntityTeleport(self, eid, x, y, z, yaw, pitch):
+    if eid in self.world._entities:
+      self.world._entities[eid].Teleport(x, y, z)
+
+  def OnEntityHeadLook(self, eid, head_yaw):
+    if eid in self.world._entities:
+      self.world._entities[eid]._head_yaw = head_yaw
+
+  def OnEntityStatus(self, eid, status):
+    if eid in self.world._entities and status == 3:
+      del self.world._entities[eid]
+
+  def OnSetExperience(self, bar, level, total):
+    self._xp_bar = bar
+    self._xp_level = level
+    self._xp_total = total
 
   def OnMultiBlockChange(self, blocks):
     for x, z, y, newType, newMeta in blocks:
       self.world.SetBlock(x, z, y, newType, newMeta)
 
   def OnBlockChange(self, x, y, z, newType, newMeta):
+    #print "Block change:", (x, z, y), newType
     self.world.SetBlock(x, z, y, newType, newMeta)
 
   def OnMapChunks(self, chunk):
     self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
 
+  def OnSetSlot(self, windowId, slotIndex, slot):
+    print 'SetSlot:', windowId, slotIndex, slot
+    if windowId == -1 and slotIndex == -1:
+      self._cursor_slot = slot
+    elif windowId in self.windows:
+      self.windows[windowId].SetSlot(slotIndex, slot)
 
-  def DoDig(self, x, z, y, face, retries=3):
-    bot.SendDig(x, z, y, 1)
+  def OnSetWindowItems(self, windowId, slots):
+    print 'SetWindowItems:', windowId
+    for s in slots:
+      print s
+    window = Window(windowId, slots)
+    self.windows[windowId] = window
+
+  def OnConfirmTransaction(self, window_id, action_id, accepted):
+    self._confirmations[action_id] = Confirmation(window_id, action_id, accepted)
+    if not accepted:
+        self.SendConfirmTransaction(window_id, action_id, accepted)
+
+  def DoDig(self, x, z, y, face=1, retries=5):
     for i in range(retries):
-      if bot.WaitFor(lambda: bot.world.GetBlock(*blockXzy) == 0):
-        return True
-      else:
-        print "retrying"
-        bot.SendDig(x, z, y, 1)
+        self.SendDig(x, z, y)
 
+        if self.world.GetBlock(x, z, y) == 0:
+            return True
+    else:
+        return False
 
-  def SendDig(self, x, z, y, face):
-    self.Send(
-        '\x0e' +
-        pack('!b', 0) +
-        pack('!i', x) +
-        pack('!b', y) +
-        pack('!i', z) +
-        pack('!b', face)
-        )
-    self.Send(
-        '\x0e' +
-        pack('!b', 2) +
-        pack('!i', x) +
-        pack('!b', y) +
-        pack('!i', z) +
-        pack('!b', face)
-        )
+  def SendDig(self, x, z, y, face=1):
+    #print "sending dig:", (x, z, y)
+    self.SendPlayerDigging(0, x, y, z, face)
+    time.sleep(0.2)
+    self.SendPlayerDigging(2, x, y, z, face)
+
+    self.WaitFor(lambda: self.world.GetBlock(x, z, y) == 0, timeout=10)
+
+  def nav_to(self, x, z, y): 
+    self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
+    botXzy = Xzy(self._pos.x, self._pos.z, self._pos.y)
+    nextXzy = Xzy(x, z, y)
+    if botXzy == nextXzy:
+      return
+
+    print 'moving to:', nextXzy
+
+    path = self.find_path(nextXzy)
+    if path is not None:
+      end = path[-1]
+      for step in path:
+        print 'minimove-', step
+        self.MoveTo(*step)
 
   def MoveTo(self, x, z, y, speed=4.25, onGround=True):
+    x+=0.5
+    z+=0.5
+
     def MyDist(x, z, y):
-      return abs(self._pos.x - x) + abs(self._pos.z - z) + abs(self._pos.y - y)
+      return abs(pos.x - x) + abs(pos.z - z) + abs(pos.y - y)
 
-    yaw = self._pos.yaw
     def Go(x=None, z=None, y=None):
-      self._pos = Position(x, y, y+1, z,
-          yaw, self._pos.pitch, onGround)
+      self._pos = Position(x, y, y+1, z, yaw, 0, onGround)
 
-    if z - self._pos.z > .9:
+    pos = self._pos
+    yaw = pos.yaw
+    if z - pos.z > .9:
       yaw = 0
-    if z - self._pos.z < - .9:
+    if z - pos.z < - .9:
       yaw = 180
-    if x - self._pos.x > .9:
+    if x - pos.x > .9:
       yaw = 270
-    if x - self._pos.x < - .9:
+    if x - pos.x < - .9:
       yaw = 90
 
     tau = 0.010
     delta = speed * tau
     while MyDist(x, z, y) > (delta * 2):
-      if self._pos.x - x > 0:
-        new_x = self._pos.x - delta
+      if pos.x - x > 0:
+        new_x = pos.x - delta
       else:
-        new_x = self._pos.x + delta
-      if self._pos.z - z > 0:
-        new_z = self._pos.z - delta
+        new_x = pos.x + delta
+      if pos.z - z > 0:
+        new_z = pos.z - delta
       else:
-        new_z = self._pos.z + delta
-      if self._pos.y - y > 0:
-        new_y = self._pos.y - delta
+        new_z = pos.z + delta
+      if pos.y - y > 0:
+        new_y = pos.y - delta
       else:
-        new_y = self._pos.y + delta
+        new_y = pos.y + delta
+
       Go(new_x, new_z, new_y)
-      #print self._pos
       time.sleep(tau)
+      if (self._pos.x, self._pos.z, self._pos.y) != (new_x, new_z, new_y):
+        print 'did not small move'
+        return False
+      pos = self._pos
+
     Go(x, z, y)
+    time.sleep(tau)
+    if (self._pos.x, self._pos.z, self._pos.y) != (x, z, y):
+      print 'did not move'
+      return False
+
+    return True
 
   def FloatDown(self):
     self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
     self.WaitFor(lambda: self.world.GetBlock(
       self._pos.x, self._pos.z, self._pos.y) is not None)
-    print "block:", self.world.GetBlock(self._pos.x, self._pos.z, self._pos.y)
-    while not self.world.IsStandable(self._pos.x, self._pos.z, self._pos.y):
-      print "floatin..."
-      self.MoveTo(int(self._pos.x) + .5, int(self._pos.z) + .5, self._pos.y - 1)
-      time.sleep(0.100)
-    print "block:", self.world.GetBlock(self._pos.x, self._pos.z, self._pos.y)
+    pos = self._pos.xzy()
+    self.MoveTo(*pos)
+    for y in range(pos.y + 1, 0, -1):
+      print 'floating:', pos
+      if self.world.IsStandable(*pos):
+        self.MoveTo(*pos)
+        return
 
-  def DigShaft(self, xRange, zRange):
+  def DigShaft(self, xRange, zRange, yRange):
+    def Dist(xzyA, xzyB):
+      return math.sqrt(
+          (xzyA.x - xzyB.x) * (xzyA.x - xzyB.x) +
+          (xzyA.z - xzyB.z) * (xzyA.z - xzyB.z) +
+          (xzyA.y - xzyB.y) * (xzyA.y - xzyB.y)
+          )
+
     def Within(dist, xzyA, xzyB):
-      if Dist(xzyA, xzyB) < dist:
+      if Dist(xzyA, xzyB) < dist and Xzy(xzyB.x, xzyB.z, xzyB.y - 1) != xzyA:
         return xzyB
 
     def WantSolid(x, z, y):
@@ -1171,22 +426,24 @@ class MineCraftBot(MineCraftProtocol):
     keepDigging = True
     while keepDigging:
       keepDigging = False
-      for y in range(127, -1, -1):
+      for y in range(*yRange):
         for x in range(*xRange):
           for z in range(*zRange):
             blockXzy = Xzy(x, z, y)
+            print "Waiting for chunks to load..."
             self.WaitFor(lambda: self.world.GetBlock(*blockXzy) is not None)
             blockType = self.world.GetBlock(*blockXzy)
+            print "blockType:", blockType
+            if blockType in ignore_blocktypes:
+              continue
             if WantSolid(*blockXzy):
               #print "Want block solid:", blockXzy, blockType
               # TODO: place
               continue
-            if blockType == 0:
-              continue
             print "Wanna dig block:", blockXzy, blockType
             botXzy = Xzy(self._pos.x, self._pos.z, self._pos.y)
             nextXzy = self.world.FindNearestStandable(botXzy,
-                functools.partial(Within, 2.5, blockXzy))
+                functools.partial(Within, 6, blockXzy))
             if not nextXzy:
               print "But can't find a digging spot ;("
               continue
@@ -1198,41 +455,374 @@ class MineCraftBot(MineCraftProtocol):
             print "Moving to:", nextXzy
             for xzy in path:
               print "mini - Move to:", xzy
-              self.MoveTo(xzy.x + .5, xzy.z + .5, xzy.y + .05)
-            print "Digging:", blockXzy
-            self.SendDig(blockXzy.x, blockXzy.z, blockXzy.y, 1)
-            self.WaitFor(lambda: self.world.GetBlock(*blockXzy) == 0)
-            if self.world.GetBlock(*blockXzy) == 0:
+              self.MoveTo(*xzy)
+            print "Digging:", blockXzy, blockType
+            if self.DoDig(blockXzy.x, blockXzy.z, blockXzy.y):
               keepDigging = True
-            print "block broken!"
-            print
-            print
+              print "block broken!"
+              self.FloatDown()
+            else:
+              print "block NOT broken!"
             #time.sleep(5)
 
+  def get_best_tool(self, blockType, tool_name):
+    print 'Looking for a', tool_name, 'to break:', blockType
+    tools = {
+      'pick': [257, 278],
+      'shovel': [256, 277]
+      }
+
+    held_items = self.windows[0].GetHeld()
+
+    for i, slot in enumerate(self.windows[0].GetHeld()):
+      if slot.itemId in tools[tool_name]:
+        print 'Switching to tool:', tool_name
+        self.SendHeldItemChange(i)
+        return True
+    
+    return False
+
+  def get_slot(self, slot_num):
+    return self.windows[0]._slots[slot_num]
+
+  #TODO Fix this. Should reliably place tool in bot's hand.
+  def click_slot(self, slot_num):
+    action_id = self._action_id.next()
+    if slot_num in range(45):
+      slot_data = self.get_slot(slot_num)
+    else:
+      slot_data = Slot(itemId=-1, count=None, meta=None, data=None) 
+    self.SendClickWindow(0, slot_num, 0, action_id, 0, slot_data)
+    if self.WaitFor(lambda: action_id in self._confirmations.keys(), timeout=5):
+      if self._confirmations[action_id].accepted:
+        self.windows[0]._slots[slot_num] = self._cursor_slot
+        self._cursor_slot = slot_data
+        return True
+    return False
+
+  def find_tool(self, tool_id, held_only=False):
+    for i, slot in enumerate(self.windows[0]._slots):
+      if slot.itemId == tool_id:
+        if not held_only or i >= 36:
+          return i
+    return None
+
+  def equip_tool(self, tool_id):
+    slot_num = self.find_tool(tool_id)
+    print 'slot_num:', slot_num
+    if slot_num is None:
+      return False
+
+    if slot_num < 36:
+      click_list = [slot_num]
+      target_slot_num = self.find_tool(-1, held_only=True)
+      if target_slot_num is None:
+        target_slot_num = random.randrange(36,45)
+        click_list.append(target_slot_num)
+        click_list.append(slot_num)
+      else:
+        click_list.append(target_slot_num)
+
+      print 'click_list:', click_list
+      for i in click_list:
+        if not self.click_slot(i):
+          return False
+    else:
+      target_slot_num = slot_num
+
+    print 'target_slot_num:', target_slot_num
+    self.SendHeldItemChange(target_slot_num-36)
+    time.sleep(.5)
+    return True
 
 
-def main():
-  host = '108.59.83.223'    # The remote host
-  port = 31337              # The same port as used by the server
-  port = 25565
-  port = 4000
+  def remove_non_tools(self):
+    tools = [257, 278, 256, 277]
+    for i, slot in enumerate(self.windows[0]._slots):
+      if i >= 9 and slot.itemId < 256 and slot.itemId != -1:
+        print 'removing item:', slot.itemId
+        for x, s in enumerate(self.windows[0]._slots):
+          print x, s
+        self.SendClickWindow(0, i, 0, self._action_id.next(), 0, slot)
+        time.sleep(.2)
+        self.SendClickWindow(0, -999, 0, self._action_id.next(), 0, slot)
+        time.sleep(.2)
 
-  username = u'johnbaruch'
-  password = u'zoe77zoe'
+  def move_tools_to_held(self):
+    tools = [257, 278, 256, 277]
+    slots = self.windows[0]._slots
+    for i, slot_held in enumerate(slots[36:]):
+      if slot_held.itemId != -1:
+        continue
+      for j, slot_main in enumerate(slots[:35]):
+        if slot_main.itemId not in tools:
+          continue
+        self.SendClickWindow(0, j, 0, self._action_id.next(), 0, slot_main)
+        time.sleep(.2)
+        self.SendClickWindow(0, i, 0, self._action_id.next(), 0, slot_main)
+        time.sleep(.2)
 
-  username = u'peon'
 
-  #bot = MineCraftBot(host, port, username, password)
-  bot = MineCraftBot(host, port)
-  bot.Login()
-  bot.FloatDown()
-  print "Fired up and ready to go!"
-  print bot._pos
+  def run_cmd(self, cmd):
+        args = cmd.split()
+        if len(args) == 0:
+            return
+        elif cmd == 'where are you?':
+            self.SendChat('x: %d, y: %d, z: %d' % (self._pos.x, self._pos.y, self._pos.z))
 
-  #bot.DigShaft( (130, 150), (240, 260) )
-  bot.DigShaft( (160, 175), (250, 265) )
-  bot.DigShaft( (135, 150), (220, 235) )
-  bot.DigShaft( (130, 150), (240, 260) )
+  def move_up(self):
+    self.MoveTo(self._pos.x, self._pos.z, self._pos.y + 100)
+
+  def dig_area(self, bbox, home=None, dump=False, dig_height=0):
+    print 'going to dig: %s' % str(bbox)
+    time.sleep(3)
+    best_against = {
+      'pick': [1,4,14,15,16],
+      'shovel': [2,3,12,13]
+      }
+    ignore_blocktypes = [0, 50]
+    #ignore_blocktypes = [0]
+    last_block_type = -1 
+    y_range = range(max(bbox['y']), min(bbox['y']), -1)
+    z_range = range(min(bbox['z']), max(bbox['z']))
+    random.shuffle(z_range)
+    x_range = range(min(bbox['x']), max(bbox['x']))
+    for y in y_range:
+        for z in z_range:
+           for x in x_range:
+                blockXzy = Xzy(x, z, y)
+                if self.world.GetBlock(*blockXzy) is None:
+                    print "Waiting for chunks to load..."
+                    self.nav_to(x, z, max(bbox['y']))
+                    self.WaitFor(lambda: self.world.GetBlock(*blockXzy) is not None)
+                blockType = self.world.GetBlock(*blockXzy)
+                if blockType in ignore_blocktypes:
+                    continue
+                if last_block_type != blockType:
+                    last_block_type = blockType
+                    for tool_name, block_list in best_against.iteritems():
+                        if blockType in block_list:
+                            if not self.get_best_tool(blockType, tool_name) and home is not None:
+                              print 'going home to get better tools:', home
+                              self.nav_to(*home)
+                              while not self.get_best_tool(blockType, tool_name):
+                                  self.remove_non_tools()
+                                  self.move_tools_to_held()
+                                  time.sleep(10)
+                              self.nav_to(x, z, y + dig_height)
+                self.nav_to(x, z, y + dig_height)
+                if self.DoDig(x, z, y):
+                  sys.stdout.write('.')
+                else:
+                  sys.stdout.write('!')
+                sys.stdout.flush()
+
+  def dig_to(self, x, z, y):
+    self.MoveTo(*self._pos.xzy())
+    path = self.find_path(Xzy(x,z,y), reachable_test=self.world.IsDiggable)
+    if path is None:
+      print 'could not find path'
+      return False
+    print path
+    for p in path:
+      print 'dig:', p
+      if self.DoDig(*p) and self.DoDig(p.x, p.z, p.y + 1):
+        if not self.MoveTo(*p):
+          print 'could not move to:', p, 'made it to:', self._pos.xzy()
+          return False
+      else:
+        print 'could not reach:', (x,z,y), 'made it to:', self._pos.xzy()
+        return False
+    print 'done'
+    return True
+
+  def find_path(self, end, reachable_test=None):
+    if reachable_test is None:
+      reachable_test = self.world.IsMoveable
+
+    def iter_moveable_adjacent(start):
+      l = []
+      for xzy, block_type in self.world.IterAdjacent(*start):
+        if reachable_test(*xzy):
+          l.append(xzy)
+      return l
+
+    def at_goal(xzy):
+      if xzy == end:
+        return True
+      else:
+        return False
+
+    def distance(a, b):
+      return cityblock(a, b)
+
+    def distance_to_goal(a):
+      return cityblock(a, end)
+
+    if not reachable_test(*end):
+      print 'destination not reachable'
+      return None
+
+    pos = self._pos.xzy()
+    #pos._replace(x=pos.x-1)
+    return astar.astar(
+        pos, iter_moveable_adjacent, at_goal, 0, 
+        distance, distance_to_goal)
+
+  def get_adjacent_blocks(self, block, max_height=64):
+    blocks = []
+    for offset_y in range(-1, 2):
+      for offset_x in range(-1, 2):
+        for offset_z in range(-1, 2):
+          x = block.x + offset_x
+          z = block.z + offset_z
+          y = block.y + offset_y
+          if y > 0 and y < max_height:
+            blocks.append(Xzy(x, z, y))
+    for xzy in blocks:
+      yield xzy
+
+  def find_nearest_blocktype(self, start, types=[15]):
+    height_dict = {
+      14: 32, #gold
+      15: 64, #iron
+      56: 17, #diamonds
+    }
+    height_list = [h for t, h in height_dict.items() if t in types]
+    if len(height_list) == 0:
+      height = 96
+    else:
+      height = max(height_list)
+
+    height = max(height, start.y)
+    checked_blocks = set([])
+    unchecked_blocks = collections.deque([start])
+
+    block_type = 0
+    print 'finding blocktypes:', types,
+    while block_type not in types:
+      if len(unchecked_blocks) == 0:
+        return None
+      if len(checked_blocks) % 1000 == 0:
+        sys.stdout.write('.')
+        sys.stdout.flush()
+      block = unchecked_blocks.popleft()
+      checked_blocks.add(block)
+      for block in self.get_adjacent_blocks(block, max_height=height):
+        if block not in checked_blocks and block not in unchecked_blocks and self.world.GetBlock(*block) is not None:
+          unchecked_blocks.append(block)
+      block_type = self.world.GetBlock(*block)
+    print 
+    return block
+
+  def help_find_blocks(self, start, types=[15], chat=True):
+    self.nav_to(start.x, start.z, 200)
+    c = [ l for l in csv.DictReader(open('blocktypes.csv'), skipinitialspace=True) ]
+    bt_name = dict([(l['type'], int(l['dec'])) for l in c ])
+    bt_int = dict([(int(l['dec']), l['type']) for l in c ])
+    interesting = [
+      'diamond ore',
+      #'gold ore',
+      #'iron ore',
+      #'coal ore'
+    ]
+    types = [ bt_name[i] for i in interesting ]
+
+    print 'waiting for world to load...'
+    self.WaitFor(lambda: self.world.GetBlock(self._pos.x, self._pos.z, self._pos.y) is not None)
+    try:
+      while True:
+        block = self.find_nearest_blocktype(start, types=types)
+        blocktype = self.world.GetBlock(*block)
+        print block, bt_int[blocktype]
+        if chat:
+          self.SendChat('x: %d, y: %d, z: %d, type: %s' % (block.x, block.y, block.z, bt_int[blocktype]))
+        while blocktype in types:
+          blocktype = self.world.GetBlock(*block)
+          time.sleep(10)
+        start = block
+    except KeyboardInterrupt:
+      print
+      return
+
+  def get_player_position(self, player_name):
+    for entity in self.world._entities.values():
+      if entity._player_name == player_name:
+        return entity._pos.xzy()
+
+  def move_to_player(self, player_name):
+    xzy = self.get_player_position(player_name)
+    if xzy is not None:
+      self.nav_to(*xzy)
 
 if __name__ == '__main__':
-  main()
+  parser = OptionParser()
+  parser.add_option("-s", "--server", dest="server", default="localhost",
+                        help="server", metavar="SERVER")
+  parser.add_option("-P", "--port", dest="port", default=25565, type="int",
+                        help="port", metavar="PORT")
+  parser.add_option("-u", "--user", dest="user",
+                        help="user to login as", metavar="USER")
+  parser.add_option("-p", "--pass", dest="password",
+                        help="password", metavar="PASSWORD")
+  parser.add_option("-b", "--bbox", dest="bbox", default='jungle',
+                        help="digging bbox", metavar="BBOX")
+  parser.add_option("-r", "--return-base", dest="return_base", default='base',
+                        help="base to return to for better tools", metavar='BASE')
+  (options, args) = parser.parse_args()
+
+
+  with open('sites.json') as f:
+    sites = json.load(f)
+    bboxes = sites['bboxes']
+    return_bases = sites['return_bases']
+
+  bbox = bboxes[options.bbox]
+  home = return_bases[options.return_base] 
+
+  server = options.server
+  port = options.port
+  password = options.password
+
+  if options.user is not None: 
+    username = options.user
+  else:
+    bot_names = ['peon', 'serf', 'grunt', 'slave', 'drudge', 'farmboy', 'peasant']
+    for name in bot_names:
+      if not os.path.isfile(os.path.join('/tmp', name)):
+        username = name
+        print 'logging in as:', username
+        break
+    else:
+      raise Exception('All usernames are logged in')
+
+  if len(args) > 0: 
+    cmd = args.pop(0)
+
+    if cmd == 'kill':
+      username = 'magahet'
+      bot = MineCraftBot(server, port, username, password=password)
+      bot.WaitFor(lambda: bot._pos.x != 0.0 and bot._pos.y != 0.0)
+      time.sleep(2)
+      import scrap
+      scrap.kill(bot)
+    elif cmd == 'explore':
+      username = 'dora'
+      bot = MineCraftBot(server, port, username, password=password)
+      bot.WaitFor(lambda: bot._pos.x != 0.0 and bot._pos.y != 0.0)
+      time.sleep(2)
+      import scrap
+      scrap.explore(bot)
+    if cmd == 'test':
+      bot = MineCraftBot(server, port, username, password=password)
+      bot.WaitFor(lambda: bot._pos.x != 0.0 and bot._pos.y != 0.0)
+      print 'bot ready'
+    elif cmd == 'help':
+      types = [14,15,16,56]
+      start = Xzy(*args[0:3])
+      bot = MineCraftBot(server, port, username, password=password)
+      bot.help_find_blocks(start, types=types)
+    elif cmd == 'dig':
+      bot = MineCraftBot(server, port, username, password=password)
+      bot.dig_area(bbox, home=home)
+
