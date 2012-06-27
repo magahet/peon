@@ -36,6 +36,7 @@ def find_shallow_iron(world, start, depth=10, width=10):
             blocks.append((block, i))
   return blocks
 
+
 def eat(bot):
   BREAD = 297
   if not bot.equip_tool(BREAD):
@@ -62,7 +63,7 @@ def eat(bot):
 def kill(bot):
   DIAMOND_SWORD = 276
 
-  bot.MoveTo(-136, -176, 12.625)
+  bot.MoveTo(-137, -177, 12)
   last_level = bot._xp_level + bot._xp_bar
 
   while True:
@@ -99,16 +100,20 @@ def kill(bot):
     entities = bot.world._entities
     for eid, e in entities.items():
       dist = euclidean(
-          (*bot._pos.xzy()), (*e._pos.xzy()))
+          bot._pos.xzy(), e._pos.xzy())
 
-      if dist <= 4 and bot._pos.x < e._pos.x:
+      #print int(dist), e._player_name
+      if dist <= 4 and e._player_name is None:
         attack_list.append(eid)
 
+    #print len(attack_list),
+    #if len(attack_list) > 0:
     for eid in attack_list:
       sys.stdout.write('.')
       sys.stdout.flush()
       bot.SendUseEntity(bot._entityId, eid, 1)
       time.sleep(.3)
+    time.sleep(1)
 
 
 def explore(bot):

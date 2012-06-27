@@ -180,14 +180,17 @@ class Entity(object):
 
   def Move(self, dx, dy, dz):
     if None not in self._pos.xzy():
-      self._pos._replace(x = self._pos.x + dx/32)
-      self._pos._replace(z = self._pos.z + dz/32)
-      self._pos._replace(y = self._pos.y + dy/32)
+      x = self._pos.x + (dx/32.0)
+      z = self._pos.z + (dz/32.0)
+      y = self._pos.y + (dy/32.0)
+      yaw = self._pos.yaw
+      pitch = self._pos.pitch
+      self._pos = Position(x, y, y+1, z, yaw, pitch, 1)
 
   def Teleport(self, x, y, z):
-    self._pos._replace(x = x/32)
-    self._pos._replace(z = z/32)
-    self._pos._replace(y = y/32)
+    yaw = self._pos.yaw
+    pitch = self._pos.pitch
+    self._pos = Position(x/32.0, y/32.0, (y/32.0)+1, z/32.0, yaw, pitch, 1)
 
 class ChunkColumn(object):
   def __init__(self, chunkX, chunkZ,

@@ -209,7 +209,8 @@ class MineCraftBot(MineCraftProtocol):
         self.run_cmd(m.group(1))
 
   def OnEntityEquipment(self, entity_id, slot_num, item_id, damage):
-    print 'Entity Equipment:', entity_id, slot_num, item_id, damage
+    return
+    #print 'Entity Equipment:', entity_id, slot_num, item_id, damage
 
   def OnUpdateHealth(self, health, food, food_saturation):
     self._health = health
@@ -277,16 +278,18 @@ class MineCraftBot(MineCraftProtocol):
     self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
 
   def OnSetSlot(self, windowId, slotIndex, slot):
-    print 'SetSlot:', windowId, slotIndex, slot
+    #print 'SetSlot:', windowId, slotIndex, slot
     if windowId == -1 and slotIndex == -1:
       self._cursor_slot = slot
     elif windowId in self.windows:
       self.windows[windowId].SetSlot(slotIndex, slot)
 
   def OnSetWindowItems(self, windowId, slots):
+    '''
     print 'SetWindowItems:', windowId
     for s in slots:
       print s
+    '''
     window = Window(windowId, slots)
     self.windows[windowId] = window
 
@@ -508,8 +511,10 @@ class MineCraftBot(MineCraftProtocol):
     return None
 
   def equip_tool(self, tool_id):
-    slot_num = self.find_tool(tool_id)
-    print 'slot_num:', slot_num
+    slot_num = self.find_tool(tool_id, held_only=True)
+    if slot_num is None:
+      slot_num = self.find_tool(tool_id)
+    #print 'slot_num:', slot_num
     if slot_num is None:
       return False
 
@@ -523,16 +528,15 @@ class MineCraftBot(MineCraftProtocol):
       else:
         click_list.append(target_slot_num)
 
-      print 'click_list:', click_list
+      #print 'click_list:', click_list
       for i in click_list:
         if not self.click_slot(i):
           return False
     else:
       target_slot_num = slot_num
 
-    print 'target_slot_num:', target_slot_num
+    #print 'target_slot_num:', target_slot_num
     self.SendHeldItemChange(target_slot_num-36)
-    time.sleep(.5)
     return True
 
 
