@@ -9,68 +9,17 @@ import os
 import cPickle
 import math
 
-def click_inventory_block(bot, xzy):
-  s = bot.Slot(itemId=-1, count=None, meta=None, data=None)
-  bot.SendPlayerBlockPlacement(xzy.x, xzy.y, xzy.z, 1, s)
-  
-
-def find_shallow_iron(world, start, depth=10, width=10):
-  y_range = range(start.y, start.y - depth*2 , -1)
-  x_range = range(start.x - width, start.x + width)
-  z_range = range(start.z - width, start.z + width)
-  #print y_range, x_range, z_range
-  blocks = []
-  for y in y_range:
-    for x in x_range:
-      for z in z_range:
-        block = Xzy(x, z, y)
-        block_type = world.GetBlock(*block)
-        if block_type == 15:
-          i = 1
-          while world.GetBlock(block.x, block.z, block.y + i) != 0:
-            i+=1
-
-          if i < depth:
-            blocks.append((block, i))
-  return blocks
-
-
-def eat(bot):
-  print 'eating',
-  BREAD = 297
-  if not bot.equip_tool(BREAD):
-    return False
-
-  slot_num = bot._held_slot_num+36
-
-  slot = bot.get_slot(0, slot_num)
-  if slot is None:
-    return False
-  while slot.itemId == BREAD and slot.count > 0 and bot._food < 18:
-    bot.SendPlayerBlockPlacement(-1, -1, -1, -1, slot)
-    time.sleep(1)
-    slot = bot.get_slot(0, slot_num)
-  time.sleep(1)
-  bot.SendPlayerDigging(5, 0, 0, 0, 255)
-
-  print bot._food, slot
-
-  if bot._food >= 18:
-    return True
-  else:
-    return False
-
-
-
 def kill(bot):
   DIAMOND_SWORD = 276
+  DIAMOND_AXE=278
   XP_POINT = (-137, -177, 12)
   last_level = bot._xp_level + bot._xp_bar
   print 'level:', bot._xp_level
 
   while True: 
     if bot._xp_level >= 50:
-      enchant(bot)
+
+      bot.enchant(DIAMOND_AXE)
       last_level = bot._xp_level + bot._xp_bar
 
     if bot._pos.xzy() != XP_POINT:
@@ -84,7 +33,7 @@ def kill(bot):
       last_level = current_level
 
     if bot._food < 10:
-      if not eat(bot):
+      if not bot.eat():
         print 'no more food. leaving'
         bot.SendDisconnect()
         sys.exit()
@@ -314,58 +263,76 @@ def find_nearest(start, sites):
   d = [ cityblock(start, site) for site in sites ]
   return d.index(min(d))
 
-def enchant(bot):
-  ENCHANTMENT_TABLE=116
-  DIAMOND_AXE=278
-  pos = bot._pos.xzy()
-  print 'finding nearest enchanting table'
-  table = bot.iter_find_nearest_blocktype(pos, types=[ENCHANTMENT_TABLE]).next()
-  print 'moving to enchanting table'
-  bot.nav_to(*table)
-
-  
-  bot.close_window()
-  print 'opening enchantment window'
-  while not bot.click_inventory_block(table):
-    time.sleep(1)
-  window_id = bot._open_window_id
-  while window_id not in bot.windows:
-    time.sleep(1)
-
-  slot_num = None
-  print 'looking for diamond axe'
-  while slot_num is None:
-    slot_num = bot.find_tool(DIAMOND_AXE, window_id=window_id, no_data=True)
-    time.sleep(1)
-
-  if bot.click_slot(window_id, slot_num):
-    print 'looking for best enchantment level'
-    while min(bot._xp_level, 50) not in bot._available_enchantments.values():
-      current_enchantments = bot._available_enchantments
-      bot.click_slot(window_id, 0)
-      if bot._cursor_slot.itemId == -1:
-        bot.WaitFor(lambda: sum(bot._available_enchantments.values()) != 0, timeout=5)
-        print max(bot._available_enchantments.values()),
-        sys.stdout.flush()
-
-    for key, value in bot._available_enchantments.items():
-      if value == min(bot._xp_level, 50):
-        print 'enchanting item'
-        bot.SendEnchantItem(bot._open_window_id, key)
-
-    bot.click_slot(window_id, 0)
-    bot.click_slot(window_id, slot_num)
-
-  print 'closing enchantment window'
-  bot.close_window()
-
-
-
-    
-    
 
 
 
 
 
-
+def DigShaft(self, xRange, zRange, yRange):
+  def Dist(xzyA, xzyB):
+    return math.sqrt(
+        (xzyA.x - xzyB.x) * (xzyA.x - xzyB.x) +
+        (xzyA.z - xzyB.z) * (xzyA.z - xzyB.z) +
+        (xzyA.y - xzyB.y) * (xzyA.y - xzyB.y)
+        )
+  def Within(dist, xzyA, xzyB):
+    if Dist(xzyA, xzyB) < dist and Xzy(xzyB.x, xzyB.z, xzyB.y - 1) != xzyA:
+      return xzyB
+  def WantSolid(x, z, y):
+    for xzyAdj, typeAdj in self.world.IterAdjacent(x, z, y):
+      if typeAdj in (8, 9, 10, 11): # lava, water
+        return True
+    if self.world.GetBlock(x, z, y + 1) in (12, 13): # sand, gravel
+      return True
+    xFirst, xLast = xRange[0], xRange[1] - 1
+    zFirst, zLast = zRange[0], zRange[1] - 1
+    # Steps against z walls
+    if z == zFirst:
+      return not ((x - xFirst + y) % 5)
+    if z == zLast:
+      return not ((xLast - x + y) % 5)
+    # walkways on x walls, and flanking z-steps
+    if x == xFirst or x == xLast or z == zFirst + 1 or z == zLast - 1:
+      return not (y % 5)
+    return False
+  keepDigging = True
+  while keepDigging:
+    keepDigging = False
+    for y in range(*yRange):
+      for x in range(*xRange):
+        for z in range(*zRange):
+          blockXzy = Xzy(x, z, y)
+          print "Waiting for chunks to load..."
+          self.WaitFor(lambda: self.world.GetBlock(*blockXzy) is not None)
+          blockType = self.world.GetBlock(*blockXzy)
+          print "blockType:", blockType
+          if blockType in ignore_blocktypes:
+            continue
+          if WantSolid(*blockXzy):
+            #print "Want block solid:", blockXzy, blockType
+            # TODO: place
+            continue
+          print "Wanna dig block:", blockXzy, blockType
+          botXzy = Xzy(self._pos.x, self._pos.z, self._pos.y)
+          nextXzy = self.world.FindNearestStandable(botXzy,
+              functools.partial(Within, 6, blockXzy))
+          if not nextXzy:
+            print "But can't find a digging spot ;("
+            continue
+          print "Wanna go to:", nextXzy
+          path = self.world.FindPath(botXzy, nextXzy)
+          if not path:
+            print "But no path :("
+            continue
+          print "Moving to:", nextXzy
+          for xzy in path:
+            print "mini - Move to:", xzy
+            self.MoveTo(*xzy)
+          print "Digging:", blockXzy, blockType
+          if self.DoDig(blockXzy.x, blockXzy.z, blockXzy.y):
+            keepDigging = True
+            print "block broken!"
+            self.FloatDown()
+          else:
+            print "block NOT broken!"
+          #time.sleep(5)

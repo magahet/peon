@@ -10,6 +10,7 @@ import urllib
 import urllib2
 import zlib
 import math
+import logging
 
 
 class Slot(collections.namedtuple('Slot', ('itemId', 'count', 'meta', 'data'))):
@@ -123,7 +124,6 @@ class World(object):
       current_xzy = queue.pop(0)
       xzyD = d[current_xzy]
       if xzyD > maxD:
-        print "too far!"
         break
       if self.IsStandable(*current_xzy) and cityblock(xzy, current_xzy) < within:
         return xzy
@@ -145,7 +145,6 @@ class World(object):
       xzy = queue.pop(0)
       xzyD = d[xzy]
       if xzyD > maxD:
-        print "too far!"
         break
       if self.IsStandable(*xzy) and condition(xzy):
         return xzy
@@ -171,7 +170,6 @@ class World(object):
           d[xzyAdj] = xzyD + 1
           queue.append(xzyAdj)
     if xzyB not in d:
-      print "dest not found"
       return None
     path = [xzyB]
     while path[-1] != xzyA:
@@ -180,7 +178,6 @@ class World(object):
           path.append(xzyAdj)
           break
     path.reverse()
-    print "found path!"
     return path
 
 
@@ -434,7 +431,8 @@ class MineCraftProtocol(object):
       while myGeneration == self._sockGeneration:
         self.RecvPacket()
         if os.getppid() != self.parentPID:
-          print "ReadThread exiting", myGeneration
+          pass
+          #print "ReadThread exiting", myGeneration
           #sys.exit()
     finally:
       os.kill(self.parentPID, 0)
@@ -447,7 +445,8 @@ class MineCraftProtocol(object):
       while myGeneration == self._sockGeneration and self._sock is not None:
         sock.sendall(queue.get())
         if os.getppid() != self.parentPID:
-          print "SendThread exiting", myGeneration
+          pass
+          #print "SendThread exiting", myGeneration
     finally:
       os.kill(self.parentPID, 0)
 
@@ -474,7 +473,7 @@ class MineCraftProtocol(object):
     try:
       parsed = self._parsers[ilk]()
       if ilk in self._interesting:
-        print '\nParsed packet: %s (buf: %d)' % (hex(ord(ilk)), len(self._buf))
+        logging.debug('Parsed packet: %s (buf: %d)', hex(ord(ilk)), len(self._buf))
       handler = self._handlers.get(ilk)
       if handler:
         handler(*parsed)
@@ -630,7 +629,6 @@ class MineCraftProtocol(object):
     return (entityId, levelType, serverMode, dimension, difficulty, maxPlayers)
 
   def ParseSpawn(self):
-    print len(self._buf)
     return (
         self.UnpackInt32(),
         self.UnpackInt32(),
@@ -1004,7 +1002,8 @@ class MineCraftProtocol(object):
     count = self.UnpackInt16()
     size = self.UnpackInt32()
     if count *4 != size:
-      print "WTF:", count, size
+      pass
+      #print "WTF:", count, size
     for i in range(count):
       record = self.UnpackInt32()
       meta = record & 0xf # 4 bits
@@ -1162,7 +1161,6 @@ class MineCraftProtocol(object):
   # Senders
 
   def SendLogin(self, username):
-    print 'SendLogin(%s)' % username
     packet = (
         '\x01' +
         struct.pack('!i', 29) +
@@ -1197,7 +1195,6 @@ class MineCraftProtocol(object):
         )
 
   def SendRespawn(self, dimension, difficulty, levelType):
-    print 'SendRespawn'
     packet = (
         '\x09' +
         struct.pack('!i', dimension) +

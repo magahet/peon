@@ -2,8 +2,7 @@
 
 import json
 import re
-import numpy
-from scipy.spatial.distance import cityblock, pdist
+from scipy.spatial.distance import cityblock
 import pickle
 import csv
 import collections
@@ -15,16 +14,13 @@ import struct
 import sys
 import threading
 import time
-import urllib
-import urllib2
-import zlib
 import random
 import itertools
+import logging
 
 from mc import Slot, Window, Xzy, World, Position, ChunkColumn, MineCraftProtocol, Entity, Confirmation
 from optparse import OptionParser
 import ConfigParser
-import multiprocessing
 import atexit
 import os
 import astar
@@ -120,22 +116,19 @@ class MineCraftBot(MineCraftProtocol):
 
     if authenticate:
       self._sessionId = self.GetSessionId(self._username, self._password)
-      print 'sessionId:', self._sessionId
+      logging.info('sessionId: %d', self._sessionId)
       self.SendHandshake(self._username, self._host, self._port)
       self.WaitFor(lambda: self._serverId is not None)
-      print 'serverId:', self._serverId
-      print 'joinserver status:', self.JoinServer(self._username, self._sessionId, self._serverId)
+      logging.info('serverId: %d', self._serverId)
+      logging.info('joinserver status: %s', str(self.JoinServer(self._username, self._sessionId, self._serverId)))
 
-    print 'sending login...'
+    logging.info('sending login...')
     self.SendLogin(self._username)
 
   def _DoCrashThread(self):
     time.sleep(60)
     while self._sock is not None:
-      #print 'BADIDEA'
-      #print self._buf
       self._buf = '\x1bADIDEA'
-      #print self._buf
       time.sleep(1)
 
   def _DoWatchdogThread(self):
@@ -146,7 +139,6 @@ class MineCraftBot(MineCraftProtocol):
       while all(t.is_alive() for t in self._threads):
         time.sleep(1)
 
-      print "somebody died!"
       deadTime = time.time()
       self._sock = None
       self._sendQueue.put(None)
@@ -157,20 +149,17 @@ class MineCraftBot(MineCraftProtocol):
       while OtherThreadIsAlive() and time.time() - deadTime < 5:
         time.sleep(1)
       if OtherThreadIsAlive():
-        print "somebody won't die! oh well."
-      time.sleep(3)
+        time.sleep(3)
 
       self._buf = ''
       self._sendQueue = Queue.Queue(10)
       self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
       self.world = World()
       self.windows = {}
-      print 'WatchDog: loggin in'
       self.Login()
-      print 'WatchDog: floatin down'
       self.FloatDown()
     finally:
-      print "Watchdog thread exiting", myGeneration
+      logging.error("Watchdog thread exiting, %s", str(myGeneration))
 
   def _DoPositionUpdateThread(self):
     try:
@@ -180,8 +169,7 @@ class MineCraftBot(MineCraftProtocol):
         time.sleep(0.010)
         self.SendPositionLook()
         if os.getppid() != self.parentPID:
-          print "Position update thread exiting", myGeneration
-          #sys.exit()
+          logging.erro("Position update thread exiting, %s", srt(myGeneration))
     finally:
       os.kill(self.parentPID, 0)
 
@@ -208,14 +196,13 @@ class MineCraftBot(MineCraftProtocol):
       self._serverId = serverId
 
   def OnChatMessage(self, chat):
-    print u"Chat: %s" % chat
+    logging.info("Chat: %s", chat)
     m = re.match('<\w+> peon, (.*)', chat)
     if m is not None:
         self.run_cmd(m.group(1))
 
   def OnEntityEquipment(self, entity_id, slot_num, item_id, damage):
     return
-    #print 'Entity Equipment:', entity_id, slot_num, item_id, damage
 
   def OnUpdateHealth(self, health, food, food_saturation):
     self._health = health
@@ -227,7 +214,6 @@ class MineCraftBot(MineCraftProtocol):
 
   def OnPlayerPositionLook(self, x, stance, y, z, yaw, pitch, onGround):
     pos = Position(x, y, stance, z, yaw, pitch, onGround)
-    print "Corrected Position: ", pos.x, pos.z, pos.y
     self.SendPositionLook(pos)
     self._pos = Position(x, y, stance, z, yaw, pitch, 1)
 
@@ -293,7 +279,6 @@ class MineCraftBot(MineCraftProtocol):
     self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
 
   def OnSetSlot(self, windowId, slotIndex, slot):
-    #print 'SetSlot:', windowId, slotIndex, slot
     if windowId == -1 and slotIndex == -1:
       self._cursor_slot = slot
     elif windowId in self.windows:
@@ -305,7 +290,6 @@ class MineCraftBot(MineCraftProtocol):
 
   def OnUpdateWindowProperty(self, window_id, window_property, value):
     self._available_enchantments[window_property] = value
-    
 
   def OnConfirmTransaction(self, window_id, action_id, accepted):
     self._confirmations[action_id] = Confirmation(window_id, action_id, accepted)
@@ -314,20 +298,16 @@ class MineCraftBot(MineCraftProtocol):
 
   def DoDig(self, x, z, y, face=1, retries=5):
     for i in range(retries):
-        self.SendDig(x, z, y)
-
-        if self.world.GetBlock(x, z, y) == 0:
-            return True
+        if self.SendDig(x, z, y):
+          return True
     else:
         return False
 
   def SendDig(self, x, z, y, face=1):
-    #print "sending dig:", (x, z, y)
     self.SendPlayerDigging(0, x, y, z, face)
     time.sleep(0.2)
     self.SendPlayerDigging(2, x, y, z, face)
-
-    self.WaitFor(lambda: self.world.GetBlock(x, z, y) == 0, timeout=10)
+    return self.WaitFor(lambda: self.world.GetBlock(x, z, y) == 0, timeout=10)
 
   def nav_to(self, x, z, y): 
     self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
@@ -343,13 +323,10 @@ class MineCraftBot(MineCraftProtocol):
   def MoveTo(self, x, z, y, speed=4.25, onGround=True):
     x+=0.5
     z+=0.5
-
     def MyDist(x, z, y):
       return abs(pos.x - x) + abs(pos.z - z) + abs(pos.y - y)
-
     def Go(x=None, z=None, y=None):
       self._pos = Position(x, y, y+1, z, yaw, 0, onGround)
-
     pos = self._pos
     yaw = pos.yaw
     if z - pos.z > .9:
@@ -360,7 +337,6 @@ class MineCraftBot(MineCraftProtocol):
       yaw = 270
     if x - pos.x < - .9:
       yaw = 90
-
     tau = 0.010
     delta = speed * tau
     while MyDist(x, z, y) > (delta * 2):
@@ -376,20 +352,17 @@ class MineCraftBot(MineCraftProtocol):
         new_y = pos.y - delta
       else:
         new_y = pos.y + delta
-
       Go(new_x, new_z, new_y)
       time.sleep(tau)
       if (self._pos.x, self._pos.z, self._pos.y) != (new_x, new_z, new_y):
-        print 'did not small move'
+        logging.error('did not move: %s', str(self._pos.xzy()))
         return False
       pos = self._pos
-
     Go(x, z, y)
     time.sleep(tau)
     if (self._pos.x, self._pos.z, self._pos.y) != (x, z, y):
-      print 'did not move'
+      logging.error('did not move: %s', str(self._pos.xzy()))
       return False
-
     return True
 
   def FloatDown(self):
@@ -399,99 +372,22 @@ class MineCraftBot(MineCraftProtocol):
     pos = self._pos.xzy()
     self.MoveTo(*pos)
     for y in range(pos.y + 1, 0, -1):
-      print 'floating:', pos
+      pos = pos._replace(y=y)
+      logging.debug('floating down: %s', str(pos))
       if self.world.IsStandable(*pos):
+        logging.info('floating down: %s', str(pos))
         self.MoveTo(*pos)
         return
 
-  def DigShaft(self, xRange, zRange, yRange):
-    def Dist(xzyA, xzyB):
-      return math.sqrt(
-          (xzyA.x - xzyB.x) * (xzyA.x - xzyB.x) +
-          (xzyA.z - xzyB.z) * (xzyA.z - xzyB.z) +
-          (xzyA.y - xzyB.y) * (xzyA.y - xzyB.y)
-          )
-
-    def Within(dist, xzyA, xzyB):
-      if Dist(xzyA, xzyB) < dist and Xzy(xzyB.x, xzyB.z, xzyB.y - 1) != xzyA:
-        return xzyB
-
-    def WantSolid(x, z, y):
-      for xzyAdj, typeAdj in self.world.IterAdjacent(x, z, y):
-        if typeAdj in (8, 9, 10, 11): # lava, water
-          return True
-      if self.world.GetBlock(x, z, y + 1) in (12, 13): # sand, gravel
-        return True
-
-      xFirst, xLast = xRange[0], xRange[1] - 1
-      zFirst, zLast = zRange[0], zRange[1] - 1
-      # Steps against z walls
-      if z == zFirst:
-        return not ((x - xFirst + y) % 5)
-      if z == zLast:
-        return not ((xLast - x + y) % 5)
-      # walkways on x walls, and flanking z-steps
-      if x == xFirst or x == xLast or z == zFirst + 1 or z == zLast - 1:
-        return not (y % 5)
-      return False
-
-    keepDigging = True
-    while keepDigging:
-      keepDigging = False
-      for y in range(*yRange):
-        for x in range(*xRange):
-          for z in range(*zRange):
-            blockXzy = Xzy(x, z, y)
-            print "Waiting for chunks to load..."
-            self.WaitFor(lambda: self.world.GetBlock(*blockXzy) is not None)
-            blockType = self.world.GetBlock(*blockXzy)
-            print "blockType:", blockType
-            if blockType in ignore_blocktypes:
-              continue
-            if WantSolid(*blockXzy):
-              #print "Want block solid:", blockXzy, blockType
-              # TODO: place
-              continue
-            print "Wanna dig block:", blockXzy, blockType
-            botXzy = Xzy(self._pos.x, self._pos.z, self._pos.y)
-            nextXzy = self.world.FindNearestStandable(botXzy,
-                functools.partial(Within, 6, blockXzy))
-            if not nextXzy:
-              print "But can't find a digging spot ;("
-              continue
-            print "Wanna go to:", nextXzy
-            path = self.world.FindPath(botXzy, nextXzy)
-            if not path:
-              print "But no path :("
-              continue
-            print "Moving to:", nextXzy
-            for xzy in path:
-              print "mini - Move to:", xzy
-              self.MoveTo(*xzy)
-            print "Digging:", blockXzy, blockType
-            if self.DoDig(blockXzy.x, blockXzy.z, blockXzy.y):
-              keepDigging = True
-              print "block broken!"
-              self.FloatDown()
-            else:
-              print "block NOT broken!"
-            #time.sleep(5)
-
   def get_best_tool(self, blockType, tool_name):
-    print 'Looking for a', tool_name, 'to break:', blockType
+    logging.info('Looking for a %s to break: %d', tool_name, blockType)
     tools = {
       'pick': [257, 278],
       'shovel': [256, 277]
       }
-
-    held_items = self.windows[0].GetHeld()
-
-    for i, slot in enumerate(self.windows[0].GetHeld()):
-      if slot.itemId in tools[tool_name]:
-        print 'Switching to tool:', tool_name
-        self.change_held_slot(i)
+    for tool_id in tools[tool_name]:
+      if self.equip_tool(tool_id):
         return True
-    
     return False
 
   def change_held_slot(self, slot_num):
@@ -501,7 +397,6 @@ class MineCraftBot(MineCraftProtocol):
   def get_slot(self, window_id, slot_num):
     return self.windows[window_id]._slots[slot_num]
 
-  #TODO Fix this. Should reliably place tool in bot's hand.
   def click_slot(self, window_id, slot_num):
     action_id = self._action_id.next()
     if slot_num in range(len(self.windows[window_id]._slots)):
@@ -526,14 +421,11 @@ class MineCraftBot(MineCraftProtocol):
   def equip_tool(self, tool_id):
     if self.get_slot(0, self._held_slot_num+36).itemId == tool_id:
       return True
-
     slot_num = self.find_tool(tool_id, held_only=True)
     if slot_num is None:
       slot_num = self.find_tool(tool_id)
-    #print 'slot_num:', slot_num
     if slot_num is None:
       return False
-
     if slot_num < 36:
       click_list = [slot_num]
       target_slot_num = self.find_tool(-1, held_only=True)
@@ -543,45 +435,13 @@ class MineCraftBot(MineCraftProtocol):
         click_list.append(slot_num)
       else:
         click_list.append(target_slot_num)
-
-      #print 'click_list:', click_list
       for i in click_list:
         if not self.click_slot(0, i):
           return False
     else:
       target_slot_num = slot_num
-
-    #print 'target_slot_num:', target_slot_num
     self.change_held_slot(target_slot_num-36)
     return True
-
-
-  def remove_non_tools(self):
-    tools = [257, 278, 256, 277]
-    for i, slot in enumerate(self.windows[0]._slots):
-      if i >= 9 and slot.itemId < 256 and slot.itemId != -1:
-        print 'removing item:', slot.itemId
-        for x, s in enumerate(self.windows[0]._slots):
-          print x, s
-        self.SendClickWindow(0, i, 0, self._action_id.next(), 0, slot)
-        time.sleep(.2)
-        self.SendClickWindow(0, -999, 0, self._action_id.next(), 0, slot)
-        time.sleep(.2)
-
-  def move_tools_to_held(self):
-    tools = [257, 278, 256, 277]
-    slots = self.windows[0]._slots
-    for i, slot_held in enumerate(slots[36:]):
-      if slot_held.itemId != -1:
-        continue
-      for j, slot_main in enumerate(slots[:35]):
-        if slot_main.itemId not in tools:
-          continue
-        self.SendClickWindow(0, j, 0, self._action_id.next(), 0, slot_main)
-        time.sleep(.2)
-        self.SendClickWindow(0, i, 0, self._action_id.next(), 0, slot_main)
-        time.sleep(.2)
-
 
   def run_cmd(self, cmd):
         args = cmd.split()
@@ -590,18 +450,13 @@ class MineCraftBot(MineCraftProtocol):
         elif cmd == 'where are you?':
             self.SendChat('x: %d, y: %d, z: %d' % (self._pos.x, self._pos.y, self._pos.z))
 
-  def move_up(self):
-    self.MoveTo(self._pos.x, self._pos.z, self._pos.y + 100)
-
-  def dig_area(self, bbox, home=None, dump=False, dig_height=0):
-    print 'going to dig: %s' % str(bbox)
+  def dig_area(self, bbox, home=None, dump=False, dig_height=0, ignore_blocktypes = [0]):
+    logging.info('going to dig: %s', str(bbox))
     time.sleep(3)
     best_against = {
       'pick': [1,4,14,15,16],
       'shovel': [2,3,12,13]
       }
-    ignore_blocktypes = [0, 50]
-    #ignore_blocktypes = [0]
     last_block_type = -1 
     y_range = range(max(bbox['y']), min(bbox['y']), -1)
     z_range = range(min(bbox['z']), max(bbox['z']))
@@ -612,7 +467,7 @@ class MineCraftBot(MineCraftProtocol):
            for x in x_range:
                 blockXzy = Xzy(x, z, y)
                 if self.world.GetBlock(*blockXzy) is None:
-                    print "Waiting for chunks to load..."
+                    logging.info("Waiting for chunks to load...")
                     self.nav_to(x, z, max(bbox['y']))
                     self.WaitFor(lambda: self.world.GetBlock(*blockXzy) is not None)
                 blockType = self.world.GetBlock(*blockXzy)
@@ -623,7 +478,7 @@ class MineCraftBot(MineCraftProtocol):
                     for tool_name, block_list in best_against.iteritems():
                         if blockType in block_list:
                             if not self.get_best_tool(blockType, tool_name) and home is not None:
-                              print 'going home to get better tools:', home
+                              logging.info('going home to get better tools: %s', str(home))
                               self.nav_to(*home)
                               while not self.get_best_tool(blockType, tool_name):
                                   self.remove_non_tools()
@@ -641,53 +496,40 @@ class MineCraftBot(MineCraftProtocol):
     self.MoveTo(*self._pos.xzy())
     path = self.find_path(Xzy(x,z,y), reachable_test=self.world.IsDiggable)
     if path is None:
-      print 'could not find path'
+      logging.error('could not find path')
       return False
-    print path
+    logging.debug('path: %s', str(path))
     for p in path:
-      print 'dig:', p
+      logging.debug('dig: %s', str(p))
       if self.DoDig(*p) and self.DoDig(p.x, p.z, p.y + 1):
         if not self.MoveTo(*p):
-          print 'could not move to:', p, 'made it to:', self._pos.xzy()
+          logging.error('could not move to: %s made it to: %s', str(p), str(self._pos.xzy()))
           return False
       else:
-        print 'could not reach:', (x,z,y), 'made it to:', self._pos.xzy()
+        logging.error('could not reach: %s made it to: %s', str((x,z,y)), str(self._pos.xzy()))
         return False
-    print 'done'
+    logging.info('done')
     return True
 
   def find_path(self, end, reachable_test=None):
     if reachable_test is None:
       reachable_test = self.world.IsMoveable
-
     def iter_moveable_adjacent(start):
       l = []
       for xzy, block_type in self.world.IterAdjacent(*start):
         if reachable_test(*xzy):
           l.append(xzy)
       return l
-
     def at_goal(xzy):
       if xzy == end:
         return True
       else:
         return False
-
     def distance(a, b):
       return cityblock(a, b)
-
     def distance_to_goal(a):
       return cityblock(a, end)
-
-    '''
-    if not reachable_test(*end):
-      print 'destination not reachable'
-      return None
-    '''
-
     pos = self._pos.xzy()
-
-    #pos._replace(x=pos.x-1)
     return astar.astar(
         pos, iter_moveable_adjacent, at_goal, 0, 
         distance, distance_to_goal)
@@ -743,13 +585,13 @@ class MineCraftBot(MineCraftProtocol):
     ]
     types = [ bt_name[i] for i in interesting ]
 
-    print 'waiting for world to load...'
+    logging.info('waiting for world to load...')
     self.WaitFor(lambda: self.world.GetBlock(self._pos.x, self._pos.z, self._pos.y) is not None)
     try:
       while True:
         block = self.find_nearest_blocktype(start, types=types)
         blocktype = self.world.GetBlock(*block)
-        print block, bt_int[blocktype]
+        logging.info('%s, %s', str(block), str(bt_int[blocktype]))
         if chat:
           self.SendChat('x: %d, y: %d, z: %d, type: %s' % (block.x, block.y, block.z, bt_int[blocktype]))
         while blocktype in types:
@@ -757,7 +599,6 @@ class MineCraftBot(MineCraftProtocol):
           time.sleep(10)
         start = block
     except KeyboardInterrupt:
-      print
       return
 
   def get_player_position(self, player_name):
@@ -786,6 +627,66 @@ class MineCraftBot(MineCraftProtocol):
     self.SendCloseWindow(window_id)
     if window_id != 0:
       del self.windows[window_id]
+
+  def enchant(self, tool_id, max_distance=100):
+    ENCHANTMENT_TABLE=116
+    pos = self._pos.xzy()
+    logging.info('finding nearest enchanting table')
+    table = self.iter_find_nearest_blocktype(pos, types=[ENCHANTMENT_TABLE]).next()
+    if cityblock(pos, table) > max_distance:
+      logging.error('too far from enchanting table') 
+      return False
+    logging.info('moving to enchanting table')
+    self.nav_to(*table)
+    self.close_window()
+    logging.info('opening enchantment window')
+    while not self.click_inventory_block(table):
+      time.sleep(1)
+    window_id = self._open_window_id
+    while window_id not in self.windows:
+      time.sleep(1)
+    slot_num = None
+    logging.info('looking for tool')
+    while slot_num is None:
+      slot_num = self.find_tool(tool_id, window_id=window_id, no_data=True)
+      time.sleep(1)
+    if self.click_slot(window_id, slot_num):
+      logging.info('looking for best enchantment level')
+      while min(self._xp_level, 50) not in self._available_enchantments.values():
+        current_enchantments = self._available_enchantments
+        self.click_slot(window_id, 0)
+        if self._cursor_slot.itemId == -1:
+          self.WaitFor(lambda: sum(self._available_enchantments.values()) != 0, timeout=5)
+          logging.debug('enchantment level: %d', max(self._available_enchantments.values()))
+      for key, value in self._available_enchantments.items():
+        if value == min(self._xp_level, 50):
+          logging.info('enchanting item')
+          self.SendEnchantItem(self._open_window_id, key)
+      self.click_slot(window_id, 0)
+      self.click_slot(window_id, slot_num)
+    logging.info('closing enchantment window')
+    self.close_window()
+
+  def eat(self, target_food_level=20):
+    logging.info('eating')
+    BREAD = 297
+    if not self.equip_tool(BREAD):
+      return False
+    slot_num = self._held_slot_num+36
+    slot = self.get_slot(0, slot_num)
+    if slot is None:
+      return False
+    while slot.itemId == BREAD and slot.count > 0 and self._food < target_food_level:
+      self.SendPlayerBlockPlacement(-1, -1, -1, -1, slot)
+      time.sleep(1)
+      slot = self.get_slot(0, slot_num)
+    time.sleep(1)
+    self.SendPlayerDigging(5, 0, 0, 0, 255)
+    logging.info('food level: %d, bread slot: %s', self._food, str(slot))
+    if self._food == target_food_level:
+      return True
+    else:
+      return False
     
 
 
@@ -803,8 +704,14 @@ if __name__ == '__main__':
                         help="digging bbox", metavar="BBOX")
   parser.add_option("-r", "--return-base", dest="return_base", default='base',
                         help="base to return to for better tools", metavar='BASE')
+  parser.add_option('-v', '--verbose', dest='verbose', action='count',
+                  help="Increase verbosity (specify multiple times for more)")
   (options, args) = parser.parse_args()
 
+  if options.verbose == 1: log_level = logging.INFO
+  elif options.verbose >= 2: log_level = logging.DEBUG
+  else: log_level = logging.WARNING
+  logging.basicConfig(level=log_level)
 
   with open('sites.json') as f:
     sites = json.load(f)
@@ -825,14 +732,12 @@ if __name__ == '__main__':
     for name in bot_names:
       if not os.path.isfile(os.path.join('/tmp', name)):
         username = name
-        print 'logging in as:', username
         break
     else:
       raise Exception('All usernames are logged in')
 
   if len(args) > 0: 
     cmd = args.pop(0)
-
     if cmd == 'kill':
       username = 'magahet'
       server = 'mc.gmendiola.com'
@@ -851,7 +756,7 @@ if __name__ == '__main__':
     if cmd == 'test':
       bot = MineCraftBot(server, port, username, password=password)
       bot.WaitFor(lambda: bot._pos.x != 0.0 and bot._pos.y != 0.0)
-      print 'bot ready'
+      logging.inform('bot ready')
     elif cmd == 'help':
       types = [14,15,16,56]
       start = Xzy(*args[0:3])
