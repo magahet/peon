@@ -20,6 +20,8 @@ class Window(object):
   def __init__(self, windowId, slots):
     self._slots = slots
     self._count = len(slots)
+    self.inventory_type = None
+    self.window_title = None
 
   def GetMainInventory(self):
     return self._slots[-36:-9]
@@ -74,10 +76,10 @@ class World(object):
         )
 
   def IsMoveable(self, x, z, y):
-    SOLID = set(range(1, 5) + [7] + range(12, 27))
+    NON_SOLID = set([0, 6, 18, 27,28,31,32,37,38,39,40,50,55,59,63,65,66,68,69,70,72,75,76,78,93,94,96,106,111,115,])
     standable = (
-        self.GetBlock(x, z, y)     not in SOLID and
-        self.GetBlock(x, z, y + 1) not in SOLID
+        self.GetBlock(x, z, y) in NON_SOLID and
+        self.GetBlock(x, z, y + 1) in NON_SOLID
     )
     return standable
 
@@ -85,7 +87,7 @@ class World(object):
     SOLID = set(range(1, 5) + [7] + range(12, 27))
     standable = (
         self.GetBlock(x, z, y - 1) in SOLID and
-        self.GetBlock(x, z, y)     not in SOLID and
+        self.GetBlock(x, z, y)     == 0 and
         self.GetBlock(x, z, y + 1) == 0
     )
     return standable
@@ -111,6 +113,28 @@ class World(object):
         ]
     for xzy in adjacents:
       yield xzy, self.GetBlock(*xzy)
+
+  def find_nearest_standable(self, xzy, within=100):
+    maxD = 100
+    d = {}
+    d[xzy] = 0
+    queue = [xzy]
+    while queue:
+      current_xzy = queue.pop(0)
+      xzyD = d[current_xzy]
+      if xzyD > maxD:
+        print "too far!"
+        break
+      if self.IsStandable(*current_xzy) and cityblock(xzy, current_xzy) < within:
+        return xzy
+      for xzyAdj, blockAdj in self.IterAdjacent(*xzy):
+        if xzyAdj in d:
+          continue
+        if self.IsJumpable(*xzyAdj):
+          d[xzyAdj] = xzyD + 1
+          queue.append(xzyAdj)
+    return None
+
 
   def FindNearestStandable(self, xzy, condition):
     maxD = 100
@@ -1258,7 +1282,7 @@ class MineCraftProtocol(object):
         )
 
   def SendClickWindow(self, window_id, slot_id, right_click, action_number, shift, slot_data):
-    print 'SendClickWindow:', window_id, slot_id, right_click, action_number, shift, slot_data
+    #print 'SendClickWindow:', window_id, slot_id, right_click, action_number, shift, slot_data
     packet = (
         '\x66' +
         struct.pack('!b', window_id) +

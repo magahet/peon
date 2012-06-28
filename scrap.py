@@ -9,10 +9,8 @@ import os
 import cPickle
 import math
 
-def click_chest(bot):
-  #bot.nav_to(-2, 52, 67)
-  xzy = Xzy(-6, 50, 66)
-  s=bot.windows[0]._slots[36]
+def click_inventory_block(bot, xzy):
+  s = bot.Slot(itemId=-1, count=None, meta=None, data=None)
   bot.SendPlayerBlockPlacement(xzy.x, xzy.y, xzy.z, 1, s)
   
 
@@ -38,20 +36,24 @@ def find_shallow_iron(world, start, depth=10, width=10):
 
 
 def eat(bot):
+  print 'eating',
   BREAD = 297
   if not bot.equip_tool(BREAD):
     return False
 
-  slot = bot.get_slot(36)
+  slot_num = bot._held_slot_num+36
+
+  slot = bot.get_slot(0, slot_num)
+  if slot is None:
+    return False
   while slot.itemId == BREAD and slot.count > 0 and bot._food < 18:
     bot.SendPlayerBlockPlacement(-1, -1, -1, -1, slot)
     time.sleep(1)
-    slot = bot.get_slot(36)
+    slot = bot.get_slot(0, slot_num)
   time.sleep(1)
   bot.SendPlayerDigging(5, 0, 0, 0, 255)
 
-  sys.stdout.write('fl%db%d' % (bot._food, slot.count))
-  sys.stdout.flush()
+  print bot._food, slot
 
   if bot._food >= 18:
     return True
@@ -62,37 +64,38 @@ def eat(bot):
 
 def kill(bot):
   DIAMOND_SWORD = 276
-
-  bot.MoveTo(-137, -177, 12)
+  XP_POINT = (-137, -177, 12)
   last_level = bot._xp_level + bot._xp_bar
+  print 'level:', bot._xp_level
 
-  while True:
+  while True: 
+    if bot._xp_level >= 50:
+      enchant(bot)
+      last_level = bot._xp_level + bot._xp_bar
+
+    if bot._pos.xzy() != XP_POINT:
+      print 'moving to xp farm'
+      bot.nav_to(*XP_POINT)
+
     current_level = bot._xp_level + bot._xp_bar
     if current_level > last_level + 0.1:
-      if current_level >= 50:
-        print 'DONE'
-        bot.SendDisconnect()
-        sys.exit()
-
       sys.stdout.write('%.1f' % current_level)
       sys.stdout.flush()
       last_level = current_level
 
     if bot._food < 10:
-      sys.stdout.write('e')
-      sys.stdout.flush()
       if not eat(bot):
         print 'no more food. leaving'
         bot.SendDisconnect()
         sys.exit()
 
     if bot._health < 15:
-      print 'leaving'
+      print 'health too low. leaving'
       bot.SendDisconnect()
       sys.exit()
 
     if not bot.equip_tool(DIAMOND_SWORD):
-      print 'No Sword. leaving'
+      print 'no sword. leaving'
       bot.SendDisconnect()
       sys.exit()
 
@@ -102,12 +105,9 @@ def kill(bot):
       dist = euclidean(
           bot._pos.xzy(), e._pos.xzy())
 
-      #print int(dist), e._player_name
       if dist <= 4 and e._player_name is None:
         attack_list.append(eid)
 
-    #print len(attack_list),
-    #if len(attack_list) > 0:
     for eid in attack_list:
       sys.stdout.write('.')
       sys.stdout.flush()
@@ -313,3 +313,59 @@ def find_blocktypes():
 def find_nearest(start, sites):
   d = [ cityblock(start, site) for site in sites ]
   return d.index(min(d))
+
+def enchant(bot):
+  ENCHANTMENT_TABLE=116
+  DIAMOND_AXE=278
+  pos = bot._pos.xzy()
+  print 'finding nearest enchanting table'
+  table = bot.iter_find_nearest_blocktype(pos, types=[ENCHANTMENT_TABLE]).next()
+  print 'moving to enchanting table'
+  bot.nav_to(*table)
+
+  
+  bot.close_window()
+  print 'opening enchantment window'
+  while not bot.click_inventory_block(table):
+    time.sleep(1)
+  window_id = bot._open_window_id
+  while window_id not in bot.windows:
+    time.sleep(1)
+
+  slot_num = None
+  print 'looking for diamond axe'
+  while slot_num is None:
+    slot_num = bot.find_tool(DIAMOND_AXE, window_id=window_id, no_data=True)
+    time.sleep(1)
+
+  if bot.click_slot(window_id, slot_num):
+    print 'looking for best enchantment level'
+    while min(bot._xp_level, 50) not in bot._available_enchantments.values():
+      current_enchantments = bot._available_enchantments
+      bot.click_slot(window_id, 0)
+      if bot._cursor_slot.itemId == -1:
+        bot.WaitFor(lambda: sum(bot._available_enchantments.values()) != 0, timeout=5)
+        print max(bot._available_enchantments.values()),
+        sys.stdout.flush()
+
+    for key, value in bot._available_enchantments.items():
+      if value == min(bot._xp_level, 50):
+        print 'enchanting item'
+        bot.SendEnchantItem(bot._open_window_id, key)
+
+    bot.click_slot(window_id, 0)
+    bot.click_slot(window_id, slot_num)
+
+  print 'closing enchantment window'
+  bot.close_window()
+
+
+
+    
+    
+
+
+
+
+
+

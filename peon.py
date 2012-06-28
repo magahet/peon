@@ -46,6 +46,9 @@ class MineCraftBot(MineCraftProtocol):
     self._xp_bar = -1
     self._xp_level = -1
     self._xp_total = -1
+    self._available_enchantments = {}
+    self._open_window_id = 0
+    self._held_slot_num = 0
 
     self.world = World()
     self.windows = {}
@@ -85,8 +88,10 @@ class MineCraftBot(MineCraftProtocol):
         '\x33': self.world.MapChunk,
         '\x34': self.OnMultiBlockChange,
         '\x35': self.OnBlockChange,
+        '\x64': self.OnOpenWindow,
         '\x67': self.OnSetSlot,
         '\x68': self.OnSetWindowItems,
+        '\x69': self.OnUpdateWindowProperty,
         '\x6a': self.OnConfirmTransaction,
         }
 
@@ -271,8 +276,18 @@ class MineCraftBot(MineCraftProtocol):
       self.world.SetBlock(x, z, y, newType, newMeta)
 
   def OnBlockChange(self, x, y, z, newType, newMeta):
-    #print "Block change:", (x, z, y), newType
     self.world.SetBlock(x, z, y, newType, newMeta)
+
+  def OnOpenWindow(self, window_id, inventory_type, window_title, num_slots):
+    self._open_window_id = window_id
+    if window_id not in self.windows:
+      time.sleep(1)
+    if window_id in self.windows:
+      self.windows[window_id].inventory_type = inventory_type
+      self.windows[window_id].window_title = window_title
+
+  def OnCloseWindow(self, window_id):
+    self._open_window_id = 0
 
   def OnMapChunks(self, chunk):
     self._chunks[chunk.chunkX, chunk.chunkZ] = chunk
@@ -285,13 +300,12 @@ class MineCraftBot(MineCraftProtocol):
       self.windows[windowId].SetSlot(slotIndex, slot)
 
   def OnSetWindowItems(self, windowId, slots):
-    '''
-    print 'SetWindowItems:', windowId
-    for s in slots:
-      print s
-    '''
     window = Window(windowId, slots)
     self.windows[windowId] = window
+
+  def OnUpdateWindowProperty(self, window_id, window_property, value):
+    self._available_enchantments[window_property] = value
+    
 
   def OnConfirmTransaction(self, window_id, action_id, accepted):
     self._confirmations[action_id] = Confirmation(window_id, action_id, accepted)
@@ -317,18 +331,13 @@ class MineCraftBot(MineCraftProtocol):
 
   def nav_to(self, x, z, y): 
     self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
-    botXzy = Xzy(self._pos.x, self._pos.z, self._pos.y)
+    botXzy = self._pos.xzy()
     nextXzy = Xzy(x, z, y)
     if botXzy == nextXzy:
       return
-
-    print 'moving to:', nextXzy
-
     path = self.find_path(nextXzy)
     if path is not None:
-      end = path[-1]
       for step in path:
-        print 'minimove-', step
         self.MoveTo(*step)
 
   def MoveTo(self, x, z, y, speed=4.25, onGround=True):
@@ -480,22 +489,26 @@ class MineCraftBot(MineCraftProtocol):
     for i, slot in enumerate(self.windows[0].GetHeld()):
       if slot.itemId in tools[tool_name]:
         print 'Switching to tool:', tool_name
-        self.SendHeldItemChange(i)
+        self.change_held_slot(i)
         return True
     
     return False
 
-  def get_slot(self, slot_num):
-    return self.windows[0]._slots[slot_num]
+  def change_held_slot(self, slot_num):
+    self.SendHeldItemChange(slot_num)
+    self._held_slot_num = slot_num
+
+  def get_slot(self, window_id, slot_num):
+    return self.windows[window_id]._slots[slot_num]
 
   #TODO Fix this. Should reliably place tool in bot's hand.
-  def click_slot(self, slot_num):
+  def click_slot(self, window_id, slot_num):
     action_id = self._action_id.next()
-    if slot_num in range(45):
-      slot_data = self.get_slot(slot_num)
+    if slot_num in range(len(self.windows[window_id]._slots)):
+      slot_data = self.get_slot(window_id, slot_num)
     else:
       slot_data = Slot(itemId=-1, count=None, meta=None, data=None) 
-    self.SendClickWindow(0, slot_num, 0, action_id, 0, slot_data)
+    self.SendClickWindow(window_id, slot_num, 0, action_id, 0, slot_data)
     if self.WaitFor(lambda: action_id in self._confirmations.keys(), timeout=5):
       if self._confirmations[action_id].accepted:
         self.windows[0]._slots[slot_num] = self._cursor_slot
@@ -503,14 +516,17 @@ class MineCraftBot(MineCraftProtocol):
         return True
     return False
 
-  def find_tool(self, tool_id, held_only=False):
-    for i, slot in enumerate(self.windows[0]._slots):
-      if slot.itemId == tool_id:
+  def find_tool(self, tool_id, window_id=0, held_only=False, no_data=False):
+    for i, slot in enumerate(self.windows[window_id]._slots):
+      if slot.itemId == tool_id and (not no_data or slot.data is None):
         if not held_only or i >= 36:
           return i
     return None
 
   def equip_tool(self, tool_id):
+    if self.get_slot(0, self._held_slot_num+36).itemId == tool_id:
+      return True
+
     slot_num = self.find_tool(tool_id, held_only=True)
     if slot_num is None:
       slot_num = self.find_tool(tool_id)
@@ -530,13 +546,13 @@ class MineCraftBot(MineCraftProtocol):
 
       #print 'click_list:', click_list
       for i in click_list:
-        if not self.click_slot(i):
+        if not self.click_slot(0, i):
           return False
     else:
       target_slot_num = slot_num
 
     #print 'target_slot_num:', target_slot_num
-    self.SendHeldItemChange(target_slot_num-36)
+    self.change_held_slot(target_slot_num-36)
     return True
 
 
@@ -663,11 +679,14 @@ class MineCraftBot(MineCraftProtocol):
     def distance_to_goal(a):
       return cityblock(a, end)
 
+    '''
     if not reachable_test(*end):
       print 'destination not reachable'
       return None
+    '''
 
     pos = self._pos.xzy()
+
     #pos._replace(x=pos.x-1)
     return astar.astar(
         pos, iter_moveable_adjacent, at_goal, 0, 
@@ -751,6 +770,25 @@ class MineCraftBot(MineCraftProtocol):
     if xzy is not None:
       self.nav_to(*xzy)
 
+  def click_inventory_block(self, xzy):
+    if self._open_window_id != 0:
+      return False
+    s = Slot(itemId=-1, count=None, meta=None, data=None)
+    self.SendPlayerBlockPlacement(xzy.x, xzy.y, xzy.z, 1,  s)
+    if self.WaitFor(lambda: self._open_window_id != 0):
+      return True
+    else:
+      return False
+
+  def close_window(self):
+    window_id = self._open_window_id
+    self._open_window_id = 0
+    self.SendCloseWindow(window_id)
+    if window_id != 0:
+      del self.windows[window_id]
+    
+
+
 if __name__ == '__main__':
   parser = OptionParser()
   parser.add_option("-s", "--server", dest="server", default="localhost",
@@ -797,6 +835,7 @@ if __name__ == '__main__':
 
     if cmd == 'kill':
       username = 'magahet'
+      server = 'mc.gmendiola.com'
       bot = MineCraftBot(server, port, username, password=password)
       bot.WaitFor(lambda: bot._pos.x != 0.0 and bot._pos.y != 0.0)
       time.sleep(2)
