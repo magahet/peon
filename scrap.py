@@ -1,4 +1,4 @@
-from peon import Xzy
+from mc import Xzy
 from scipy.spatial.distance import euclidean
 import time
 import sys

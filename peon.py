@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import mc
+import astar
 import json
 import re
 from scipy.spatial.distance import cityblock
@@ -17,21 +19,16 @@ import time
 import random
 import itertools
 import logging
-
-from mc import Slot, Window, Xzy, World, Position, ChunkColumn, MineCraftProtocol, Entity, Confirmation
-from optparse import OptionParser
-import ConfigParser
+import optparse
 import atexit
 import os
-import astar
 
 class MoveException(Exception):
   pass
 
-class MineCraftBot(MineCraftProtocol):
+class MineCraftBot(mc.MineCraftProtocol):
   def __init__(self, host, port, username, password=None):
     super(MineCraftBot, self).__init__()
-
     self._host = host
     self._port = port
     self._username = username
@@ -45,22 +42,19 @@ class MineCraftBot(MineCraftProtocol):
     self._available_enchantments = {}
     self._open_window_id = 0
     self._held_slot_num = 0
-
-    self.world = World()
+    self.world = mc.World()
     self.windows = {}
-    self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
-
+    self._pos = mc.Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
     self._entityId = None
     self._levelType = None
     self._serverMode = None
     self._dimension = None
     self._difficulty = None
     self._maxPlayers = None
-    self._cursor_slot = Slot(itemId=-1, count=None, meta=None, data=None) 
+    self._cursor_slot = mc.Slot(itemId=-1, count=None, meta=None, data=None) 
     self._action_id = itertools.count(1)
     self._confirmations = {}
     self.bot_file = os.path.join('/tmp', self._username)
-
     self._threadFuncs.extend([
         #self._DoCrashThread,
         #self._DoWatchdogThread,
@@ -90,21 +84,15 @@ class MineCraftBot(MineCraftProtocol):
         '\x69': self.OnUpdateWindowProperty,
         '\x6a': self.OnConfirmTransaction,
         }
-
     self._block_names, self._block_ids = self.get_blocktypes()
-
-
     if os.path.isfile(self.bot_file):
       raise Exception("%s is already logged in" % self._username)
-
     open(self.bot_file, 'w').close()
     atexit.register(self.delbotfile)
-    
     if password is None:
       self.Login()
     else:
       self.Login(authenticate=True)
-
     self.FloatDown()
 
   def get_blocktypes(self, filename='blocktypes.csv'):
@@ -120,9 +108,7 @@ class MineCraftBot(MineCraftProtocol):
     self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self._sock.connect((self._host, self._port))
     self._sockGeneration += 1
-
     self.StartThreads()
-
     if authenticate:
       self._sessionId = self.GetSessionId(self._username, self._password)
       logging.info('sessionId: %d', self._sessionId)
@@ -130,7 +116,6 @@ class MineCraftBot(MineCraftProtocol):
       self.WaitFor(lambda: self._serverId is not None)
       logging.info('serverId: %d', self._serverId)
       logging.info('joinserver status: %s', str(self.JoinServer(self._username, self._sessionId, self._serverId)))
-
     logging.info('sending login. server: %s username: %s', self._host, self._username)
     self.SendLogin(self._username)
 
@@ -143,27 +128,23 @@ class MineCraftBot(MineCraftProtocol):
   def _DoWatchdogThread(self):
     try:
       myGeneration = self._sockGeneration
-      # Give everyone a bit of time to wake up
       time.sleep(5)
       while all(t.is_alive() for t in self._threads):
         time.sleep(1)
-
       deadTime = time.time()
       self._sock = None
       self._sendQueue.put(None)
       self._sendQueue = None
-
       def OtherThreadIsAlive():
         return len([t for t in self._threads if t.is_alive()]) > 1
       while OtherThreadIsAlive() and time.time() - deadTime < 5:
         time.sleep(1)
       if OtherThreadIsAlive():
         time.sleep(3)
-
       self._buf = ''
       self._sendQueue = Queue.Queue(10)
-      self._pos = Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
-      self.world = World()
+      self._pos = mc.Position(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1)
+      self.world = mc.World()
       self.windows = {}
       self.Login()
       self.FloatDown()
@@ -222,24 +203,21 @@ class MineCraftBot(MineCraftProtocol):
       self.SendRespawn(self._dimension, self._difficulty, self._levelType)
 
   def OnPlayerPositionLook(self, x, stance, y, z, yaw, pitch, onGround):
-    pos = Position(x, y, stance, z, yaw, pitch, onGround)
+    pos = mc.Position(x, y, stance, z, yaw, pitch, onGround)
     self.SendPositionLook(pos)
-    self._pos = Position(x, y, stance, z, yaw, pitch, 1)
+    self._pos = mc.Position(x, y, stance, z, yaw, pitch, 1)
 
   def OnSpawnNamedEntity(self, eid, player_name, x, y, z, yaw, pitch, current_item):
-    self.world._entities[eid] = Entity(
+    self.world._entities[eid] = mc.Entity(
       eid, 0, x, y, z, yaw, pitch, player_name=player_name, current_item=current_item)
 
   def OnSpawnMob(self, eid, etype, x, y, z, yaw, pitch, head_yaw, metadata):
-    self.world._entities[eid] = Entity(
+    self.world._entities[eid] = mc.Entity(
       eid, etype, x, y, z, yaw, pitch, head_yaw=head_yaw, metadata=metadata)
 
   def OnDestroyEntity(self, eid):
     if eid in self.world._entities:
       del self.world._entities[eid]
-
-  def OnEntity(self, eid):
-    return
 
   def OnEntityRelativeMove(self, eid, x, y, z):
     if eid in self.world._entities:
@@ -294,40 +272,45 @@ class MineCraftBot(MineCraftProtocol):
       self.windows[windowId].SetSlot(slotIndex, slot)
 
   def OnSetWindowItems(self, windowId, slots):
-    window = Window(windowId, slots)
+    window = mc.Window(windowId, slots)
     self.windows[windowId] = window
 
   def OnUpdateWindowProperty(self, window_id, window_property, value):
     self._available_enchantments[window_property] = value
 
   def OnConfirmTransaction(self, window_id, action_id, accepted):
-    self._confirmations[action_id] = Confirmation(window_id, action_id, accepted)
+    self._confirmations[action_id] = mc.Confirmation(window_id, action_id, accepted)
     if not accepted:
         self.SendConfirmTransaction(window_id, action_id, accepted)
 
-  def DoDig(self, x, z, y, face=1, retries=5):
+  def break_block(self, x, z, y, face=1, retries=5):
+    xzy = mc.Xzy(x, z, y)
     for i in range(retries):
-        if self.SendDig(x, z, y):
-          return True
+      logging.debug('sending dig command for: %s', str(xzy))
+      self.SendPlayerDigging(0, x, y, z, face)
+      time.sleep(0.1)
+      self.SendPlayerDigging(2, x, y, z, face)
+      if self.WaitFor(lambda: self.world.GetBlock(x, z, y) == 0, timeout=10):
+        return True
     else:
-        return False
-
-  def SendDig(self, x, z, y, face=1):
-    self.SendPlayerDigging(0, x, y, z, face)
-    time.sleep(0.2)
-    self.SendPlayerDigging(2, x, y, z, face)
-    return self.WaitFor(lambda: self.world.GetBlock(x, z, y) == 0, timeout=10)
+      logging.error('could not break block: %s', str(xzy))
+      return False
 
   def nav_to(self, x, z, y): 
-    self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
+    if not self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0):
+      logging.error('current position could not be found')
+      return False
     botXzy = self._pos.xzy()
-    nextXzy = Xzy(x, z, y)
+    nextXzy = mc.Xzy(x, z, y)
     if botXzy == nextXzy:
-      return
+      return True
     path = self.find_path(nextXzy)
     if path is not None:
       for step in path:
-        self.MoveTo(*step)
+        if not self.MoveTo(*step):
+          logging.error('could not make it to: %s failed at: %s', str(nextXzy), str(step))
+          return False
+    return True
 
   def MoveTo(self, x, z, y, speed=4.25, onGround=True):
     x+=0.5
@@ -336,7 +319,7 @@ class MineCraftBot(MineCraftProtocol):
       return abs(pos.x - x) + abs(pos.z - z) + abs(pos.y - y)
     def Go(x=None, z=None, y=None):
       logging.debug('moving to: (%d, %d, %d)', x, z, y)
-      self._pos = Position(x, y, y+1, z, yaw, 0, onGround)
+      self._pos = mc.Position(x, y, y+1, z, yaw, 0, onGround)
     pos = self._pos
     yaw = pos.yaw
     if z - pos.z > .9:
@@ -412,7 +395,7 @@ class MineCraftBot(MineCraftProtocol):
     if slot_num in range(len(self.windows[window_id]._slots)):
       slot_data = self.get_slot(window_id, slot_num)
     else:
-      slot_data = Slot(itemId=-1, count=None, meta=None, data=None) 
+      slot_data = mc.Slot(itemId=-1, count=None, meta=None, data=None) 
     self.SendClickWindow(window_id, slot_num, 0, action_id, 0, slot_data)
     if self.WaitFor(lambda: action_id in self._confirmations.keys(), timeout=5):
       if self._confirmations[action_id].accepted:
@@ -476,7 +459,7 @@ class MineCraftBot(MineCraftProtocol):
     for y in y_range:
         for z in z_range:
            for x in x_range:
-                blockXzy = Xzy(x, z, y)
+                blockXzy = mc.Xzy(x, z, y)
                 if self.world.GetBlock(*blockXzy) is None:
                     logging.info("Waiting for chunks to load...")
                     self.nav_to(x, z, max(bbox['y']))
@@ -497,7 +480,7 @@ class MineCraftBot(MineCraftProtocol):
                                   time.sleep(10)
                               self.nav_to(x, z, y + dig_height)
                 self.nav_to(x, z, y + dig_height)
-                if self.DoDig(x, z, y):
+                if self.break_block(x, z, y):
                   sys.stdout.write('.')
                 else:
                   sys.stdout.write('!')
@@ -505,14 +488,14 @@ class MineCraftBot(MineCraftProtocol):
 
   def dig_to(self, x, z, y):
     self.MoveTo(*self._pos.xzy())
-    path = self.find_path(Xzy(x,z,y), reachable_test=self.world.IsDiggable)
+    path = self.find_path(mc.Xzy(x,z,y), reachable_test=self.world.IsDiggable)
     if path is None:
       logging.error('could not find path')
       return False
     logging.debug('path: %s', str(path))
     for p in path:
       logging.debug('dig: %s', str(p))
-      if self.DoDig(*p) and self.DoDig(p.x, p.z, p.y + 1):
+      if self.break_block(*p) and self.break_block(p.x, p.z, p.y + 1):
         if not self.MoveTo(*p):
           logging.error('could not move to: %s made it to: %s', str(p), str(self._pos.xzy()))
           return False
@@ -523,8 +506,6 @@ class MineCraftBot(MineCraftProtocol):
     return True
 
   def find_path(self, end, reachable_test=None):
-    if reachable_test is None:
-      reachable_test = self.world.IsMoveable
     def iter_moveable_adjacent(start):
       l = []
       for xzy, block_type in self.world.IterAdjacent(*start):
@@ -540,8 +521,9 @@ class MineCraftBot(MineCraftProtocol):
       return cityblock(a, b)
     def distance_to_goal(a):
       return cityblock(a, end)
+    if reachable_test is None:
+      reachable_test = self.world.IsMoveable
     pos = self._pos.xzy()
-
     logging.debug('looking for path from: %s to: %s', str(pos), str(end))
     path = astar.astar(
         pos, iter_moveable_adjacent, at_goal, 0, 
@@ -558,7 +540,7 @@ class MineCraftBot(MineCraftProtocol):
           z = block.z + offset_z
           y = block.y + offset_y
           if y > 0 and y < max_height:
-            blocks.append(Xzy(x, z, y))
+            blocks.append(mc.Xzy(x, z, y))
     for xzy in blocks:
       yield xzy
 
@@ -627,7 +609,7 @@ class MineCraftBot(MineCraftProtocol):
   def click_inventory_block(self, xzy):
     if self._open_window_id != 0:
       return False
-    s = Slot(itemId=-1, count=None, meta=None, data=None)
+    s = mc.Slot(itemId=-1, count=None, meta=None, data=None)
     self.SendPlayerBlockPlacement(xzy.x, xzy.y, xzy.z, 1,  s)
     if self.WaitFor(lambda: self._open_window_id != 0):
       return True
@@ -641,7 +623,7 @@ class MineCraftBot(MineCraftProtocol):
     if window_id != 0:
       del self.windows[window_id]
 
-  def enchant(self, tool_id, max_distance=100):
+  def enchant(self, tool_id, max_distance=100, retries=3):
     ENCHANTMENT_TABLE=116
     pos = self._pos.xzy()
     logging.info('finding nearest enchanting table')
@@ -650,35 +632,50 @@ class MineCraftBot(MineCraftProtocol):
       logging.error('too far from enchanting table') 
       return False
     logging.info('moving to enchanting table')
-    self.nav_to(*table)
+    if not self.nav_to(*table):
+      logging.error('did not make it to enchanting table')
+      return False
     self.close_window()
     logging.info('opening enchantment window')
-    while not self.click_inventory_block(table):
-      time.sleep(1)
+    if not self.click_inventory_block(table):
+      logging.error('could not open enchantment window')
+      return False
     window_id = self._open_window_id
-    while window_id not in self.windows:
-      time.sleep(1)
-    slot_num = None
+    if not self.WaitFor(lambda: window_id in self.windows):
+      logging.error('could not open enchantment window')
+      return False
     logging.info('looking for tool')
-    while slot_num is None:
-      slot_num = self.find_tool(tool_id, window_id=window_id, no_data=True)
-      time.sleep(1)
-    if self.click_slot(window_id, slot_num):
-      logging.info('looking for best enchantment level')
-      while min(self._xp_level, 50) not in self._available_enchantments.values():
-        current_enchantments = self._available_enchantments
-        self.click_slot(window_id, 0)
-        if self._cursor_slot.itemId == -1:
-          self.WaitFor(lambda: sum(self._available_enchantments.values()) != 0, timeout=5)
-          logging.debug('enchantment level: %d', max(self._available_enchantments.values()))
-      for key, value in self._available_enchantments.items():
-        if value == min(self._xp_level, 50):
-          logging.info('enchanting item')
-          self.SendEnchantItem(self._open_window_id, key)
-      self.click_slot(window_id, 0)
-      self.click_slot(window_id, slot_num)
+    slot_num = self.find_tool(tool_id, window_id=window_id, no_data=True)
+    if slot_num is None:
+      logging.error('could not find tool to enchant')
+      return False
+    if not self.click_slot(window_id, slot_num):
+      logging.error('could not grab tool to enchant')
+      return False
+    logging.info('looking for best enchantment level')
+    target_level = min(self._xp_level, 50)
+    while target_level not in self._available_enchantments.values():
+      if not self.click_slot(window_id, 0):
+        logging.error('failed to place tool on enchanting table')
+        return False
+      if self._cursor_slot.itemId == -1:
+        self.WaitFor(lambda: sum(self._available_enchantments.values()) != 0, timeout=5)
+        logging.debug('enchantment level: %d', max(self._available_enchantments.values()))
+    enchantment_num = [ k for k, v in self._available_enchantments.items() if v == target_level ][0]
+    logging.info('enchanting item')
+    self.SendEnchantItem(self._open_window_id, enchantment_num)
+    if not self.WaitFor(lambda: self.windows[window_id]._slots[0].data is not None, timeout=5):
+      logging.error('enchant tool command failed')
+      return False
+    if not self.click_slot(window_id, 0):
+      logging.error('could not grab enchanted tool')
+      return False
+    if not self.click_slot(window_id, slot_num):
+      logging.error('could not place enchanted tool in inventory')
+      return False
     logging.info('closing enchantment window')
     self.close_window()
+    return True
 
   def eat(self, target_food_level=20):
     logging.info('eating')
@@ -734,7 +731,7 @@ class MineCraftBot(MineCraftProtocol):
 
 
 if __name__ == '__main__':
-  parser = OptionParser()
+  parser = optparse.OptionParser()
   parser.add_option("-s", "--server", dest="server", default="localhost",
                         help="server", metavar="SERVER")
   parser.add_option("-P", "--port", dest="port", default=25565, type="int",
@@ -801,7 +798,7 @@ if __name__ == '__main__':
       logging.info('bot ready')
     elif cmd == 'help':
       types = [14,15,16,56]
-      start = Xzy(*args[0:3])
+      start = mc.Xzy(*args[0:3])
       bot = MineCraftBot(server, port, username, password=password)
       bot.help_find_blocks(start, types=types)
     elif cmd == 'dig':
