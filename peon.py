@@ -91,6 +91,9 @@ class MineCraftBot(MineCraftProtocol):
         '\x6a': self.OnConfirmTransaction,
         }
 
+    self._block_names, self._block_ids = self.get_blocktypes()
+
+
     if os.path.isfile(self.bot_file):
       raise Exception("%s is already logged in" % self._username)
 
@@ -103,6 +106,12 @@ class MineCraftBot(MineCraftProtocol):
       self.Login(authenticate=True)
 
     self.FloatDown()
+
+  def get_blocktypes(self, filename='blocktypes.csv'):
+    c = [ l for l in csv.DictReader(open(filename), skipinitialspace=True) ]
+    block_names = dict([(int(l['dec']), l['type']) for l in c ])
+    block_ids = dict([(l['type'], int(l['dec'])) for l in  c ])
+    return block_names, block_ids
 
   def delbotfile(self):
     os.remove(self.bot_file)
@@ -122,7 +131,7 @@ class MineCraftBot(MineCraftProtocol):
       logging.info('serverId: %d', self._serverId)
       logging.info('joinserver status: %s', str(self.JoinServer(self._username, self._sessionId, self._serverId)))
 
-    logging.info('sending login...')
+    logging.info('sending login. server: %s username: %s', self._host, self._username)
     self.SendLogin(self._username)
 
   def _DoCrashThread(self):
@@ -326,6 +335,7 @@ class MineCraftBot(MineCraftProtocol):
     def MyDist(x, z, y):
       return abs(pos.x - x) + abs(pos.z - z) + abs(pos.y - y)
     def Go(x=None, z=None, y=None):
+      logging.debug('moving to: (%d, %d, %d)', x, z, y)
       self._pos = Position(x, y, y+1, z, yaw, 0, onGround)
     pos = self._pos
     yaw = pos.yaw
@@ -406,7 +416,8 @@ class MineCraftBot(MineCraftProtocol):
     self.SendClickWindow(window_id, slot_num, 0, action_id, 0, slot_data)
     if self.WaitFor(lambda: action_id in self._confirmations.keys(), timeout=5):
       if self._confirmations[action_id].accepted:
-        self.windows[0]._slots[slot_num] = self._cursor_slot
+        if slot_num in range(len(self.windows[window_id]._slots)):
+          self.windows[0]._slots[slot_num] = self._cursor_slot
         self._cursor_slot = slot_data
         return True
     return False
@@ -530,9 +541,13 @@ class MineCraftBot(MineCraftProtocol):
     def distance_to_goal(a):
       return cityblock(a, end)
     pos = self._pos.xzy()
-    return astar.astar(
+
+    logging.debug('looking for path from: %s to: %s', str(pos), str(end))
+    path = astar.astar(
         pos, iter_moveable_adjacent, at_goal, 0, 
         distance, distance_to_goal)
+    logging.debug('path: %s', str(path))
+    return path
 
   def get_adjacent_blocks(self, block, max_height=64):
     blocks = []
@@ -574,16 +589,13 @@ class MineCraftBot(MineCraftProtocol):
 
   def help_find_blocks(self, start, types=[15], chat=True):
     self.nav_to(start.x, start.z, 200)
-    c = [ l for l in csv.DictReader(open('blocktypes.csv'), skipinitialspace=True) ]
-    bt_name = dict([(l['type'], int(l['dec'])) for l in c ])
-    bt_int = dict([(int(l['dec']), l['type']) for l in c ])
     interesting = [
       'diamond ore',
       #'gold ore',
       #'iron ore',
       #'coal ore'
     ]
-    types = [ bt_name[i] for i in interesting ]
+    types = [ self._block_names[i] for i in interesting ]
 
     logging.info('waiting for world to load...')
     self.WaitFor(lambda: self.world.GetBlock(self._pos.x, self._pos.z, self._pos.y) is not None)
@@ -591,9 +603,9 @@ class MineCraftBot(MineCraftProtocol):
       while True:
         block = self.find_nearest_blocktype(start, types=types)
         blocktype = self.world.GetBlock(*block)
-        logging.info('%s, %s', str(block), str(bt_int[blocktype]))
+        logging.info('%s, %s', str(block), str(self._block_ids[blocktype]))
         if chat:
-          self.SendChat('x: %d, y: %d, z: %d, type: %s' % (block.x, block.y, block.z, bt_int[blocktype]))
+          self.SendChat('x: %d, y: %d, z: %d, type: %s' % (block.x, block.y, block.z, self._block_ids[blocktype]))
         while blocktype in types:
           blocktype = self.world.GetBlock(*block)
           time.sleep(10)
@@ -608,6 +620,7 @@ class MineCraftBot(MineCraftProtocol):
 
   def move_to_player(self, player_name):
     xzy = self.get_player_position(player_name)
+    logging.info('moving to player: %s at: %s', player_name, str(xzy))
     if xzy is not None:
       self.nav_to(*xzy)
 
@@ -687,7 +700,37 @@ class MineCraftBot(MineCraftProtocol):
       return True
     else:
       return False
-    
+
+  def get_inventory(self):
+    return [ (slot_num, item) for slot_num, item in enumerate(self.windows[0]._slots) if item.itemId != -1 ]
+
+  def drop_items(self, item_ids):
+    if len(item_ids) == 0:
+      drop_list = [ slot_num for slot_num, item in self.get_inventory() ]
+    else:
+      drop_list = [ slot_num for slot_num, item in self.get_inventory() if item.itemId in item_ids ]
+    for slot_num in drop_list:
+      if not self.click_slot(0, slot_num):
+        return False
+      if not self.click_slot(0, -999):
+        return False
+    else:
+      return True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
@@ -708,9 +751,8 @@ if __name__ == '__main__':
                   help="Increase verbosity (specify multiple times for more)")
   (options, args) = parser.parse_args()
 
-  if options.verbose == 1: log_level = logging.INFO
-  elif options.verbose >= 2: log_level = logging.DEBUG
-  else: log_level = logging.WARNING
+  if options.verbose >= 1: log_level = logging.DEBUG
+  else: log_level = logging.INFO
   logging.basicConfig(level=log_level)
 
   with open('sites.json') as f:
@@ -756,7 +798,7 @@ if __name__ == '__main__':
     if cmd == 'test':
       bot = MineCraftBot(server, port, username, password=password)
       bot.WaitFor(lambda: bot._pos.x != 0.0 and bot._pos.y != 0.0)
-      logging.inform('bot ready')
+      logging.info('bot ready')
     elif cmd == 'help':
       types = [14,15,16,56]
       start = Xzy(*args[0:3])

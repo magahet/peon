@@ -77,7 +77,7 @@ class World(object):
         )
 
   def IsMoveable(self, x, z, y):
-    NON_SOLID = set([0, 6, 18, 27,28,31,32,37,38,39,40,50,55,59,63,65,66,68,69,70,72,75,76,78,93,94,96,106,111,115,])
+    NON_SOLID = set([0,6,27,28,31,32,37,38,39,40,50,55,59,63,65,66,68,69,70,72,75,76,78,93,94,96,106,111,115,])
     standable = (
         self.GetBlock(x, z, y) in NON_SOLID and
         self.GetBlock(x, z, y + 1) in NON_SOLID
