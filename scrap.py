@@ -18,8 +18,11 @@ def kill(bot):
 
   while True: 
     if bot._xp_level >= 50:
-
-      bot.enchant(DIAMOND_AXE)
+      print 'enchanting axe'
+      if not bot.enchant(DIAMOND_AXE):
+        print 'no tools to enchant. leaving'
+        bot.SendDisconnect()
+        sys.exit()
       last_level = bot._xp_level + bot._xp_bar
 
     if bot._pos.xzy() != XP_POINT:

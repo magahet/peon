@@ -127,3 +127,131 @@ dec, hex, type
 125, 7d, wooden double slab
 126, 7e, wooden slab
 127, 7f, cocoa plant
+256, 100, iron shovel
+257, 101, iron pickaxe
+258, 102, iron axe
+259, 103, flint and steel
+260, 104, red apple
+261, 105, bow
+262, 106, arrow
+263, 107, coal
+264, 108, diamond
+265, 109, iron ingot
+266, 10a, gold ingot
+267, 10b, iron sword
+268, 10c, wooden sword
+269, 10d, wooden shovel
+270, 10e, wooden pickaxe
+271, 10f, wooden axe
+272, 110, stone sword
+273, 111, stone shovel
+274, 112, stone pickaxe
+275, 113, stone axe
+276, 114, diamond sword
+277, 115, diamond shovel
+278, 116, diamond pickaxe
+279, 117, diamond axe
+280, 118, stick
+281, 119, bowl
+282, 11a, mushroom soup
+283, 11b, golden sword
+284, 11c, golden shovel
+285, 11d, golden pickaxe
+286, 11e, golden axe
+287, 11f, string
+288, 120, feather
+289, 121, gunpowder
+290, 122, wooden hoe
+291, 123, stone hoe
+292, 124, iron hoe
+293, 125, diamond hoe
+294, 126, gold hoe
+295, 127, seeds
+296, 128, wheat
+297, 129, bread
+298, 12a, leather cap
+299, 12b, leather tunic
+300, 12c, leather pants
+301, 12d, leather boots
+302, 12e, chain helmet
+303, 12f, chain chestplate
+304, 130, chain leggings
+305, 131, chain boots
+306, 132, iron helmet
+307, 133, iron chestplate
+308, 134, iron leggings
+309, 135, iron boots
+310, 136, diamond helmet
+311, 137, diamond chestplate
+312, 138, diamond leggings
+313, 139, diamond boots
+314, 13a, golden helmet
+315, 13b, golden chestplate
+316, 13c, golden leggings
+317, 13d, golden boots
+318, 13e, flint
+319, 13f, raw porkchop
+320, 140, cooked porkchop
+321, 141, paintings
+322, 142, golden apple
+323, 143, sign
+324, 144, wooden door
+325, 145, bucket
+326, 146, water bucket
+327, 147, lava bucket
+328, 148, minecart
+329, 149, saddle
+330, 14a, iron door
+331, 14b, redstone dust
+332, 14c, snowball
+333, 14d, boat
+334, 14e, leather
+335, 14f, milk
+336, 150, clay brick
+337, 151, clay
+338, 152, sugar cane
+339, 153, paper
+340, 154, book
+341, 155, slimeball
+342, 156, minecart with chest
+343, 157, minecart with furnace
+344, 158, chicken egg
+345, 159, compass
+346, 15a, fishing rod
+347, 15b, clock
+348, 15c, glowstone dust
+349, 15d, raw fish
+350, 15e, cooked fish
+351, 15f, dye
+352, 160, bone
+353, 161, sugar
+354, 162, cake
+355, 163, bed
+356, 164, redstone repeater
+357, 165, cookie
+358, 166, map
+359, 167, shears
+360, 168, melon slice
+361, 169, pumpkin seeds
+362, 16a, melon seeds
+363, 16b, raw beef
+364, 16c, steak
+365, 16d, raw chicken
+366, 16e, cooked chicken
+367, 16f, rotten flesh
+368, 170, ender pearl
+369, 171, blaze rod
+370, 172, ghast tear
+371, 173, gold nugget
+372, 174, nether wart
+373, 175, potions
+374, 176, glass bottle
+375, 177, spider eye
+376, 178, fermented spider eye
+377, 179, blaze powder
+378, 17a, magma cream
+379, 17b, brewing stand
+380, 17c, cauldron
+381, 17d, eye of ender
+382, 17e, glistering melon
+383, 17f, spawn egg
