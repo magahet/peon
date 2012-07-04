@@ -1,5 +1,6 @@
 from mc import Xzy
 from scipy.spatial.distance import euclidean
+from scipy.linalg import solve
 import time
 import sys
 import random
@@ -8,6 +9,49 @@ import numpy
 import os
 import cPickle
 import math
+
+def light_area(bot, width=100):
+  TORCH = bot._block_ids['torch']
+  start = bot._pos.xzy()
+  s=spiral()
+  while euclidean(start, bot._pos.xzy()) <= width:
+    x, z = s.next()
+    pos = Xzy(start.x + x, start.z + z, start.y)
+    if not is_optimal_lighting_spot(*pos):
+      if bot.world.GetBlock(*pos) == TORCH:
+        bot.nav_to(*pos)
+        bot.break_block(*pos)
+        time.sleep(1)
+    else:
+      print 'o:', pos
+      if bot.world.GetBlock(*pos) == 0:
+        while not bot.equip_tool(TORCH):
+          print 'need torch'
+          time.sleep(3)
+        if not bot.nav_to(*pos):
+          return False
+        bot.place_block(pos)
+
+  return True
+
+
+def find_surface(bot, xzy):
+  for y in range(255, 0, -1):
+    pos = xzy._replace(y=y)
+    if bot.world.GetBlock(*pos) != 0:
+      return pos
+
+def spiral(x=0, y=0):
+  dx = 0
+  dy = -1
+  while True:
+    yield (x, y)
+    if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
+      dx, dy = -dy, dx
+    x, y = x+dx, y+dy
+
+def is_optimal_lighting_spot(x, z, y):
+  return sum(solve(numpy.array([[13,6],[1,7]]),numpy.array([x, z]))) % 1 == 0 
 
 def kill(bot):
   DIAMOND_SWORD = 276
@@ -161,15 +205,6 @@ def find_cluster(points, size=3):
       else:
         return l
 
-
-def spiral(x=0, y=0):
-  dx = 0
-  dy = -1
-  while True:
-    yield (x, y)
-    if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
-      dx, dy = -dy, dx
-    x, y = x+dx, y+dy
 
 
 

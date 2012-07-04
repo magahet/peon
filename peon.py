@@ -4,7 +4,7 @@ import mc
 import astar
 import json
 import re
-from scipy.spatial.distance import cityblock
+from scipy.spatial.distance import cityblock, euclidean
 import pickle
 import csv
 import collections
@@ -305,11 +305,13 @@ class MineCraftBot(mc.MineCraftProtocol):
     if botXzy == nextXzy:
       return True
     path = self.find_path(nextXzy)
-    if path is not None:
-      for step in path:
-        if not self.MoveTo(*step):
-          logging.error('could not make it to: %s failed at: %s', str(nextXzy), str(step))
-          return False
+    if path is None:
+      logging.error('could not find path')
+      return False
+    for step in path:
+      if not self.MoveTo(*step):
+        logging.error('could not make it to: %s failed at: %s', str(nextXzy), str(step))
+        return False
     return True
 
   def MoveTo(self, x, z, y, speed=4.25, onGround=True):
@@ -614,6 +616,33 @@ class MineCraftBot(mc.MineCraftProtocol):
     if self.WaitFor(lambda: self._open_window_id != 0):
       return True
     else:
+      return False
+
+  def place_block(self, xzy):
+    def get_block_direction(a, b):
+      if a.y < b.x: return 0
+      elif a.y > b.y: return 1
+      elif a.z < b.z: return 2
+      elif a.z > b.z: return 3
+      elif a.x < b.x: return 4
+      elif a.x > b.x: return 5
+    SOLID = set(range(1, 5) + [7] + range(12, 27))
+    if euclidean(self._pos.xzy(), xzy) > 6:
+      logging.error('too far to place block')
+      return False
+    slot = self.get_slot(0, self._held_slot_num+36)
+    for block, blocktype in self.world.IterAdjacent(*xzy):
+      if blocktype in SOLID:
+        direction = get_block_direction(xzy, block)
+        logging.debug('sending block placement command: %s, direction: %d, slot_data: %s', str(block), direction, str(slot))
+        self.SendPlayerBlockPlacement(block.x, block.y, block.z, direction,  slot)
+        if self.WaitFor(lambda: self.world.GetBlock(*xzy) == slot.itemId, timeout=5):
+          return True
+        else:
+          logging.error('placed blocktype did not change')
+          return False
+    else:
+      logging.error('could not find solid adjacent block')
       return False
 
   def close_window(self):
