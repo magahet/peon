@@ -11,20 +11,24 @@ import cPickle
 import math
 
 def light_area(bot, width=100):
+  SOLID = set(range(1, 5) + [7] + range(12, 27))
   TORCH = bot._block_ids['torch']
   start = bot._pos.xzy()
   s=spiral()
+  print 'looking for spot'
   while euclidean(start, bot._pos.xzy()) <= width:
     x, z = s.next()
     pos = Xzy(start.x + x, start.z + z, start.y)
+    pos_under = Xzy(start.x + x, start.z + z, start.y - 1)
     if not is_optimal_lighting_spot(*pos):
       if bot.world.GetBlock(*pos) == TORCH:
+        print 'found misplaced torch'
         bot.nav_to(*pos)
         bot.break_block(*pos)
         time.sleep(1)
     else:
-      print 'o:', pos
-      if bot.world.GetBlock(*pos) == 0:
+      if bot.world.GetBlock(*pos) == 0 and bot.world.GetBlock(*pos_under) in SOLID:
+        print 'found spot for torch'
         while not bot.equip_tool(TORCH):
           print 'need torch'
           time.sleep(3)

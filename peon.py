@@ -304,7 +304,8 @@ class MineCraftBot(mc.MineCraftProtocol):
     nextXzy = mc.Xzy(x, z, y)
     if botXzy == nextXzy:
       return True
-    path = self.find_path(nextXzy)
+    distance = cityblock(botXzy, nextXzy)
+    path = self.find_path(nextXzy, limit=min(sys.maxint, distance**2))
     if path is None:
       logging.error('could not find path')
       return False
@@ -402,7 +403,7 @@ class MineCraftBot(mc.MineCraftProtocol):
     if self.WaitFor(lambda: action_id in self._confirmations.keys(), timeout=5):
       if self._confirmations[action_id].accepted:
         if slot_num in range(len(self.windows[window_id]._slots)):
-          self.windows[0]._slots[slot_num] = self._cursor_slot
+          self.windows[window_id]._slots[slot_num] = self._cursor_slot
         self._cursor_slot = slot_data
         return True
     return False
@@ -507,7 +508,7 @@ class MineCraftBot(mc.MineCraftProtocol):
     logging.info('done')
     return True
 
-  def find_path(self, end, reachable_test=None):
+  def find_path(self, end, reachable_test=None, limit=sys.maxint):
     def iter_moveable_adjacent(start):
       l = []
       for xzy, block_type in self.world.IterAdjacent(*start):
@@ -529,7 +530,7 @@ class MineCraftBot(mc.MineCraftProtocol):
     logging.debug('looking for path from: %s to: %s', str(pos), str(end))
     path = astar.astar(
         pos, iter_moveable_adjacent, at_goal, 0, 
-        distance, distance_to_goal)
+        distance, distance_to_goal, limit=limit)
     logging.debug('path: %s', str(path))
     return path
 
