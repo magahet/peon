@@ -9,6 +9,72 @@ import numpy
 import os
 import cPickle
 import math
+import json
+
+def terraform(bot):
+  def under(x, z, y):
+    return Xzy(x, z, y - 1)
+
+  def above(x, z, y):
+    return Xzy(x, z, y + 1)
+
+  GROUND_LEVEL = 62
+  TORCH = bot._block_ids['torch']
+  DIRT = bot._block_ids['dirt']
+  GRASS = bot._block_ids['grass block']
+  SOLID = set(range(1, 5) + [7] + range(12, 27))
+
+  with open('sites.json') as f:
+    sites = json.load(f)
+    bboxes = sites['bboxes']
+    points = sites['return_bases']
+
+  protected = bboxes['base']
+  start = points['base']
+
+  s = spiral()
+
+  while True:
+    x, z = s.next()
+    xzy = Xzy(x + start[0], z + start[1], GROUND_LEVEL)
+
+    if in_bbox(protected, xzy):
+      continue
+
+    xzy_surface = find_surface(bot, *xzy)
+
+    # clear column
+    if xzy_surface.y > GROUND_LEVEL + 1:
+      if not bot.nav_to(*above(*xzy_surface)): continue
+      for y in range(xzy_surface.y, GROUND_LEVEL + 1, -1):
+        if not bot.dig_to(xzy_surface.x, xzy_surface.z, y):
+          break
+      else:
+        continue
+
+    # place sub-layer
+    if bot.world.GetBlock(*under(*xzy)) not in SOLID:
+      if not bot.nav_to(*xzy_surface): continue
+      if not bot.equip_tool(STONE): continue
+      if not bot.place_block(under(*xzy)): continue
+
+    # place surface layer
+    if bot.world.GetBlock(*xzy) not in [DIRT, GRASS]:
+      if bot.nav_to(*above(*xzy_surface)):
+        if bot.equip_tool(DIRT):
+          bot.place_block(xzy)
+
+    # place torch on optimal blocks
+    if is_optimal_lighting_spot(*xzy):
+      if not bot.equip_tool(TORCH): continue
+      if not bot.nav_to(*above(*xzy_surface)): continue
+      if not bot.place_block(above(*xzy)): continue
+    elif above(*xzy) != 0:
+      if not bot.nav_to(*above(*xzy)): continue
+      if not bot.dig_to(xzy_surface.x, xzy_surface.z, y): continue
+
+
+
 
 def light_area(bot, width=100):
   SOLID = set(range(1, 5) + [7] + range(12, 27))
@@ -46,32 +112,13 @@ def in_bbox(bbox, xzy):
   else:
     return True
 
-def teraform(bot):
-  with open('sites.json') as f:
-    sites = json.load(f)
-    bboxes = sites['bboxes']
-    points = sites['return_bases']
-  start = points['base']
-
-  s = spiral()
-
-  while True:
-    x, z = s.next()
-    xzy = Xzy(x += start[0], z += start[1], 63)
-
-    if in_bbox(bboxes['base'], xzy):
-      continue
-
-    xzy_surface = find_surface(bot, xzy)
 
 
 
-
-def find_surface(bot, xzy):
+def find_surface(bot, x, z, y):
   for y in range(255, 0, -1):
-    pos = xzy._replace(y=y)
-    if bot.world.GetBlock(*pos) != 0:
-      return pos
+    if bot.world.GetBlock(x, z, y) != 0:
+      return Xzy(x, z, y)
 
 def spiral(x=0, y=0):
   dx = 0
