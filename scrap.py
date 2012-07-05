@@ -29,12 +29,12 @@ def light_area(bot, width=100):
     else:
       if bot.world.GetBlock(*pos) == 0 and bot.world.GetBlock(*pos_under) in SOLID:
         print 'found spot for torch'
-        while not bot.equip_tool(TORCH):
+        if bot.equip_tool(TORCH):
+          if not bot.nav_to(*pos):
+            return False
+          bot.place_block(pos)
+        else:
           print 'need torch'
-          time.sleep(3)
-        if not bot.nav_to(*pos):
-          return False
-        bot.place_block(pos)
 
   return True
 
@@ -83,7 +83,7 @@ def spiral(x=0, y=0):
     x, y = x+dx, y+dy
 
 def is_optimal_lighting_spot(x, z, y):
-  return sum(solve(numpy.array([[13,6],[1,7]]),numpy.array([x, z]))) % 1 == 0 
+  return sum(solve(numpy.array([[13,6],[1,7]]),numpy.array([x, z]))) % 1 <= 0.001
 
 def kill(bot):
   DIAMOND_SWORD = 276

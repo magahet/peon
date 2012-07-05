@@ -27,7 +27,7 @@ class MoveException(Exception):
   pass
 
 class MineCraftBot(mc.MineCraftProtocol):
-  def __init__(self, host, port, username, password=None):
+  def __init__(self, host, port, username, password=None, fighting=True):
     super(MineCraftBot, self).__init__()
     self._host = host
     self._port = port
@@ -60,6 +60,8 @@ class MineCraftBot(mc.MineCraftProtocol):
         #self._DoWatchdogThread,
         self._DoPositionUpdateThread,
         ])
+    if fighting:
+      self._threadFuncs.append(self._DoFightingThread)
     self._handlers = {
         '\x00': self.OnKeepAlive,
         '\x01': self.OnLogin,
@@ -160,6 +162,21 @@ class MineCraftBot(mc.MineCraftProtocol):
         self.SendPositionLook()
         if os.getppid() != self.parentPID:
           logging.erro("Position update thread exiting, %s", srt(myGeneration))
+    finally:
+      os.kill(self.parentPID, 0)
+
+  def _DoFightingThread(self):
+    HOSTILE_MOBS = set([50, 51, 52, 53, 54, 55, 56, 58, 59, 61, 62, 63])
+    try:
+      self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
+      while True:
+        time.sleep(0.10)
+        if os.getppid() != self.parentPID:
+          logging.erro("Fighting thread exiting, %s", srt(myGeneration))
+        for eid, entity in self.world._entities.items():
+          if entity._type in HOSTILE_MOBS:
+            if euclidean(entity._pos.xzy(), self._pos.xzy()) <= 4:
+              self.attack_entity(eid)
     finally:
       os.kill(self.parentPID, 0)
 
@@ -374,6 +391,9 @@ class MineCraftBot(mc.MineCraftProtocol):
         logging.info('floating down: %s', str(pos))
         self.MoveTo(*pos)
         return
+
+  def attack_entity(self, eid):
+    self.SendUseEntity(self._entityId, eid, 1)
 
   def get_best_tool(self, blockType, tool_name):
     logging.info('Looking for a %s to break: %d', tool_name, blockType)
