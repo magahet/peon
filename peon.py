@@ -534,7 +534,7 @@ class MineCraftBot(mc.MineCraftProtocol):
     logging.debug('path: %s', str(path))
     return path
 
-  def get_adjacent_blocks(self, block, max_height=64):
+  def get_adjacent_blocks(self, block, min_height=0, max_height=64):
     blocks = []
     for offset_y in range(-1, 2):
       for offset_x in range(-1, 2):
@@ -542,30 +542,29 @@ class MineCraftBot(mc.MineCraftProtocol):
           x = block.x + offset_x
           z = block.z + offset_z
           y = block.y + offset_y
-          if y > 0 and y < max_height:
+          if y > 0 and y <= max_height and y >= min_height:
             blocks.append(mc.Xzy(x, z, y))
     for xzy in blocks:
       yield xzy
 
-  def iter_find_nearest_blocktype(self, start, types=[15]):
+  def iter_find_nearest_blocktype(self, start, types=[15], max_height=96, min_height=0):
     height_dict = {
       14: 32, #gold
       15: 64, #iron
       56: 17, #diamonds
     }
-    height_list = [h for t, h in height_dict.items() if t in types]
-    if len(height_list) == 0:
-      height = 96
-    else:
-      height = max(height_list)
-    height = max(height, start.y)
+    if max_height is None:
+      if set(types).issubset(height_dict.keys()):
+        max_height = max([h for t, h in height_dict.items() if t in types])
+      else:
+        max_height = 96
     checked_blocks = set([])
     unchecked_blocks = collections.deque([start])
     block_type = 0
     while len(unchecked_blocks) != 0:
       block = unchecked_blocks.popleft()
       checked_blocks.add(block)
-      for block in self.get_adjacent_blocks(block, max_height=height):
+      for block in self.get_adjacent_blocks(block, min_height=min_height, max_height=max_height):
         if block not in checked_blocks and block not in unchecked_blocks and self.world.GetBlock(*block) is not None:
           unchecked_blocks.append(block)
       block_type = self.world.GetBlock(*block)

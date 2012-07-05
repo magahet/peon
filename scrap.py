@@ -38,6 +38,34 @@ def light_area(bot, width=100):
 
   return True
 
+def in_bbox(bbox, xzy):
+  xzy_dict = xzy._asdict()
+  for a in bbox.keys():
+    if xzy_dict[a] < min(bbox[a]) or xzy_dict[a] > max(bbox[a]):
+      return False
+  else:
+    return True
+
+def teraform(bot):
+  with open('sites.json') as f:
+    sites = json.load(f)
+    bboxes = sites['bboxes']
+    points = sites['return_bases']
+  start = points['base']
+
+  s = spiral()
+
+  while True:
+    x, z = s.next()
+    xzy = Xzy(x += start[0], z += start[1], 63)
+
+    if in_bbox(bboxes['base'], xzy):
+      continue
+
+    xzy_surface = find_surface(bot, xzy)
+
+
+
 
 def find_surface(bot, xzy):
   for y in range(255, 0, -1):
