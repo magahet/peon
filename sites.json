@@ -1,7 +1,7 @@
 {
   "return_bases": {
     "null": "null",
-    "base": [-30, 70, 62],
+    "base": [0, 65, 62],
     "sand": [60, -348, 82]
   },
   "bboxes": {

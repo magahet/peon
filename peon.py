@@ -392,8 +392,10 @@ class MineCraftBot(mc.MineCraftProtocol):
         self.MoveTo(*pos)
         return
 
-  def attack_entity(self, eid):
-    self.SendUseEntity(self._entityId, eid, 1)
+  def attack_entity(self, eid, times=3):
+    for i in xrange(times):
+      self.SendUseEntity(self._entityId, eid, 1)
+      time.sleep(0.1)
 
   def get_best_tool(self, blockType, tool_name):
     logging.info('Looking for a %s to break: %d', tool_name, blockType)
@@ -525,7 +527,7 @@ class MineCraftBot(mc.MineCraftProtocol):
       else:
         logging.error('could not reach: %s made it to: %s', str((x,z,y)), str(self._pos.xzy()))
         return False
-    logging.info('done')
+    #logging.info('done')
     return True
 
   def find_path(self, end, reachable_test=None, limit=sys.maxint):
@@ -640,7 +642,7 @@ class MineCraftBot(mc.MineCraftProtocol):
 
   def place_block(self, xzy):
     def get_block_direction(a, b):
-      if a.y < b.x: return 0
+      if a.y < b.y: return 0
       elif a.y > b.y: return 1
       elif a.z < b.z: return 2
       elif a.z > b.z: return 3

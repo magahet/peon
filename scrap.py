@@ -11,26 +11,37 @@ import cPickle
 import math
 import json
 
-def terraform(bot):
+def terraform(bot, start_point='base'):
   def under(x, z, y):
     return Xzy(x, z, y - 1)
 
   def above(x, z, y):
     return Xzy(x, z, y + 1)
 
+  def dig_down(bot, xzy_surface, GROUND_LEVEL):
+    if not bot.nav_to(*above(*xzy_surface)): return False
+    for y in range(xzy_surface.y, GROUND_LEVEL + 1, -1):
+      if not bot.break_block(xzy_surface.x, xzy_surface.z, y): return False
+      if not bot.nav_to(xzy_surface.x, xzy_surface.z, y): return False
+    return True
+
   GROUND_LEVEL = 62
   TORCH = bot._block_ids['torch']
   DIRT = bot._block_ids['dirt']
   GRASS = bot._block_ids['grass block']
+  STONE = bot._block_ids['cobblestone']
   SOLID = set(range(1, 5) + [7] + range(12, 27))
+  NON_SOLID = set([0] + range(8, 12))
 
   with open('sites.json') as f:
     sites = json.load(f)
     bboxes = sites['bboxes']
     points = sites['return_bases']
+    points['bot'] = bot._pos.xzy()
 
   protected = bboxes['base']
-  start = points['base']
+  
+  start = points[start_point]
 
   s = spiral()
 
@@ -42,103 +53,42 @@ def terraform(bot):
       continue
 
     xzy_surface = find_surface(bot, *xzy)
+    if xzy_surface.y < GROUND_LEVEL:
+      xzy_surface = xzy
 
-    # clear column
     if xzy_surface.y > GROUND_LEVEL + 1:
-      if not bot.nav_to(*above(*xzy_surface)): continue
-      for y in range(xzy_surface.y, GROUND_LEVEL + 1, -1):
-        if not bot.dig_to(xzy_surface.x, xzy_surface.z, y):
-          break
-      else:
-        continue
+      print 'clear column:', xzy_surface
+      if not dig_down(bot, xzy_surface, GROUND_LEVEL): continue
 
-    # place sub-layer
-    if bot.world.GetBlock(*under(*xzy)) not in SOLID:
-      if not bot.nav_to(*xzy_surface): continue
+    if bot.world.GetBlock(*under(*xzy)) in NON_SOLID:
+      print 'place sub-layer:', xzy_surface
       if not bot.equip_tool(STONE): continue
+      if not bot.nav_to(*above(*xzy_surface)): continue
       if not bot.place_block(under(*xzy)): continue
 
-    # place surface layer
     if bot.world.GetBlock(*xzy) not in [DIRT, GRASS]:
-      if bot.nav_to(*above(*xzy_surface)):
-        if bot.equip_tool(DIRT):
-          bot.place_block(xzy)
+      if bot.world.GetBlock(*xzy) not in NON_SOLID:
+        print 'remove surface layer:', xzy_surface
+        if not bot.nav_to(*above(*xzy_surface)): continue
+        if not bot.break_block(*xzy): continue
+      print 'place surface layer:', xzy_surface
+      if not bot.equip_tool(DIRT): continue
+      if not bot.nav_to(*above(*xzy_surface)): continue
+      if not bot.place_block(xzy): continue
 
-    # place torch on optimal blocks
+    if is_optimal_lighting_spot(*xzy) and bot.world.GetBlock(*above(*xzy)) == TORCH:
+      continue
+
+    elif bot.world.GetBlock(*above(*xzy)) != 0:
+      print 'remove block from above surface:', xzy_surface
+      if not bot.nav_to(*above(*xzy)): continue
+      if not bot.break_block(*above(*xzy)): continue
+    
     if is_optimal_lighting_spot(*xzy):
+      print 'place torch on optimal block:', xzy_surface
       if not bot.equip_tool(TORCH): continue
       if not bot.nav_to(*above(*xzy_surface)): continue
       if not bot.place_block(above(*xzy)): continue
-    elif above(*xzy) != 0:
-      if not bot.nav_to(*above(*xzy)): continue
-      if not bot.dig_to(xzy_surface.x, xzy_surface.z, y): continue
-
-
-
-
-def terraform(bot):
-  def under(x, z, y):
-    return Xzy(x, z, y - 1)
-
-  def above(x, z, y):
-    return Xzy(x, z, y + 1)
-
-  GROUND_LEVEL = 62
-  TORCH = bot._block_ids['torch']
-  DIRT = bot._block_ids['dirt']
-  GRASS = bot._block_ids['grass block']
-  SOLID = set(range(1, 5) + [7] + range(12, 27))
-  PROTECTED = bboxes['base']
-
-  with open('sites.json') as f:
-    sites = json.load(f)
-    bboxes = sites['bboxes']
-    points = sites['return_bases']
-
-  start = points['base']
-
-  s = spiral()
-
-  while True:
-    x, z = s.next()
-    xzy = Xzy(x += start[0], z += start[1], GROUND_LEVEL)
-
-    if in_bbox(PROTECTED, xzy):
-      continue
-
-    xzy_surface = find_surface(bot, *xzy)
-
-    # clear column
-    if xzy_surface.y > GROUND_LEVEL + 1:
-      if not bot.nav_to(*above(*xzy_surface)): continue
-      for y in range(xzy_surface.y, GROUND_LEVEL + 1, -1):
-        if not bot.dig_to(xzy_surface.x, xzy_surface.z, y):
-          break
-      else:
-        continue
-
-    # place sub-layer
-    if bot.world.GetBlock(under(xzy)) not in SOLID:
-      if not bot.nav_to(*xzy_surface): continue
-      if not bot.equip_tool(STONE): continue
-      if not bot.place_block(under(xzy)): continue
-
-    # place surface layer
-    if bot.world.GetBlock(xzy) not in [DIRT, GRASS]:
-      if bot.nav_to(*above(*xzy_surface)):
-        if bot.equip_tool(DIRT):
-          bot.place_block(xzy)
-
-    # place torch on optimal blocks
-    if is_optimal_lighting_spot(*xzy):
-      if not bot.equip_tool(TORCH): continue
-      if not bot.nav_to(*above(*xzy_surface)): continue
-      if not bot.place_block(above(xzy)): continue
-    elif above(xzy) != 0:
-      if not bot.nav_to(*above(*xzy)): continue
-      if not bot.dig_to(xzy_surface.x, xzy_surface.z, y): continue
-
-
 
 
 def light_area(bot, width=100):
