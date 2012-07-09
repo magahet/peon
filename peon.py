@@ -35,7 +35,9 @@ class MineCraftBot(mc.MineCraftProtocol):
     self._password = password
     self._serverId = None
     self._status = 'idle'
-    self._food= 1
+    self._health = 0
+    self._food = 0
+    self._food_saturation = 0
     self._xp_bar = -1
     self._xp_level = -1
     self._xp_total = -1
@@ -95,7 +97,7 @@ class MineCraftBot(mc.MineCraftProtocol):
       self.Login()
     else:
       self.Login(authenticate=True)
-    self.FloatDown()
+    #self.FloatDown()
 
   def get_blocktypes(self, filename='blocktypes.csv'):
     c = [ l for l in csv.DictReader(open(filename), skipinitialspace=True) ]
@@ -300,14 +302,17 @@ class MineCraftBot(mc.MineCraftProtocol):
     if not accepted:
         self.SendConfirmTransaction(window_id, action_id, accepted)
 
-  def break_block(self, x, z, y, face=1, retries=5):
+  def break_block(self, x, z, y, face=1, retries=3):
     xzy = mc.Xzy(x, z, y)
+    blocktype = self.world.GetBlock(*xzy)
+    if blocktype is not None:
+      self.get_best_tool(blocktype)
     for i in range(retries):
       logging.debug('sending dig command for: %s', str(xzy))
       self.SendPlayerDigging(0, x, y, z, face)
       time.sleep(0.1)
       self.SendPlayerDigging(2, x, y, z, face)
-      if self.WaitFor(lambda: self.world.GetBlock(x, z, y) == 0, timeout=10):
+      if self.WaitFor(lambda: self.world.GetBlock(x, z, y) == 0, timeout=5):
         return True
     else:
       logging.error('could not break block: %s', str(xzy))
@@ -379,10 +384,14 @@ class MineCraftBot(mc.MineCraftProtocol):
     return True
 
   def FloatDown(self):
+    logging.debug('floating down')
+    logging.debug('waiting for pos to load')
     self.WaitFor(lambda: self._pos.x != 0.0 and self._pos.y != 0.0)
+    logging.debug('waiting for block to load')
     self.WaitFor(lambda: self.world.GetBlock(
       self._pos.x, self._pos.z, self._pos.y) is not None)
     pos = self._pos.xzy()
+    logging.debug('waiting for block to load')
     self.MoveTo(*pos)
     for y in range(pos.y + 1, 0, -1):
       pos = pos._replace(y=y)
@@ -392,20 +401,22 @@ class MineCraftBot(mc.MineCraftProtocol):
         self.MoveTo(*pos)
         return
 
-  def attack_entity(self, eid, times=3):
+  def attack_entity(self, eid, times=5, delay=0.01):
     for i in xrange(times):
       self.SendUseEntity(self._entityId, eid, 1)
-      time.sleep(0.1)
+      time.sleep(delay)
 
-  def get_best_tool(self, blockType, tool_name):
-    logging.info('Looking for a %s to break: %d', tool_name, blockType)
-    tools = {
-      'pick': [257, 278],
-      'shovel': [256, 277]
-      }
-    for tool_id in tools[tool_name]:
-      if self.equip_tool(tool_id):
-        return True
+  def get_best_tool(self, blockType):
+    best_tools = (
+        (set([1,4,14,15,16]), set([257, 278])),
+        (set([2,3,12,13]), set([256, 277])),
+      )
+    for blocktypes, tool_ids in best_tools:
+      if blockType in blocktypes:
+        for tool_id in tool_ids:
+          if self.equip_tool(tool_id):
+            return True
+        return False
     return False
 
   def change_held_slot(self, slot_num):
@@ -752,9 +763,11 @@ class MineCraftBot(mc.MineCraftProtocol):
   def get_inventory(self):
     return [ (slot_num, item) for slot_num, item in enumerate(self.windows[0]._slots) if item.itemId != -1 ]
 
-  def drop_items(self, item_ids):
+  def drop_items(self, item_ids, invert=False):
     if len(item_ids) == 0:
       drop_list = [ slot_num for slot_num, item in self.get_inventory() ]
+    elif invert:
+      drop_list = [ slot_num for slot_num, item in self.get_inventory() if item.itemId not in item_ids ]
     else:
       drop_list = [ slot_num for slot_num, item in self.get_inventory() if item.itemId in item_ids ]
     for slot_num in drop_list:
@@ -828,14 +841,15 @@ if __name__ == '__main__':
 
   if len(args) > 0: 
     cmd = args.pop(0)
-    if cmd == 'kill':
-      username = 'magahet'
-      server = 'mc.gmendiola.com'
-      bot = MineCraftBot(server, port, username, password=password)
-      bot.WaitFor(lambda: bot._pos.x != 0.0 and bot._pos.y != 0.0)
-      time.sleep(2)
+    if cmd in ['kill', 'terraform']:
       import scrap
-      scrap.kill(bot)
+      funcs = {'kill': scrap.kill, 'terraform': scrap.terraform}
+      users = {'kill': 'magahet', 'terraform': 'bob'}
+      server = 'mc.gmendiola.com'
+      bot = MineCraftBot(server, port, users[cmd], password=password)
+      bot.WaitFor(lambda: bot._pos.x != 0.0 and bot._pos.y != 0.0)
+      time.sleep(5)
+      funcs[cmd](bot)
     elif cmd == 'explore':
       username = 'dora'
       bot = MineCraftBot(server, port, username, password=password)

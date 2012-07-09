@@ -12,11 +12,11 @@ import math
 import json
 
 def terraform(bot, start_point='base'):
-  def under(x, z, y):
-    return Xzy(x, z, y - 1)
+  def under(x, z, y, distance=1):
+    return Xzy(x, z, y - distance)
 
-  def above(x, z, y):
-    return Xzy(x, z, y + 1)
+  def above(x, z, y, distance=1):
+    return Xzy(x, z, y + distance)
 
   def dig_down(bot, xzy_surface, GROUND_LEVEL):
     if not bot.nav_to(*above(*xzy_surface)): return False
@@ -25,13 +25,26 @@ def terraform(bot, start_point='base'):
       if not bot.nav_to(xzy_surface.x, xzy_surface.z, y): return False
     return True
 
+  def near_mob(bot, distance=16):
+    HOSTILE_MOBS = set([50, 51, 52, 53, 54, 55, 56, 58, 59, 61, 62, 63])
+    for e in bot.world._entities.values():
+      if e._type in HOSTILE_MOBS:
+        if euclidean(e._pos.xzy(), bot._pos.xzy()) <= distance:
+          return True
+    return False
+
   GROUND_LEVEL = 62
   TORCH = bot._block_ids['torch']
   DIRT = bot._block_ids['dirt']
   GRASS = bot._block_ids['grass block']
   STONE = bot._block_ids['cobblestone']
+  DIAMOND_PICKAXE = bot._block_ids['diamond pickaxe']
+  DIAMOND_SHOVEL = bot._block_ids['diamond shovel']
+  BREAD = bot._block_ids['bread']
   SOLID = set(range(1, 5) + [7] + range(12, 27))
   NON_SOLID = set([0] + range(8, 12))
+  STOP_FOR_FOOD = True
+
 
   with open('sites.json') as f:
     sites = json.load(f)
@@ -43,42 +56,77 @@ def terraform(bot, start_point='base'):
   
   start = points[start_point]
 
-  s = spiral()
+  bot.drop_items([DIRT, STONE, TORCH, DIAMOND_PICKAXE, DIAMOND_SHOVEL, BREAD], invert=True)
+  print bot.get_inventory()
 
+  s = spiral()
+  i = 0
+  furthest = 0
   while True:
+    if i > 128:
+      count = 0
+      for num, item in bot.get_inventory():
+        if item.itemId in [DIRT, STONE]:
+          count += item.count
+      if count > 256:
+        i = 0
+        print 'starting from beginning'
+        bot.drop_items([DIRT, STONE, TORCH, DIAMOND_PICKAXE, DIAMOND_SHOVEL, BREAD], invert=True)
+        s = spiral()
     x, z = s.next()
     xzy = Xzy(x + start[0], z + start[1], GROUND_LEVEL)
+    distance = int(euclidean(xzy, start))
+
+    if near_mob(bot):
+      print 'mob alert'
+      while near_mob(bot, distance=128):
+        bot.MoveTo(*above(*bot._pos.xzy(), distance=10))
+      time.sleep(3)
+
+    if bot._food < 18:
+      if not bot.eat() and STOP_FOR_FOOD:
+        print 'need bread'
+        bot.nav_to(start[0], start[1], 67)
+        while not bot.eat():
+          time.sleep(5)
+
+    if distance > furthest and distance > 100:
+      print 'distance:', distance
+      furthest = distance
 
     if in_bbox(protected, xzy):
       continue
 
     xzy_surface = find_surface(bot, *xzy)
+    if xzy_surface is None: continue
+
     if xzy_surface.y < GROUND_LEVEL:
       xzy_surface = xzy
 
     if xzy_surface.y > GROUND_LEVEL + 1:
       print 'clear column:', xzy_surface
       if not dig_down(bot, xzy_surface, GROUND_LEVEL): continue
+      i+=1
+      xzy_surface = xzy_surface._replace(y=GROUND_LEVEL + 2)
 
     if bot.world.GetBlock(*under(*xzy)) in NON_SOLID:
-      print 'place sub-layer:', xzy_surface
-      if not bot.equip_tool(STONE): continue
-      if not bot.nav_to(*above(*xzy_surface)): continue
-      if not bot.place_block(under(*xzy)): continue
+      if bot.equip_tool(STONE): 
+        print 'place sub-layer:', xzy_surface
+        if bot.nav_to(*above(*xzy_surface)):
+          bot.place_block(under(*xzy))
 
     if bot.world.GetBlock(*xzy) not in [DIRT, GRASS]:
       if bot.world.GetBlock(*xzy) not in NON_SOLID:
         print 'remove surface layer:', xzy_surface
         if not bot.nav_to(*above(*xzy_surface)): continue
         if not bot.break_block(*xzy): continue
-      print 'place surface layer:', xzy_surface
       if not bot.equip_tool(DIRT): continue
+      print 'place surface layer:', xzy_surface
       if not bot.nav_to(*above(*xzy_surface)): continue
       if not bot.place_block(xzy): continue
 
     if is_optimal_lighting_spot(*xzy) and bot.world.GetBlock(*above(*xzy)) == TORCH:
       continue
-
     elif bot.world.GetBlock(*above(*xzy)) != 0:
       print 'remove block from above surface:', xzy_surface
       if not bot.nav_to(*above(*xzy)): continue
@@ -89,6 +137,7 @@ def terraform(bot, start_point='base'):
       if not bot.equip_tool(TORCH): continue
       if not bot.nav_to(*above(*xzy_surface)): continue
       if not bot.place_block(above(*xzy)): continue
+
 
 
 def light_area(bot, width=100):
@@ -131,8 +180,11 @@ def in_bbox(bbox, xzy):
 
 
 def find_surface(bot, x, z, y):
-  for y in range(255, 0, -1):
-    if bot.world.GetBlock(x, z, y) != 0:
+  for y in range(128, 0, -1):
+    blocktype = bot.world.GetBlock(x, z, y)
+    if blocktype is None:
+      return
+    elif blocktype != 0:
       return Xzy(x, z, y)
 
 def spiral(x=0, y=0):

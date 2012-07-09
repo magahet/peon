@@ -63,7 +63,7 @@ class World(object):
 
   def GetBlock(self, x, z, y):
     chunk = self._chunks.get((int(x/16), int(z/16)))
-    if not chunk:
+    if chunk is None:
       return None
     return chunk.GetBlock(int(x), int(z), int(y))
 
@@ -235,12 +235,15 @@ class ChunkColumn(object):
 
   def SetBlock(self, x, z, y, newType, newMeta):
     # TODO: what about extra 4 bits?
-    self._blocks[self._GetOffset(x, z, y)] = (newType & 0xff)
+    offset = self._GetOffset(x, z, y)
+    self._blocks[offset] = (newType & 0xff)
     return newType
 
   def GetBlock(self, x, z, y):
-    blockType = self._blocks[self._GetOffset(x, z, y)]
-    return blockType
+    offset = self._GetOffset(x, z, y)
+    if offset < len(self._blocks):
+      blocktype = self._blocks[offset]
+      return blocktype
 
 class MineCraftProtocol(object):
   def __init__(self):
@@ -489,7 +492,7 @@ class MineCraftProtocol(object):
       sys.stderr.write('back on track\n')
 
 
-  def WaitFor(self, what, timeout=60):
+  def WaitFor(self, what, timeout=10):
     start = time.time()
     with self._recvCondition:
       while not what() and time.time() - start < timeout:
