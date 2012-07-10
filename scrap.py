@@ -19,10 +19,8 @@ def terraform(bot, start_point='base'):
     return Xzy(x, z, y + distance)
 
   def dig_down(bot, xzy_surface, GROUND_LEVEL):
-    if not bot.nav_to(*above(*xzy_surface)): return False
     for y in range(xzy_surface.y, GROUND_LEVEL + 1, -1):
       if not bot.break_block(xzy_surface.x, xzy_surface.z, y): return False
-      if not bot.nav_to(xzy_surface.x, xzy_surface.z, y): return False
     return True
 
   def near_mob(bot, distance=16):
@@ -112,30 +110,25 @@ def terraform(bot, start_point='base'):
     if bot.world.GetBlock(*under(*xzy)) in NON_SOLID:
       if bot.equip_tool(STONE): 
         print 'place sub-layer:', xzy_surface
-        if bot.nav_to(*above(*xzy_surface)):
-          bot.place_block(under(*xzy))
+        bot.place_block(under(*xzy))
 
     if bot.world.GetBlock(*xzy) not in [DIRT, GRASS]:
       if bot.world.GetBlock(*xzy) not in NON_SOLID:
         print 'remove surface layer:', xzy_surface
-        if not bot.nav_to(*above(*xzy_surface)): continue
         if not bot.break_block(*xzy): continue
       if not bot.equip_tool(DIRT): continue
       print 'place surface layer:', xzy_surface
-      if not bot.nav_to(*above(*xzy_surface)): continue
       if not bot.place_block(xzy): continue
 
     if is_optimal_lighting_spot(*xzy) and bot.world.GetBlock(*above(*xzy)) == TORCH:
       continue
     elif bot.world.GetBlock(*above(*xzy)) != 0:
       print 'remove block from above surface:', xzy_surface
-      if not bot.nav_to(*above(*xzy)): continue
       if not bot.break_block(*above(*xzy)): continue
     
     if is_optimal_lighting_spot(*xzy):
       print 'place torch on optimal block:', xzy_surface
       if not bot.equip_tool(TORCH): continue
-      if not bot.nav_to(*above(*xzy_surface)): continue
       if not bot.place_block(above(*xzy)): continue
 
 

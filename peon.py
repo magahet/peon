@@ -304,6 +304,14 @@ class MineCraftBot(mc.MineCraftProtocol):
 
   def break_block(self, x, z, y, face=1, retries=3):
     xzy = mc.Xzy(x, z, y)
+    m= self.iter_nearest_moveable(xzy)
+    block = m.next()
+    while euclidean(xzy, block) <= 6:
+      if self.nav_to(*block): break
+      block = m.next()
+    else:
+      logging.error('too far to place block')
+      return False
     blocktype = self.world.GetBlock(*xzy)
     if blocktype is not None:
       self.get_best_tool(blocktype)
@@ -567,7 +575,7 @@ class MineCraftBot(mc.MineCraftProtocol):
     logging.debug('path: %s', str(path))
     return path
 
-  def get_adjacent_blocks(self, block, min_height=0, max_height=64):
+  def get_adjacent_blocks(self, block, min_height=0, max_height=255):
     blocks = []
     for offset_y in range(-1, 2):
       for offset_x in range(-1, 2):
@@ -651,6 +659,18 @@ class MineCraftBot(mc.MineCraftProtocol):
     else:
       return False
 
+  def iter_nearest_moveable(self, start):
+    checked_blocks = set([])
+    unchecked_blocks = collections.deque([start])
+    while len(unchecked_blocks) != 0:
+      block = unchecked_blocks.popleft()
+      checked_blocks.add(block)
+      for block in self.get_adjacent_blocks(block):
+        if block not in checked_blocks and block not in unchecked_blocks and self.world.GetBlock(*block) is not None:
+          unchecked_blocks.append(block)
+      if self.world.IsMoveable(*block):
+        yield block
+
   def place_block(self, xzy):
     def get_block_direction(a, b):
       if a.y < b.y: return 0
@@ -660,7 +680,12 @@ class MineCraftBot(mc.MineCraftProtocol):
       elif a.x < b.x: return 4
       elif a.x > b.x: return 5
     SOLID = set(range(1, 5) + [7] + range(12, 27))
-    if euclidean(self._pos.xzy(), xzy) > 6:
+    m= self.iter_nearest_moveable(xzy)
+    block = m.next()
+    while euclidean(xzy, block) <= 6:
+      if self.nav_to(*block): break
+      block = m.next()
+    else:
       logging.error('too far to place block')
       return False
     slot = self.get_slot(0, self._held_slot_num+36)
