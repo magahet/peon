@@ -10,6 +10,51 @@ import os
 import cPickle
 import math
 import json
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+
+
+def test_plot():
+  fig = plt.figure()
+  ax = fig.gca(projection='3d')
+  X = np.arange(-5, 5, 0.25)
+  Y = np.arange(-5, 5, 0.25)
+  X, Y = np.meshgrid(X, Y)
+  R = np.sqrt(X**2 + Y**2)
+  Z = np.sin(R)
+  surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,
+              linewidth=0, antialiased=False)
+  ax.set_zlim(-1.01, 1.01)
+
+  ax.zaxis.set_major_locator(LinearLocator(10))
+  ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+
+  fig.colorbar(surf, shrink=0.5, aspect=5)
+
+  plt.show()
+
+def plot_area(bot, radius=16):
+  start = bot._pos.xzy()
+  s=spiral()
+  points = []
+  while True:
+    x, z = s.next()
+    surface = find_surface(bot, x, z, 0)
+    xzy = Xzy(x + start.x, z + start.z, surface.y)
+    if euclidean(start, xzy) > radius:
+      break
+    points.append(xzy)
+  X, Z, Y = zip(*points)
+  print Y 
+  fig = plt.figure()
+  ax = fig.gca(projection='3d')
+  ax.plot_surface(X, Z, Y, rstride=1, cstride=1, cmap=cm.jet,
+              linewidth=0, antialiased=False)
+  plt.show()
 
 def terraform(bot, start_point='base'):
   def under(x, z, y, distance=1):

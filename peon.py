@@ -655,9 +655,9 @@ class MineCraftBot(mc.MineCraftProtocol):
     s = mc.Slot(itemId=-1, count=None, meta=None, data=None)
     self.SendPlayerBlockPlacement(xzy.x, xzy.y, xzy.z, 1,  s)
     if self.WaitFor(lambda: self._open_window_id != 0):
-      return True
-    else:
-      return False
+      if self.WaitFor(lambda: self._open_window_id in self.windows):
+        return True
+    return False
 
   def iter_nearest_moveable(self, start):
     checked_blocks = set([])
@@ -802,6 +802,55 @@ class MineCraftBot(mc.MineCraftProtocol):
         return False
     else:
       return True
+
+  def find_chest_with_item(self, tool_id, timeout=60):
+    start_time = time.time()
+    self.close_window()
+    for chest_block in self.iter_find_nearest_blocktype(self._pos.xzy(), types=[self._block_ids['chest']]):
+      self.nav_to(*chest_block)
+      if self.click_inventory_block(chest_block):
+        if tool_id in [ item.itemId for item in self.windows[self._open_window_id]._slots ]:
+          return chest_block
+      self.close_window()
+    if time.time() > start_time + timeout:
+      logging.error('timed out looking for tool')
+      self.close_window()
+      return None
+
+  def get_item_from_chest(self, tool_id, chest_block):
+    if self.click_inventory_block(chest_block):
+      target_slot_num = self.find_tool(-1, window_id=self._open_window_id)
+      if target_slot_num is None:
+        logging.error('no empty slot to place item')
+        self.close_window()
+        return False
+      for slot_num, item in enumerate(self.windows[self._open_window_id]._slots):
+        if item.itemId == tool_id:
+          if bot.click_slot(self._open_window_id, slot_num):
+            if bot.click_slot(self._open_window_id, target_slot_num):
+              self.close_window()
+              return True
+    self.close_window()
+    return False
+
+  def put_item_into_chest(self, tool_id, chest_block):
+    if self.click_inventory_block(chest_block):
+      target_slot_num = self.find_tool(-1, window_id=self._open_window_id)
+      if target_slot_num is None:
+        logging.error('no empty slot to place item')
+        self.close_window()
+        return False
+      for slot_num, item in enumerate(self.windows[self._open_window_id]._slots):
+        if item.itemId == tool_id:
+          if bot.click_slot(self._open_window_id, slot_num):
+            if bot.click_slot(self._open_window_id, target_slot_num):
+              self.close_window()
+              return True
+    self.close_window()
+    return False
+
+
+
 
 
 
