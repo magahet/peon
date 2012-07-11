@@ -588,6 +588,31 @@ class MineCraftBot(mc.MineCraftProtocol):
     for xzy in blocks:
       yield xzy
 
+  def iter_find_blocktypes(self, start, types):
+    cx, cz = (int(self._pos.x / 16), int(self._pos.z / 16))
+    s=self._iter_spiral()
+    x, z = s.next()
+    while (cx, cz) in self.world._chunks:
+      for i, b in enumerate(self.world._chunks[(cx, cz)]._blocks): 
+        if b in types:
+          y, r = divmod(i, 256)
+          z, x = divmod(r, 16)
+          yield mc.Xzy(x, z, y)
+      x, z = s.next()
+      cx += x
+      cz += z
+
+  def _iter_spiral(self):
+    x = 0
+    y = 0
+    dx = 0
+    dy = -1
+    while True:
+      yield (x, y)
+      if x == y or (x < 0 and x == -y) or (x > 0 and x == 1-y):
+        dx, dy = -dy, dx
+      x, y = x+dx, y+dy
+
   def iter_find_nearest_blocktype(self, start, types=[15], max_height=96, min_height=0):
     height_dict = {
       14: 32, #gold
