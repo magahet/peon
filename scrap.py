@@ -10,51 +10,7 @@ import os
 import cPickle
 import math
 import json
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.interpolate import griddata
 
-
-def test_plot():
-  fig = plt.figure()
-  ax = fig.gca(projection='3d')
-  X = np.arange(-5, 5, 0.25)
-  Y = np.arange(-5, 5, 0.25)
-  X, Y = np.meshgrid(X, Y)
-  R = np.sqrt(X**2 + Y**2)
-  Z = np.sin(R)
-  surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,
-              linewidth=0, antialiased=False)
-  ax.set_zlim(-1.01, 1.01)
-
-  ax.zaxis.set_major_locator(LinearLocator(10))
-  ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-
-  fig.colorbar(surf, shrink=0.5, aspect=5)
-
-  plt.show()
-
-def plot_area(bot, radius=16):
-  start = bot._pos.xzy()
-  s=spiral()
-  points = []
-  while True:
-    x, z = s.next()
-    surface = find_surface(bot, x, z, 0)
-    xzy = Xzy(x + start.x, z + start.z, surface.y)
-    if euclidean(start, xzy) > radius:
-      break
-    points.append(xzy)
-  X, Z, Y = zip(*points)
-  print Y 
-  fig = plt.figure()
-  ax = fig.gca(projection='3d')
-  ax.plot_surface(X, Z, Y, rstride=1, cstride=1, cmap=cm.jet,
-              linewidth=0, antialiased=False)
-  plt.show()
 
 def terraform(bot, start_point='base'):
   def under(x, z, y, distance=1):
@@ -98,24 +54,15 @@ def terraform(bot, start_point='base'):
   protected = bboxes['base']
   
   start = points[start_point]
-
-  bot.drop_items([DIRT, STONE, TORCH, DIAMOND_PICKAXE, DIAMOND_SHOVEL, BREAD], invert=True)
-  print bot.get_inventory()
+  chest_xzy = Xzy(*points['chest'])
+  tool_set = set([TORCH, DIAMOND_PICKAXE, DIAMOND_SHOVEL, BREAD])
 
   s = spiral()
   i = 0
   furthest = 0
+
+  print 'starting to terraform'
   while True:
-    if i > 128:
-      count = 0
-      for num, item in bot.get_inventory():
-        if item.itemId in [DIRT, STONE]:
-          count += item.count
-      if count > 256:
-        i = 0
-        print 'starting from beginning'
-        bot.drop_items([DIRT, STONE, TORCH, DIAMOND_PICKAXE, DIAMOND_SHOVEL, BREAD], invert=True)
-        s = spiral()
     x, z = s.next()
     xzy = Xzy(x + start[0], z + start[1], GROUND_LEVEL)
     distance = int(euclidean(xzy, start))
@@ -126,12 +73,20 @@ def terraform(bot, start_point='base'):
         bot.MoveTo(*above(*bot._pos.xzy(), distance=10))
       time.sleep(3)
 
+    missing_tools = tool_set.difference(bot.get_inventory_ids())
+    if len(missing_tools) > 0:
+      print 'going to look for tools:', [bot._block_names[item_id] for item_id in missing_tools]
+      bot.nav_to(*chest_xzy)
+      bot.drop_items(tool_set, invert=True)
+      for item_id in missing_tools:
+        if not bot.get_item_from_chest(item_id, chest_xzy):
+          print 'need more:', bot._block_names[item_id]
+          print 'leaving'
+          bot.SendDisconnect()
+          sys.exit()
+
     if bot._food < 18:
-      if not bot.eat() and STOP_FOR_FOOD:
-        print 'need bread'
-        bot.nav_to(start[0], start[1], 67)
-        while not bot.eat():
-          time.sleep(5)
+      bot.eat()
 
     if distance > furthest and distance > 100:
       print 'distance:', distance
@@ -235,7 +190,11 @@ def spiral(x=0, y=0):
     x, y = x+dx, y+dy
 
 def is_optimal_lighting_spot(x, z, y):
-  return sum(solve(numpy.array([[13,6],[1,7]]),numpy.array([x, z]))) % 1 <= 0.001
+  s = sum(solve(numpy.array([[13,6],[1,7]]),numpy.array([x, z]))) % 1
+  if s <= 0.001 or s >= 0.999:
+    return True
+  else:
+    return False
 
 def kill(bot):
   DIAMOND_SWORD = 276

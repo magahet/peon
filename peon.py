@@ -449,11 +449,23 @@ class MineCraftBot(mc.MineCraftProtocol):
         return True
     return False
 
-  def find_tool(self, tool_id, window_id=0, held_only=False, no_data=False):
-    for i, slot in enumerate(self.windows[window_id]._slots):
+  def find_tool(self, tool_id, window_id=0, storage_only=False, inventory_only=False, held_only=False, no_data=False):
+    if storage_only:
+      start = 0
+      end = len(self.windows[window_id]._slots) - 36
+    elif inventory_only:
+      start = len(self.windows[window_id]._slots) - 36
+      end = len(self.windows[window_id]._slots) - 1
+    elif held_only:
+      start = len(self.windows[window_id]._slots) - 9
+      end = len(self.windows[window_id]._slots) - 1
+    else:
+      start = 0
+      end = len(self.windows[window_id]._slots) - 1
+
+    for i, slot in enumerate(self.windows[window_id]._slots[start:end]):
       if slot.itemId == tool_id and (not no_data or slot.data is None):
-        if not held_only or i >= 36:
-          return i
+        return i + start
     return None
 
   def equip_tool(self, tool_id):
@@ -588,19 +600,21 @@ class MineCraftBot(mc.MineCraftProtocol):
     for xzy in blocks:
       yield xzy
 
-  def iter_find_blocktypes(self, start, types):
-    cx, cz = (int(self._pos.x / 16), int(self._pos.z / 16))
+  def iter_find_blocktype(self, start, types):
+    start_x, start_z = int(self._pos.x / 16), int(self._pos.z / 16)
     s=self._iter_spiral()
-    x, z = s.next()
+    offset_x, offset_z = s.next()
+    cx, cz = start_x + offset_x, start_z + offset_z
     while (cx, cz) in self.world._chunks:
+      logging.info('chunk: %s', str((cx, cz)))
       for i, b in enumerate(self.world._chunks[(cx, cz)]._blocks): 
         if b in types:
+          logging.info('block: %d', i)
           y, r = divmod(i, 256)
           z, x = divmod(r, 16)
-          yield mc.Xzy(x, z, y)
-      x, z = s.next()
-      cx += x
-      cz += z
+          yield mc.Xzy(x + cx*16, z + cz*16, y)
+      offset_x, offset_z = s.next()
+      cx, cz = start_x + offset_x, start_z + offset_z
 
   def _iter_spiral(self):
     x = 0
@@ -813,6 +827,9 @@ class MineCraftBot(mc.MineCraftProtocol):
   def get_inventory(self):
     return [ (slot_num, item) for slot_num, item in enumerate(self.windows[0]._slots) if item.itemId != -1 ]
 
+  def get_inventory_ids(self):
+    return [ item.itemId for slot_num, item in enumerate(self.windows[0]._slots) if item.itemId != -1 ]
+
   def drop_items(self, item_ids, invert=False):
     if len(item_ids) == 0:
       drop_list = [ slot_num for slot_num, item in self.get_inventory() ]
@@ -831,10 +848,11 @@ class MineCraftBot(mc.MineCraftProtocol):
   def find_chest_with_item(self, tool_id, timeout=60):
     start_time = time.time()
     self.close_window()
-    for chest_block in self.iter_find_nearest_blocktype(self._pos.xzy(), types=[self._block_ids['chest']]):
+    for chest_block in self.iter_find_blocktype(self._pos.xzy(), [self._block_ids['chest']]):
       self.nav_to(*chest_block)
       if self.click_inventory_block(chest_block):
         if tool_id in [ item.itemId for item in self.windows[self._open_window_id]._slots ]:
+          self.close_window()
           return chest_block
       self.close_window()
     if time.time() > start_time + timeout:
@@ -844,33 +862,25 @@ class MineCraftBot(mc.MineCraftProtocol):
 
   def get_item_from_chest(self, tool_id, chest_block):
     if self.click_inventory_block(chest_block):
-      target_slot_num = self.find_tool(-1, window_id=self._open_window_id)
-      if target_slot_num is None:
-        logging.error('no empty slot to place item')
-        self.close_window()
-        return False
-      for slot_num, item in enumerate(self.windows[self._open_window_id]._slots):
-        if item.itemId == tool_id:
-          if bot.click_slot(self._open_window_id, slot_num):
-            if bot.click_slot(self._open_window_id, target_slot_num):
-              self.close_window()
-              return True
+      source_slot_num = self.find_tool(tool_id, window_id=self._open_window_id, storage_only=True)
+      target_slot_num = self.find_tool(-1, window_id=self._open_window_id, inventory_only=True)
+      if source_slot_num is not None and target_slot_num is not None:
+        if bot.click_slot(self._open_window_id, source_slot_num):
+          if bot.click_slot(self._open_window_id, target_slot_num):
+            self.close_window()
+            return True
     self.close_window()
     return False
 
   def put_item_into_chest(self, tool_id, chest_block):
     if self.click_inventory_block(chest_block):
-      target_slot_num = self.find_tool(-1, window_id=self._open_window_id)
-      if target_slot_num is None:
-        logging.error('no empty slot to place item')
-        self.close_window()
-        return False
-      for slot_num, item in enumerate(self.windows[self._open_window_id]._slots):
-        if item.itemId == tool_id:
-          if bot.click_slot(self._open_window_id, slot_num):
-            if bot.click_slot(self._open_window_id, target_slot_num):
-              self.close_window()
-              return True
+      source_slot_num = self.find_tool(tool_id, window_id=self._open_window_id, inventory_only=True)
+      target_slot_num = self.find_tool(-1, window_id=self._open_window_id, storage_only=True)
+      if source_slot_num is not None and target_slot_num is not None:
+        if bot.click_slot(self._open_window_id, source_slot_num):
+          if bot.click_slot(self._open_window_id, target_slot_num):
+            self.close_window()
+            return True
     self.close_window()
     return False
 
