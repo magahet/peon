@@ -24,11 +24,11 @@ def terraform(bot, start_point='base'):
       if not bot.break_block(xzy_surface.x, xzy_surface.z, y): return False
     return True
 
-  def near_mob(bot, distance=16):
+  def near_mob(bot, distance=16, surface=63):
     HOSTILE_MOBS = set([50, 51, 52, 53, 54, 55, 56, 58, 59, 61, 62, 63])
     for e in bot.world._entities.values():
       if e._type in HOSTILE_MOBS:
-        if euclidean(e._pos.xzy(), bot._pos.xzy()) <= distance:
+        if euclidean(e._pos.xzy(), bot._pos.xzy()) <= distance and e._pos.y >= bot._pos.y - 4:
           return True
     return False
 
@@ -38,6 +38,7 @@ def terraform(bot, start_point='base'):
   GRASS = bot._block_ids['grass block']
   STONE = bot._block_ids['cobblestone']
   DIAMOND_PICKAXE = bot._block_ids['diamond pickaxe']
+  DIAMOND_AXE = bot._block_ids['diamond axe']
   DIAMOND_SHOVEL = bot._block_ids['diamond shovel']
   BREAD = bot._block_ids['bread']
   SOLID = set(range(1, 5) + [7] + range(12, 27))
@@ -55,14 +56,18 @@ def terraform(bot, start_point='base'):
   
   start = points[start_point]
   chest_xzy = Xzy(*points['chest'])
-  tool_set = set([TORCH, DIAMOND_PICKAXE, DIAMOND_SHOVEL, BREAD])
+  tool_set = set([TORCH, DIAMOND_PICKAXE, DIAMOND_AXE, DIAMOND_SHOVEL, BREAD])
 
   s = spiral()
   i = 0
   furthest = 0
 
   print 'starting to terraform'
+  unfinished = 0
   while True:
+    if unfinished > 64 and random.random() < 0.01:
+      print 'starting over'
+      s = spiral()
     x, z = s.next()
     xzy = Xzy(x + start[0], z + start[1], GROUND_LEVEL)
     distance = int(euclidean(xzy, start))
@@ -84,6 +89,7 @@ def terraform(bot, start_point='base'):
           print 'leaving'
           bot.SendDisconnect()
           sys.exit()
+        print 'back to work'
 
     if bot._food < 18:
       bot.eat()
@@ -103,8 +109,9 @@ def terraform(bot, start_point='base'):
 
     if xzy_surface.y > GROUND_LEVEL + 1:
       print 'clear column:', xzy_surface
-      if not dig_down(bot, xzy_surface, GROUND_LEVEL): continue
-      i+=1
+      if not dig_down(bot, xzy_surface, GROUND_LEVEL): 
+        unfinished += 1
+        continue
       xzy_surface = xzy_surface._replace(y=GROUND_LEVEL + 2)
 
     if bot.world.GetBlock(*under(*xzy)) in NON_SOLID:
@@ -115,21 +122,31 @@ def terraform(bot, start_point='base'):
     if bot.world.GetBlock(*xzy) not in [DIRT, GRASS]:
       if bot.world.GetBlock(*xzy) not in NON_SOLID:
         print 'remove surface layer:', xzy_surface
-        if not bot.break_block(*xzy): continue
-      if not bot.equip_tool(DIRT): continue
+        if not bot.break_block(*xzy): 
+          unfinished += 1
+          continue
+      if not bot.equip_tool(DIRT): 
+        unfinished += 1
+        continue
       print 'place surface layer:', xzy_surface
-      if not bot.place_block(xzy): continue
+      if not bot.place_block(xzy): 
+        unfinished += 1
+        continue
 
     if is_optimal_lighting_spot(*xzy) and bot.world.GetBlock(*above(*xzy)) == TORCH:
       continue
     elif bot.world.GetBlock(*above(*xzy)) != 0:
       print 'remove block from above surface:', xzy_surface
-      if not bot.break_block(*above(*xzy)): continue
+      if not bot.break_block(*above(*xzy)): 
+        unfinished += 1
+        continue
     
     if is_optimal_lighting_spot(*xzy):
       print 'place torch on optimal block:', xzy_surface
       if not bot.equip_tool(TORCH): continue
-      if not bot.place_block(above(*xzy)): continue
+      if not bot.place_block(above(*xzy)): 
+        unfinished += 1
+        continue
 
 
 

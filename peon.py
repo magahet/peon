@@ -416,8 +416,9 @@ class MineCraftBot(mc.MineCraftProtocol):
 
   def get_best_tool(self, blockType):
     best_tools = (
-        (set([1,4,14,15,16]), set([257, 278])),
-        (set([2,3,12,13]), set([256, 277])),
+        (set([1,4,14,15,16,48,61,87,89,98,109,112,113,114]), set([257, 278])), # pickaxe
+        (set([2,3,12,13,88]), set([256, 277])), # shovel
+        (set([5,17,18,47,53,54,58,64,72,106,107,125,126]), set([258, 279])), # axe
       )
     for blocktypes, tool_ids in best_tools:
       if blockType in blocktypes:
@@ -473,7 +474,7 @@ class MineCraftBot(mc.MineCraftProtocol):
       return True
     slot_num = self.find_tool(tool_id, held_only=True)
     if slot_num is None:
-      slot_num = self.find_tool(tool_id)
+      slot_num = self.find_tool(tool_id, inventory_only=True)
     if slot_num is None:
       return False
     if slot_num < 36:
@@ -748,6 +749,7 @@ class MineCraftBot(mc.MineCraftProtocol):
     self.SendCloseWindow(window_id)
     if window_id != 0:
       del self.windows[window_id]
+    time.sleep(1)
 
   def enchant(self, tool_id, max_distance=100, retries=3):
     ENCHANTMENT_TABLE=116
@@ -865,8 +867,8 @@ class MineCraftBot(mc.MineCraftProtocol):
       source_slot_num = self.find_tool(tool_id, window_id=self._open_window_id, storage_only=True)
       target_slot_num = self.find_tool(-1, window_id=self._open_window_id, inventory_only=True)
       if source_slot_num is not None and target_slot_num is not None:
-        if bot.click_slot(self._open_window_id, source_slot_num):
-          if bot.click_slot(self._open_window_id, target_slot_num):
+        if self.click_slot(self._open_window_id, source_slot_num):
+          if self.click_slot(self._open_window_id, target_slot_num):
             self.close_window()
             return True
     self.close_window()
@@ -877,8 +879,8 @@ class MineCraftBot(mc.MineCraftProtocol):
       source_slot_num = self.find_tool(tool_id, window_id=self._open_window_id, inventory_only=True)
       target_slot_num = self.find_tool(-1, window_id=self._open_window_id, storage_only=True)
       if source_slot_num is not None and target_slot_num is not None:
-        if bot.click_slot(self._open_window_id, source_slot_num):
-          if bot.click_slot(self._open_window_id, target_slot_num):
+        if self.click_slot(self._open_window_id, source_slot_num):
+          if self.click_slot(self._open_window_id, target_slot_num):
             self.close_window()
             return True
     self.close_window()
