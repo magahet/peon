@@ -65,8 +65,9 @@ def terraform(bot, start_point='base'):
   print 'starting to terraform'
   unfinished = 0
   while True:
-    if unfinished > 64 and random.random() < 0.01:
+    if unfinished > 64 and set([DIRT, STONE]).issubset(bot.get_inventory_ids()):
       print 'starting over'
+      unfinished = 0
       s = spiral()
     x, z = s.next()
     xzy = Xzy(x + start[0], z + start[1], GROUND_LEVEL)
@@ -125,13 +126,11 @@ def terraform(bot, start_point='base'):
         if not bot.break_block(*xzy): 
           unfinished += 1
           continue
-      if not bot.equip_tool(DIRT): 
-        unfinished += 1
-        continue
-      print 'place surface layer:', xzy_surface
-      if not bot.place_block(xzy): 
-        unfinished += 1
-        continue
+      if bot.equip_tool(DIRT): 
+        print 'place surface layer:', xzy_surface
+        if not bot.place_block(xzy): 
+          unfinished += 1
+          continue
 
     if is_optimal_lighting_spot(*xzy) and bot.world.GetBlock(*above(*xzy)) == TORCH:
       continue
