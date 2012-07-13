@@ -21,6 +21,7 @@ def get_tools(bot, tool_set, chest_xzy, ignore_special=False):
       if not bot.get_item_from_chest(item_id, chest_xzy, ignore_special=ignore_special):
         print 'need more:', bot._block_names[item_id]
         return False
+    print 'back to work'
   return True
 
 def terraform(bot, start_point='base'):
@@ -93,8 +94,6 @@ def terraform(bot, start_point='base'):
     if not get_tools(bot, tool_set, chest_xzy):
       bot.SendDisconnect()
       sys.exit()
-
-    print 'back to work'
 
     if bot._food < 18:
       bot.eat()
