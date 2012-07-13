@@ -751,7 +751,7 @@ class MineCraftBot(mc.MineCraftProtocol):
       del self.windows[window_id]
     time.sleep(1)
 
-  def enchant(self, tool_id, max_distance=100, retries=3):
+  def enchant(self, tool_id, max_distance=100):
     ENCHANTMENT_TABLE=116
     pos = self._pos.xzy()
     logging.info('finding nearest enchanting table')
@@ -769,11 +769,8 @@ class MineCraftBot(mc.MineCraftProtocol):
       logging.error('could not open enchantment window')
       return False
     window_id = self._open_window_id
-    if not self.WaitFor(lambda: window_id in self.windows):
-      logging.error('could not open enchantment window')
-      return False
     logging.info('looking for tool')
-    slot_num = self.find_tool(tool_id, window_id=window_id, no_data=True)
+    slot_num = self.find_tool(tool_id, window_id=window_id, inventory_only=True, no_data=True)
     if slot_num is None:
       logging.error('could not find tool to enchant')
       return False
@@ -833,6 +830,8 @@ class MineCraftBot(mc.MineCraftProtocol):
     return [ item.itemId for slot_num, item in enumerate(self.windows[0]._slots) if item.itemId != -1 ]
 
   def drop_items(self, item_ids, invert=False):
+    if self._open_window_id != 0:
+      return False
     if len(item_ids) == 0:
       drop_list = [ slot_num for slot_num, item in self.get_inventory() ]
     elif invert:
@@ -840,10 +839,11 @@ class MineCraftBot(mc.MineCraftProtocol):
     else:
       drop_list = [ slot_num for slot_num, item in self.get_inventory() if item.itemId in item_ids ]
     for slot_num in drop_list:
-      if not self.click_slot(0, slot_num):
-        return False
-      if not self.click_slot(0, -999):
-        return False
+      if slot_num >= 9:
+        if not self.click_slot(0, slot_num):
+          return False
+        if not self.click_slot(0, -999):
+          return False
     else:
       return True
 
@@ -862,9 +862,9 @@ class MineCraftBot(mc.MineCraftProtocol):
       self.close_window()
       return None
 
-  def get_item_from_chest(self, tool_id, chest_block):
+  def get_item_from_chest(self, tool_id, chest_block, ignore_special=False):
     if self.click_inventory_block(chest_block):
-      source_slot_num = self.find_tool(tool_id, window_id=self._open_window_id, storage_only=True)
+      source_slot_num = self.find_tool(tool_id, window_id=self._open_window_id, storage_only=True, no_data=ignore_special)
       target_slot_num = self.find_tool(-1, window_id=self._open_window_id, inventory_only=True)
       if source_slot_num is not None and target_slot_num is not None:
         if self.click_slot(self._open_window_id, source_slot_num):
@@ -956,8 +956,9 @@ if __name__ == '__main__':
       import scrap
       funcs = {'kill': scrap.kill, 'terraform': scrap.terraform}
       users = {'kill': 'magahet', 'terraform': 'bob'}
+      fighting = {'kill': False, 'terraform': True}
       server = 'mc.gmendiola.com'
-      bot = MineCraftBot(server, port, users[cmd], password=password)
+      bot = MineCraftBot(server, port, users[cmd], password=password, fighting=fighting[cmd])
       bot.WaitFor(lambda: bot._pos.x != 0.0 and bot._pos.y != 0.0)
       time.sleep(5)
       funcs[cmd](bot)

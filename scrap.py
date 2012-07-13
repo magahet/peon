@@ -11,6 +11,17 @@ import cPickle
 import math
 import json
 
+def get_tools(bot, tool_set, chest_xzy, ignore_special=False):
+  missing_tools = tool_set.difference(bot.get_inventory_ids())
+  if len(missing_tools) > 0:
+    print 'going to look for tools:', [bot._block_names[item_id] for item_id in missing_tools]
+    bot.nav_to(*chest_xzy)
+    bot.drop_items(tool_set, invert=True)
+    for item_id in missing_tools:
+      if not bot.get_item_from_chest(item_id, chest_xzy, ignore_special=ignore_special):
+        print 'need more:', bot._block_names[item_id]
+        return False
+  return True
 
 def terraform(bot, start_point='base'):
   def under(x, z, y, distance=1):
@@ -79,18 +90,11 @@ def terraform(bot, start_point='base'):
         bot.MoveTo(*above(*bot._pos.xzy(), distance=10))
       time.sleep(3)
 
-    missing_tools = tool_set.difference(bot.get_inventory_ids())
-    if len(missing_tools) > 0:
-      print 'going to look for tools:', [bot._block_names[item_id] for item_id in missing_tools]
-      bot.nav_to(*chest_xzy)
-      bot.drop_items(tool_set, invert=True)
-      for item_id in missing_tools:
-        if not bot.get_item_from_chest(item_id, chest_xzy):
-          print 'need more:', bot._block_names[item_id]
-          print 'leaving'
-          bot.SendDisconnect()
-          sys.exit()
-        print 'back to work'
+    if not get_tools(bot, tool_set, chest_xzy):
+      bot.SendDisconnect()
+      sys.exit()
+
+    print 'back to work'
 
     if bot._food < 18:
       bot.eat()
@@ -213,19 +217,34 @@ def is_optimal_lighting_spot(x, z, y):
     return False
 
 def kill(bot):
+  with open('sites.json') as f:
+    sites = json.load(f)
+    bboxes = sites['bboxes']
+    points = sites['return_bases']
+
   DIAMOND_SWORD = 276
   DIAMOND_AXE=278
+  BREAD = bot._block_ids['bread']
   XP_POINT = (-137, -177, 12)
+  chest_xzy = Xzy(*points['xp chest'])
+  tool_set = set([DIAMOND_AXE, DIAMOND_SWORD, BREAD])
+
   last_level = bot._xp_level + bot._xp_bar
   print 'level:', bot._xp_level
 
   while True: 
+    if not get_tools(bot, tool_set, chest_xzy, ignore_special=True):
+      bot.SendDisconnect()
+      sys.exit()
+
     if bot._xp_level >= 50:
       print 'enchanting axe'
       if not bot.enchant(DIAMOND_AXE):
-        print 'no tools to enchant. leaving'
+        print 'failed to enchant, leaving'
         bot.SendDisconnect()
         sys.exit()
+      bot.nav_to(*chest_xzy)
+      bot.put_item_into_chest(DIAMOND_AXE, chest_xzy)
       last_level = bot._xp_level + bot._xp_bar
 
     if bot._pos.xzy() != XP_POINT:
@@ -239,21 +258,14 @@ def kill(bot):
       last_level = current_level
 
     if bot._food < 10:
-      if not bot.eat():
-        print 'no more food. leaving'
-        bot.SendDisconnect()
-        sys.exit()
+      bot.eat()
 
     if bot._health < 15:
       print 'health too low. leaving'
       bot.SendDisconnect()
       sys.exit()
 
-    if not bot.equip_tool(DIAMOND_SWORD):
-      print 'no sword. leaving'
-      bot.SendDisconnect()
-      sys.exit()
-
+    bot.equip_tool(DIAMOND_SWORD)
     attack_list = []
     entities = bot.world._entities
     for eid, e in entities.items():
