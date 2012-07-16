@@ -467,6 +467,8 @@ class MineCraftBot(mc.MineCraftProtocol):
     for i, slot in enumerate(self.windows[window_id]._slots[start:end]):
       if slot.itemId == tool_id and (not no_data or slot.data is None):
         return i + start
+      elif tool_id is None and slot.itemId != -1 and (not no_data or slot.data is None):
+        return i + start
     return None
 
   def equip_tool(self, tool_id):
@@ -869,8 +871,13 @@ class MineCraftBot(mc.MineCraftProtocol):
       if source_slot_num is not None and target_slot_num is not None:
         if self.click_slot(self._open_window_id, source_slot_num):
           if self.click_slot(self._open_window_id, target_slot_num):
-            self.close_window()
-            return True
+            if tool_id is None:
+              tool_id = bot.windows[self._open_window_id]._slots[target_slot_num].itemId
+              self.close_window()
+              return tool_id
+            else:
+              self.close_window()
+              return True
     self.close_window()
     return False
 
@@ -955,7 +962,7 @@ if __name__ == '__main__':
     if cmd in ['kill', 'terraform']:
       import scrap
       funcs = {'kill': scrap.kill, 'terraform': scrap.terraform}
-      users = {'kill': 'magahet', 'terraform': 'bob'}
+      users = {'kill': 'merlin', 'terraform': 'bob'}
       fighting = {'kill': False, 'terraform': True}
       server = 'mc.gmendiola.com'
       bot = MineCraftBot(server, port, users[cmd], password=password, fighting=fighting[cmd])

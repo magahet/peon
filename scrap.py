@@ -11,12 +11,13 @@ import cPickle
 import math
 import json
 
-def get_tools(bot, tool_set, chest_xzy, ignore_special=False):
+def get_tools(bot, tool_set, chest_xzy, ignore_special=False, drop_others=False):
   missing_tools = tool_set.difference(bot.get_inventory_ids())
   if len(missing_tools) > 0:
     print 'going to look for tools:', [bot._block_names[item_id] for item_id in missing_tools]
     bot.nav_to(*chest_xzy)
-    bot.drop_items(tool_set, invert=True)
+    if drop_others:
+      bot.drop_items(tool_set, invert=True)
     for item_id in missing_tools:
       if not bot.get_item_from_chest(item_id, chest_xzy, ignore_special=ignore_special):
         print 'need more:', bot._block_names[item_id]
@@ -91,7 +92,7 @@ def terraform(bot, start_point='base'):
         bot.MoveTo(*above(*bot._pos.xzy(), distance=10))
       time.sleep(3)
 
-    if not get_tools(bot, tool_set, chest_xzy):
+    if not get_tools(bot, tool_set, chest_xzy, drop_others=True):
       bot.SendDisconnect()
       sys.exit()
 
@@ -225,25 +226,36 @@ def kill(bot):
   DIAMOND_AXE=278
   BREAD = bot._block_ids['bread']
   XP_POINT = (-137, -177, 12)
-  chest_xzy = Xzy(*points['xp chest'])
-  tool_set = set([DIAMOND_AXE, DIAMOND_SWORD, BREAD])
+  supply_xzy = Xzy(*points['supply chest'])
+  in_xzy = Xzy(*points['in chest'])
+  out_xzy = Xzy(*points['out chest'])
+  tool_set = set([DIAMOND_SWORD, BREAD])
 
   last_level = bot._xp_level + bot._xp_bar
   print 'level:', bot._xp_level
 
   while True: 
-    if not get_tools(bot, tool_set, chest_xzy, ignore_special=True):
+    if not get_tools(bot, tool_set, supply_xzy, ignore_special=True, drop_others=True):
       bot.SendDisconnect()
       sys.exit()
 
     if bot._xp_level >= 50:
-      print 'enchanting axe'
-      if not bot.enchant(DIAMOND_AXE):
+      print 'looking for tool to enchant'
+      bot.nav_to(*in_xzy)
+      while True:
+        tool_id = bot.get_item_from_chest(None, in_xzy, ignore_special=True)
+        if not tool_id:
+          print 'waiting for tool to enchant'
+          time.sleep(10)
+        else:
+          print 'going to enchant:', bot._block_names[tool_id]
+          break
+      if not bot.enchant(tool_id):
         print 'failed to enchant, leaving'
         bot.SendDisconnect()
         sys.exit()
-      bot.nav_to(*chest_xzy)
-      bot.put_item_into_chest(DIAMOND_AXE, chest_xzy)
+      bot.nav_to(*out_xzy)
+      bot.put_item_into_chest(tool_id, out_xzy)
       last_level = bot._xp_level + bot._xp_bar
 
     if bot._pos.xzy() != XP_POINT:
