@@ -435,18 +435,19 @@ class MineCraftBot(mc.MineCraftProtocol):
   def get_slot(self, window_id, slot_num):
     return self.windows[window_id]._slots[slot_num]
 
-  def click_slot(self, window_id, slot_num):
+  def click_slot(self, window_id, slot_num, right_click=0, shift=0):
     action_id = self._action_id.next()
     if slot_num in range(len(self.windows[window_id]._slots)):
       slot_data = self.get_slot(window_id, slot_num)
     else:
       slot_data = mc.Slot(itemId=-1, count=None, meta=None, data=None) 
-    self.SendClickWindow(window_id, slot_num, 0, action_id, 0, slot_data)
+    self.SendClickWindow(window_id, slot_num, right_click, action_id, shift, slot_data)
     if self.WaitFor(lambda: action_id in self._confirmations.keys(), timeout=5):
       if self._confirmations[action_id].accepted:
-        if slot_num in range(len(self.windows[window_id]._slots)):
-          self.windows[window_id]._slots[slot_num] = self._cursor_slot
-        self._cursor_slot = slot_data
+        if shift == 0:
+          if slot_num in range(len(self.windows[window_id]._slots)):
+            self.windows[window_id]._slots[slot_num] = self._cursor_slot
+          self._cursor_slot = slot_data
         return True
     return False
 
@@ -662,17 +663,18 @@ class MineCraftBot(mc.MineCraftProtocol):
       #'iron ore',
       #'coal ore'
     ]
-    types = [ self._block_names[i] for i in interesting ]
+    types = [ self._block_ids[i] for i in interesting ]
 
     logging.info('waiting for world to load...')
     self.WaitFor(lambda: self.world.GetBlock(self._pos.x, self._pos.z, self._pos.y) is not None)
     try:
+      block_iter = self.iter_find_blocktype(start, types=types)
       while True:
-        block = self.find_nearest_blocktype(start, types=types)
+        block = block_iter.next()
         blocktype = self.world.GetBlock(*block)
-        logging.info('%s, %s', str(block), str(self._block_ids[blocktype]))
+        logging.info('%s, %s', str(block), str(self._block_names[blocktype]))
         if chat:
-          self.SendChat('x: %d, y: %d, z: %d, type: %s' % (block.x, block.y, block.z, self._block_ids[blocktype]))
+          self.SendChat('x: %d, y: %d, z: %d, type: %s' % (block.x, block.y, block.z, self._block_names[blocktype]))
         while blocktype in types:
           blocktype = self.world.GetBlock(*block)
           time.sleep(10)
@@ -831,7 +833,7 @@ class MineCraftBot(mc.MineCraftProtocol):
   def get_inventory_ids(self):
     return [ item.itemId for slot_num, item in enumerate(self.windows[0]._slots) if item.itemId != -1 ]
 
-  def drop_items(self, item_ids, invert=False):
+  def drop_items(self, item_ids, invert=False, single=False):
     if self._open_window_id != 0:
       return False
     if len(item_ids) == 0:
@@ -846,6 +848,8 @@ class MineCraftBot(mc.MineCraftProtocol):
           return False
         if not self.click_slot(0, -999):
           return False
+      if single:
+        return True
     else:
       return True
 
@@ -865,21 +869,17 @@ class MineCraftBot(mc.MineCraftProtocol):
       return None
 
   def get_item_from_chest(self, tool_id, chest_block, ignore_special=False):
-    if self.click_inventory_block(chest_block):
-      source_slot_num = self.find_tool(tool_id, window_id=self._open_window_id, storage_only=True, no_data=ignore_special)
-      target_slot_num = self.find_tool(-1, window_id=self._open_window_id, inventory_only=True)
-      if source_slot_num is not None and target_slot_num is not None:
-        if self.click_slot(self._open_window_id, source_slot_num):
-          if self.click_slot(self._open_window_id, target_slot_num):
-            if tool_id is None:
-              tool_id = bot.windows[self._open_window_id]._slots[target_slot_num].itemId
-              self.close_window()
-              return tool_id
-            else:
-              self.close_window()
-              return True
-    self.close_window()
-    return False
+    if not self.click_inventory_block(chest_block): return False
+    source_slot_num = self.find_tool(tool_id, window_id=self._open_window_id, storage_only=True, no_data=ignore_special)
+    source_tool_id = self.windows[self._open_window_id]._slots[source_slot_num].itemId
+    if source_slot_num is None: return False
+    if not self.click_slot(self._open_window_id, source_slot_num, shift=1): return False
+    if tool_id is None:
+      self.close_window()
+      return source_tool_id
+    else:
+      self.close_window()
+      return True
 
   def put_item_into_chest(self, tool_id, chest_block):
     if self.click_inventory_block(chest_block):
@@ -982,8 +982,14 @@ if __name__ == '__main__':
       logging.info('bot ready')
     elif cmd == 'help':
       types = [14,15,16,56]
-      start = mc.Xzy(*args[0:3])
       bot = MineCraftBot(server, port, username, password=password)
+      time.sleep(5)
+      print bot._pos.xzy()
+      start = bot.get_player_position('magahet')
+      if start is None:
+        x = float(raw_input('x: ').strip())
+        z = float(raw_input('z: ').strip())
+        start = mc.Xzy(x, z, 0)
       bot.help_find_blocks(start, types=types)
     elif cmd == 'dig':
       bot = MineCraftBot(server, port, username, password=password)

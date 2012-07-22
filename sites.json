@@ -6,7 +6,8 @@
     "chest": [4, 81, 63],
     "supply chest": [-133, -176, 12],
     "in chest": [-131, -176, 12],
-    "out chest": [-129, -176, 12]
+    "out chest": [-129, -176, 12],
+    "bone chest": [-127, -176, 12]
 
   },
   "bboxes": {

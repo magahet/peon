@@ -1,4 +1,4 @@
-from mc import Xzy
+from mc import Xzy, Slot
 from scipy.spatial.distance import euclidean
 from scipy.linalg import solve
 import time
@@ -10,6 +10,68 @@ import os
 import cPickle
 import math
 import json
+
+def farm(bot):
+  def craft_bonemeal(bot):
+    if bot._open_window_id != 0:
+      return False
+    slot_num = bot.find_tool(BONE)
+    if not bot.click_slot(0, slot_num): return False
+    if not bot.click_slot(0, 1): return False
+    if not bot.click_slot(0, 0, shift=1): return False
+    return True
+
+  stand_xzy = Xzy(x=-125, z=-177, y=12)
+  trash_xzy = Xzy(x=-125, z=-180, y=12)
+  dirt_xzy = Xzy(x=-124, z=-177, y=11)
+  wheat_xzy = Xzy(x=-124, z=-177, y=12)
+  in_xzy = Xzy(x=-127, z=-176, y=12)
+  out_xzy = Xzy(x=-127, z=-178, y=12)
+
+  WHEAT = 296
+  SEEDS = 295
+  BONE = 352
+  BONEMEAL = 351
+  s = Slot(itemId=-1, count=None,   meta=None, data=None)
+  tool_set = set([BONE])
+
+  try:
+    while True:
+      if bot.get_inventory_ids().count(SEEDS) > 4:
+        while bot.get_inventory_ids().count(SEEDS) > 2:
+          bot.nav_to(*trash_xzy)
+          bot.drop_items([SEEDS], single=True)
+
+      if bot.get_inventory_ids().count(WHEAT) > 4:
+        while WHEAT in bot.get_inventory_ids():
+          bot.put_item_into_chest(WHEAT, out_xzy)
+
+      bot.nav_to(*stand_xzy)
+      bot.equip_tool(SEEDS)
+      slot = bot.get_slot(0, bot._held_slot_num + 36)
+      bot.SendPlayerBlockPlacement(dirt_xzy.x, dirt_xzy.y, dirt_xzy.z, 1, slot)
+      time.sleep(.2)
+
+      while not bot.equip_tool(BONEMEAL):
+        get_tools(bot, tool_set, in_xzy)
+        craft_bonemeal(bot)
+
+      slot = bot.get_slot(0, bot._held_slot_num + 36)
+      bot.SendPlayerBlockPlacement(wheat_xzy.x, wheat_xzy.y, wheat_xzy.z, 0, slot)
+      time.sleep(.2)
+      bot.break_block(*wheat_xzy)
+      time.sleep(.2)
+      sys.stdout.write('.')
+      sys.stdout.flush()
+
+  except Exception, e:
+    print str(e)
+    return
+
+
+
+
+
 
 def get_tools(bot, tool_set, chest_xzy, ignore_special=False, drop_others=False):
   missing_tools = tool_set.difference(bot.get_inventory_ids())
@@ -224,20 +286,29 @@ def kill(bot):
 
   DIAMOND_SWORD = 276
   DIAMOND_AXE=278
+  BONE = 352
   BREAD = bot._block_ids['bread']
   XP_POINT = (-137, -177, 12)
   supply_xzy = Xzy(*points['supply chest'])
   in_xzy = Xzy(*points['in chest'])
   out_xzy = Xzy(*points['out chest'])
+  bone_xzy = Xzy(*points['bone chest'])
   tool_set = set([DIAMOND_SWORD, BREAD])
 
   last_level = bot._xp_level + bot._xp_bar
   print 'level:', bot._xp_level
 
   while True: 
-    if not get_tools(bot, tool_set, supply_xzy, ignore_special=True, drop_others=True):
+    if not get_tools(bot, tool_set, supply_xzy):
       bot.SendDisconnect()
       sys.exit()
+
+    if bot.get_inventory_ids().count(BONE) > 4:
+      bot.nav_to(*bone_xzy)
+      while BONE in bot.get_inventory_ids():
+        if not bot.put_item_into_chest(BONE, bone_xzy):
+          bot.drop_items([BONE])
+      bot.drop_items([BREAD, DIAMOND_SWORD], invert=True)
 
     if bot._xp_level >= 50:
       print 'looking for tool to enchant'
