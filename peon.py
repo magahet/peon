@@ -454,48 +454,46 @@ class MineCraftBot(mc.MineCraftProtocol):
   def find_tool(self, tool_id, window_id=0, storage_only=False, inventory_only=False, held_only=False, no_data=False):
     if storage_only:
       start = 0
-      end = len(self.windows[window_id]._slots) - 36
+      end = len(self.windows[window_id]._slots) - 35
     elif inventory_only:
       start = len(self.windows[window_id]._slots) - 36
-      end = len(self.windows[window_id]._slots) - 1
+      end = len(self.windows[window_id]._slots)
     elif held_only:
       start = len(self.windows[window_id]._slots) - 9
-      end = len(self.windows[window_id]._slots) - 1
+      end = len(self.windows[window_id]._slots)
     else:
       start = 0
-      end = len(self.windows[window_id]._slots) - 1
+      end = len(self.windows[window_id]._slots)
 
-    for i, slot in enumerate(self.windows[window_id]._slots[start:end]):
+    for i, slot in enumerate(self.windows[window_id]._slots[start:end], start):
       if slot.itemId == tool_id and (not no_data or slot.data is None):
-        return i + start
+        return i
       elif tool_id is None and slot.itemId != -1 and (not no_data or slot.data is None):
-        return i + start
+        return i
     return None
 
   def equip_tool(self, tool_id):
-    if self.get_slot(0, self._held_slot_num+36).itemId == tool_id:
-      return True
+    if self.get_slot(0, self._held_slot_num+36).itemId == tool_id: return True
     slot_num = self.find_tool(tool_id, held_only=True)
-    if slot_num is None:
-      slot_num = self.find_tool(tool_id, inventory_only=True)
-    if slot_num is None:
+    if slot_num is not None:
+      self.change_held_slot(slot_num-36)
+      return True
+    slot_num = self.find_tool(tool_id, inventory_only=True)
+    if slot_num is None: 
+      logging.debug('could not find tool_id: %d', tool_id)
       return False
-    if slot_num < 36:
-      click_list = [slot_num]
-      target_slot_num = self.find_tool(-1, held_only=True)
-      if target_slot_num is None:
-        target_slot_num = random.randrange(36,45)
-        click_list.append(target_slot_num)
-        click_list.append(slot_num)
-      else:
-        click_list.append(target_slot_num)
-      for i in click_list:
-        if not self.click_slot(0, i):
-          return False
-    else:
-      target_slot_num = slot_num
-    self.change_held_slot(target_slot_num-36)
-    return True
+    open_slot_num = self.find_tool(-1, held_only=True)
+    if open_slot_num is None:
+      held_slot_num = random.randrange(36,45)
+      if not self.click_slot(0, held_slot_num, shift=True):
+        logging.debug('could not move held item to inventory: %d', held_slot_num)
+        return False
+    if not self.click_slot(0, slot_num): 
+      logging.debug('could not click on slot num: %d', slot_num)
+      return False
+    if not self.click_slot(0, open_slot_num):
+      logging.debug('could not click on slot num: %d', open_slot_num)
+      return False
 
   def run_cmd(self, cmd):
         args = cmd.split()
@@ -810,18 +808,18 @@ class MineCraftBot(mc.MineCraftProtocol):
     logging.info('eating')
     BREAD = 297
     if not self.equip_tool(BREAD):
+      logging.debug('could not equip bread')
       return False
-    slot_num = self._held_slot_num+36
-    slot = self.get_slot(0, slot_num)
+    slot = self.get_slot(0, self._held_slot_num+36)
     if slot is None:
       return False
     while slot.itemId == BREAD and slot.count > 0 and self._food < target_food_level:
       self.SendPlayerBlockPlacement(-1, -1, -1, -1, slot)
       time.sleep(1)
-      slot = self.get_slot(0, slot_num)
+      slot = self.get_slot(0, self._held_slot_num+36)
     time.sleep(1)
     self.SendPlayerDigging(5, 0, 0, 0, 255)
-    logging.info('food level: %d, bread slot: %s', self._food, str(slot))
+    logging.debug('food level: %d, bread slot: %s', self._food, str(slot))
     if self._food == target_food_level:
       return True
     else:
