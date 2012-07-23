@@ -302,16 +302,17 @@ class MineCraftBot(mc.MineCraftProtocol):
     if not accepted:
         self.SendConfirmTransaction(window_id, action_id, accepted)
 
-  def break_block(self, x, z, y, face=1, retries=3):
+  def break_block(self, x, z, y, face=1, retries=3, auto_move=True):
     xzy = mc.Xzy(x, z, y)
-    m= self.iter_nearest_moveable(xzy)
-    block = m.next()
-    while euclidean(xzy, block) <= 6:
-      if self.nav_to(*block): break
+    if auto_move:
+      m= self.iter_nearest_moveable(xzy)
       block = m.next()
-    else:
-      logging.error('too far to place block')
-      return False
+      while euclidean(xzy, block) <= 6:
+        if self.nav_to(*block): break
+        block = m.next()
+      else:
+        logging.error('too far to break block')
+        return False
     blocktype = self.world.GetBlock(*xzy)
     if blocktype is not None:
       self.get_best_tool(blocktype)
@@ -553,7 +554,7 @@ class MineCraftBot(mc.MineCraftProtocol):
     logging.debug('path: %s', str(path))
     for p in path:
       logging.debug('dig: %s', str(p))
-      if self.break_block(*p) and self.break_block(p.x, p.z, p.y + 1):
+      if self.break_block(*p, auto_move=False) and self.break_block(p.x, p.z, p.y + 1, auto_move=False):
         if not self.MoveTo(*p):
           logging.error('could not move to: %s made it to: %s', str(p), str(self._pos.xzy()))
           return False
@@ -563,7 +564,9 @@ class MineCraftBot(mc.MineCraftProtocol):
     #logging.info('done')
     return True
 
-  def find_path(self, end, reachable_test=None, limit=sys.maxint):
+  def find_path(self, end, reachable_test=None, limit=None):
+    if limit is None:
+      limit = cityblock(self._pos.xzy(), end)**2
     def iter_moveable_adjacent(start):
       l = []
       for xzy, block_type in self.world.IterAdjacent(*start):
@@ -602,8 +605,10 @@ class MineCraftBot(mc.MineCraftProtocol):
     for xzy in blocks:
       yield xzy
 
-  def iter_find_blocktype(self, start, types):
-    start_x, start_z = int(self._pos.x / 16), int(self._pos.z / 16)
+  def iter_find_blocktype(self, types, start=None):
+    if start is None:
+      start = self._pos
+    start_x, start_z = int(start.x / 16), int(start.z / 16)
     s=self._iter_spiral()
     offset_x, offset_z = s.next()
     cx, cz = start_x + offset_x, start_z + offset_z
@@ -611,7 +616,7 @@ class MineCraftBot(mc.MineCraftProtocol):
       logging.info('chunk: %s', str((cx, cz)))
       for i, b in enumerate(self.world._chunks[(cx, cz)]._blocks): 
         if b in types:
-          logging.info('block: %d', i)
+          logging.info('blocktype: %d', b)
           y, r = divmod(i, 256)
           z, x = divmod(r, 16)
           yield mc.Xzy(x + cx*16, z + cz*16, y)
@@ -653,32 +658,33 @@ class MineCraftBot(mc.MineCraftProtocol):
       if block_type in types:
         yield block
 
-  def help_find_blocks(self, start, types=[15], chat=True):
-    self.nav_to(start.x, start.z, 200)
-    interesting = [
-      'diamond ore',
-      #'gold ore',
-      #'iron ore',
-      #'coal ore'
-    ]
-    types = [ self._block_ids[i] for i in interesting ]
-
+  def help_find_blocks(self, types=[14, 56], chat=True, start=None):
+    LAVA = set([10,11])
+    if start is None:
+      start = self._pos.xzy()
+    else:
+      self.nav_to(start.x, start.z, 200)
     logging.info('waiting for world to load...')
     self.WaitFor(lambda: self.world.GetBlock(self._pos.x, self._pos.z, self._pos.y) is not None)
-    try:
-      block_iter = self.iter_find_blocktype(start, types=types)
-      while True:
-        block = block_iter.next()
-        blocktype = self.world.GetBlock(*block)
-        logging.info('%s, %s', str(block), str(self._block_names[blocktype]))
-        if chat:
-          self.SendChat('x: %d, y: %d, z: %d, type: %s' % (block.x, block.y, block.z, self._block_names[blocktype]))
-        while blocktype in types:
-          blocktype = self.world.GetBlock(*block)
-          time.sleep(10)
-        start = block
-    except KeyboardInterrupt:
-      return
+    block_iter = self.iter_find_blocktype(types, start=start)
+    while True:
+      block = block_iter.next()
+      if block.y <= 5: continue
+      if LAVA.issubset([blocktype for xzy, blocktype in bot.world.IterAdjacent(*block)]): continue
+      blocktype = self.world.GetBlock(*block)
+      logging.info('%s, %s', str(block), str(self._block_names[blocktype]))
+      if chat:
+        self.SendChat('%s. type: %s' % (str(block), self._block_names[blocktype]))
+      try:
+        while not self.WaitFor(lambda: self.world.GetBlock(*block) not in types):
+          pass
+      except KeyboardInterrupt:
+        try:
+          print 'break again to stop'
+          time.sleep(1)
+          continue
+        except KeyboardInterrupt:
+          return
 
   def get_player_position(self, player_name):
     for entity in self.world._entities.values():
@@ -854,7 +860,7 @@ class MineCraftBot(mc.MineCraftProtocol):
   def find_chest_with_item(self, tool_id, timeout=60):
     start_time = time.time()
     self.close_window()
-    for chest_block in self.iter_find_blocktype(self._pos.xzy(), [self._block_ids['chest']]):
+    for chest_block in self.iter_find_blocktype([self._block_ids['chest']]):
       self.nav_to(*chest_block)
       if self.click_inventory_block(chest_block):
         if tool_id in [ item.itemId for item in self.windows[self._open_window_id]._slots ]:

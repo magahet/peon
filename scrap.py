@@ -11,6 +11,14 @@ import cPickle
 import math
 import json
 
+def mine(bot, types=[14, 15, 56]):
+  block = bot.iter_find_blocktype(types)
+
+  while True:
+    xzy = block.next()
+    print 'digging to:', xzy
+    bot.dig_to(*xzy)
+
 def farm(bot):
   def craft_bonemeal(bot):
     if bot._open_window_id != 0:

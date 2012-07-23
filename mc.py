@@ -94,7 +94,10 @@ class World(object):
     return standable
 
   def IsDiggable(self, x, z, y):
+    UNDIGGABLE= set([7])
     NON_SOLID = set(range(8, 14))
+    if self.GetBlock(x, z, y) in UNDIGGABLE:
+      return False
     for xzy, block_type in self.IterAdjacent(x, z, y):
       if block_type in NON_SOLID:
         return False
