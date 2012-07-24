@@ -11,13 +11,38 @@ import cPickle
 import math
 import json
 
-def mine(bot, types=[14, 15, 56]):
+def mine(bot, types=[14, 15]):
+  TORCH = bot._block_ids['torch']
+  DIRT = bot._block_ids['dirt']
+  GRASS = bot._block_ids['grass block']
+  STONE = bot._block_ids['cobblestone']
+  DIAMOND_PICKAXE = bot._block_ids['diamond pickaxe']
+  IRON_PICKAXE = bot._block_ids['iron pickaxe']
+  DIAMOND_AXE = bot._block_ids['diamond axe']
+  DIAMOND_SHOVEL = bot._block_ids['diamond shovel']
+  IRON_SHOVEL = bot._block_ids['iron shovel']
+  BREAD = bot._block_ids['bread']
+  tool_set = set([TORCH, DIAMOND_PICKAXE, DIAMOND_AXE, DIAMOND_SHOVEL, IRON_PICKAXE, IRON_SHOVEL, BREAD] + types)
   block = bot.iter_find_blocktype(types)
 
   while True:
+    bot.drop_items(tool_set, invert=True)
+    if len(bot.get_inventory()) == 36:
+      print 'inventory full'
+      break
     xzy = block.next()
     print 'digging to:', xzy
     bot.dig_to(*xzy)
+    for near_block in bot.iter_nearest_radius(bot._pos.xzy(), 6):
+      if bot.world.GetBlock(*near_block) in types:
+        bot.dig_to(*near_block)
+    place_torch(bot)
+
+def place_torch(bot):
+  TORCH = bot._block_ids['torch']
+  if TORCH in [ bot.world.GetBlock(*block) for block in bot.iter_nearest_radius(bot._pos.xzy(), 6) ]: return True
+  if not bot.equip_tool(TORCH): return False
+  return bot.place_block(bot._pos.xzy())
 
 def farm(bot):
   def craft_bonemeal(bot):

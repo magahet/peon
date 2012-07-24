@@ -324,7 +324,7 @@ class MineCraftBot(mc.MineCraftProtocol):
       if self.WaitFor(lambda: self.world.GetBlock(x, z, y) == 0, timeout=5):
         return True
     else:
-      logging.error('could not break block: %s', str(xzy))
+      logging.error('could not break block: %s, type: %d', str(xzy), blocktype)
       return False
 
   def nav_to(self, x, z, y): 
@@ -553,7 +553,7 @@ class MineCraftBot(mc.MineCraftProtocol):
       return False
     logging.debug('path: %s', str(path))
     for p in path:
-      logging.debug('dig: %s', str(p))
+      logging.debug('dig: %s, type: %d', str(p), self.world.GetBlock(*p))
       if self.break_block(*p, auto_move=False) and self.break_block(p.x, p.z, p.y + 1, auto_move=False):
         if not self.MoveTo(*p):
           logging.error('could not move to: %s made it to: %s', str(p), str(self._pos.xzy()))
@@ -707,7 +707,7 @@ class MineCraftBot(mc.MineCraftProtocol):
         return True
     return False
 
-  def iter_nearest_moveable(self, start):
+  def iter_nearest(self, start):
     checked_blocks = set([])
     unchecked_blocks = collections.deque([start])
     while len(unchecked_blocks) != 0:
@@ -716,8 +716,17 @@ class MineCraftBot(mc.MineCraftProtocol):
       for block in self.get_adjacent_blocks(block):
         if block not in checked_blocks and block not in unchecked_blocks and self.world.GetBlock(*block) is not None:
           unchecked_blocks.append(block)
+        yield block
+
+  def iter_nearest_moveable(self, start):
+    for block in self.iter_nearest(start):
       if self.world.IsMoveable(*block):
         yield block
+
+  def iter_nearest_radius(self, start, radius):
+    block = self.iter_nearest(start)
+    while euclidean(start, block.next()) <= radius:
+      yield block.next()
 
   def place_block(self, xzy):
     def get_block_direction(a, b):
