@@ -760,6 +760,17 @@ class MineCraftBot(mc.MineCraftProtocol):
       logging.error('could not find solid adjacent block')
       return False
 
+  def fill_adjacent_liquid(self, xzy):
+    LIQUID = set(range(8,12))
+    SOLID = set([1,3,4])
+    for block, blocktype in self.world.IterAdjacent(*xzy):
+      if blocktype in LIQUID:
+        solid_blocktype = SOLID.intersection(self.get_inventory_ids())
+        if len(solid_blocktype) == 0: return False
+        if not self.equip_tool(solid_blocktype): return False
+        if not self.place_block(block): return False
+        return True
+
   def close_window(self):
     window_id = self._open_window_id
     self._open_window_id = 0
