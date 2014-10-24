@@ -67,6 +67,9 @@ class Client(object):
             self.protocol_version)
         self.start_threads()
         self.send_login_request(host, username, port)
+        logging.info('logging in')
+        while self.reader.state != fastmc.proto.PLAY:
+            time.sleep(.1)
 
     def send_login_request(self, host, username, port=25565):
         self.send(self.proto.HandshakeServerboundHandshake.id,
@@ -205,20 +208,23 @@ class Client(object):
         self.reader.set_compression_threshold(pkt.threshold)
 
     def on_play_chat_message(self, pkt):
-        mc_string = fastmc.util.MCString(pkt.chat)
-        logging.info('chat: %s', repr(mc_string.stripped))
+        def parse_chat_json(json):
+            if json.get('translate') == 'chat.type.text':
+                message_list = []
+                sender = ''
+                for section in json.get('with', []):
+                    if isinstance(section, basestring):
+                        message_list.append(section)
+                    elif isinstance(section, dict):
+                        sender = section.get('text')
+                return '<{}> {}'.format(sender, ' '.join(message_list))
+            else:
+                return ''
+
+        logging.info('chat: %s', str(pkt.chat))
+        logging.info('chat: %s', parse_chat_json(pkt.chat))
 
     def on_unhandled(self, pkt):
         return
         print pkt
         print
-
-
-def afk(bot):
-    i = 0
-    while True:
-        bot.send(bot.proto.PlayServerboundHeldItemChange.id,
-                 slot=i
-                 )
-        i = (i + 1) % 8
-        time.sleep(55)
