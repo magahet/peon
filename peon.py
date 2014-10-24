@@ -58,8 +58,10 @@ class Client(object):
         if auth:
             self._session = fastmc.auth.Session.from_credentials(
                 username, password)
+            self.username = self._session.player_ign
         else:
             self._session = None
+            self.username = username
         #self._sock = gevent.socket.create_connection((host, port))
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.connect((host, port))
@@ -67,12 +69,12 @@ class Client(object):
         self.reader, self.writer = fastmc.proto.Endpoint.client_pair(
             self.protocol_version)
         self.start_threads()
-        self.send_login_request(host, username, port)
+        self.send_login_request(host, port)
         logging.info('logging in')
         while self.reader.state != fastmc.proto.PLAY:
             time.sleep(.1)
 
-    def send_login_request(self, host, username, port=25565):
+    def send_login_request(self, host, port=25565):
         self.send(self.proto.HandshakeServerboundHandshake.id,
                   version=self.writer.protocol.version,
                   addr=host,
@@ -82,7 +84,7 @@ class Client(object):
         while self.writer.state != fastmc.proto.LOGIN:
             time.sleep(.5)
         self.send(self.proto.LoginServerboundLoginStart.id,
-                  name=username
+                  name=self.username
                   )
 
     def start_threads(self):
