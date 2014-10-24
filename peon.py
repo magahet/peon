@@ -25,6 +25,7 @@ class Client(object):
         self._recv_condition = threading.Condition()
         self._send_queue = Queue.Queue(10)
         self.parent_pid = os.getppid()
+        self.last_keepalive = time.time()
         self._threads = {}
         self._thread_funcs = {
             'reader': self._do_read_thread,
@@ -202,6 +203,7 @@ class Client(object):
         self.send(self.proto.PlayServerboundKeepAlive.id,
                   keepalive_id=pkt.keepalive_id
                   )
+        self.last_keepalive = time.time()
 
     def on_play_set_compression(self, pkt):
         logging.debug('setting reader compression threshold: %d', pkt.threshold)
@@ -218,11 +220,15 @@ class Client(object):
                     elif isinstance(section, dict):
                         sender = section.get('text')
                 return '<{}> {}'.format(sender, ' '.join(message_list))
-            else:
-                return ''
+            elif json.get('translate') in ['multiplayer.player.joined', 'multiplayer.player.left']:
+                event = json.get('translate', '').replace('multiplayer.player.', 'player ')
+                player = json.get('with', [{}])[0].get('text', 'UNKNOWN')
+                return '{}: {}'.format(event, player)
 
-        logging.info('chat: %s', str(pkt.chat))
-        logging.info('chat: %s', parse_chat_json(pkt.chat))
+        #logging.info('chat: %s', str(pkt.chat))
+        clean_message = parse_chat_json(pkt.chat)
+        if clean_message:
+            logging.info('chat: %s', clean_message)
 
     def on_unhandled(self, pkt):
         return
