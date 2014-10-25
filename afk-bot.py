@@ -3,6 +3,8 @@
 import peon
 import utils
 import argparse
+import logging
+import sys
 
 
 def start_afk_bot(host, username, password, port=25565, auth=True):
@@ -13,6 +15,15 @@ def start_afk_bot(host, username, password, port=25565, auth=True):
 
 
 if __name__ == '__main__':
+    logger = logging.getLogger()
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+        datefmt='%H:%M')
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.INFO)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
     parser = argparse.ArgumentParser(description='AFK bot with chat for minecraft.')
     parser.add_argument('host', help='host server')
     parser.add_argument('username', help='username')

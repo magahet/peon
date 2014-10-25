@@ -28,6 +28,7 @@ def start_chat_interface(bot):
     message = ''
     while message not in ['exit', 'quit']:
         message = raw_input('> ').strip()
-        bot.send(bot.proto.PlayServerboundChatMessage.id,
-                 chat=message
-                 )
+        if message not in ['exit', 'quit']:
+            bot.send(bot.proto.PlayServerboundChatMessage.id,
+                     chat=message
+                     )

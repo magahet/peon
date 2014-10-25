@@ -1,7 +1,4 @@
-import sys
 import logging
-logging.basicConfig(stream=sys.stderr, level=logging.INFO)
-
 import socket
 import fastmc.proto
 import fastmc.auth
@@ -10,6 +7,9 @@ import threading
 import Queue
 import os
 import time
+
+
+log = logging.getLogger(__name__)
 
 
 class Client(object):
@@ -70,7 +70,7 @@ class Client(object):
             self.protocol_version)
         self.start_threads()
         self.send_login_request(host, port)
-        logging.info('logging in')
+        log.info('logging in')
         while self.reader.state != fastmc.proto.PLAY:
             time.sleep(.1)
 
@@ -126,7 +126,7 @@ class Client(object):
 
     def recv_packet(self):
         if self._mc_sock is None:
-            logging.debug('no mc sock')
+            log.debug('no mc sock')
             return
         sock = self._mc_sock
         reader = self.reader
@@ -139,7 +139,7 @@ class Client(object):
             pkt, pkt_raw = reader.read(in_buf)
             if pkt is None:
                 break
-            logging.debug('handler: (%s, %s)', reader.state, pkt.id)
+            log.debug('handler: (%s, %s)', reader.state, pkt.id)
             handler = self._handlers.get((reader.state, pkt.id))
             if handler:
                 handler(pkt)
@@ -197,7 +197,7 @@ class Client(object):
         self.writer.switch_state(fastmc.proto.PLAY)
 
     def on_login_set_compression(self, pkt):
-        logging.debug('setting compression threshold: %d', pkt.threshold)
+        log.debug('setting compression threshold: %d', pkt.threshold)
         self.reader.set_compression_threshold(pkt.threshold)
         self.writer.set_compression_threshold(pkt.threshold)
 
@@ -208,7 +208,7 @@ class Client(object):
         self.last_keepalive = time.time()
 
     def on_play_set_compression(self, pkt):
-        logging.debug('setting reader compression threshold: %d', pkt.threshold)
+        log.debug('setting reader compression threshold: %d', pkt.threshold)
         self.reader.set_compression_threshold(pkt.threshold)
 
     def on_play_chat_message(self, pkt):
@@ -227,10 +227,10 @@ class Client(object):
                 player = json.get('with', [{}])[0].get('text', 'UNKNOWN')
                 return '{}: {}'.format(event, player)
 
-        #logging.info('chat: %s', str(pkt.chat))
+        #log.info('chat: %s', str(pkt.chat))
         clean_message = parse_chat_json(pkt.chat)
         if clean_message:
-            logging.info('chat: %s', clean_message)
+            log.info('chat: %s', clean_message)
 
     def on_unhandled(self, pkt):
         return
