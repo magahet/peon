@@ -24,6 +24,21 @@ def start_afk_thread(bot):
     return thread
 
 
+def start_shear_thread(bot):
+    def do_shear_thread(bot, pid):
+        while True:
+            bot.send(bot.proto.PlayServerboundHeldItemChange.id,
+                     slot=i
+                     )
+            time.sleep(55)
+
+    pid = os.getppid()
+    thread = threading.Thread(target=do_afk_thread, name='afk', args=(bot, pid))
+    thread.daemon = True
+    thread.start()
+    return thread
+
+
 def start_chat_interface(bot):
     message = ''
     while message not in ['exit', 'quit']:

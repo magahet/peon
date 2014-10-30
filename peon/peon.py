@@ -35,6 +35,7 @@ class Client(object):
             (fastmc.proto.HANDSHAKE, self.proto.HandshakeServerboundHandshake.id): self.set_to_login_state,
             (fastmc.proto.LOGIN, self.proto.LoginServerboundEncryptionResponse.id): self.set_sock_cipher,
         }
+        self.interesting = []
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
             (fastmc.proto.LOGIN, self.proto.LoginClientboundLoginSuccess.id): self.on_login_login_success,
@@ -233,6 +234,6 @@ class Client(object):
             log.info('chat: %s', clean_message)
 
     def on_unhandled(self, pkt):
-        return
-        print pkt
-        print
+        if pkt.id in self.interesting:
+            print pkt
+            print
