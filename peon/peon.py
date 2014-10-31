@@ -7,6 +7,9 @@ import threading
 import Queue
 import os
 import time
+from world import World
+from player import Player
+from entity import Entity
 
 
 log = logging.getLogger(__name__)
@@ -14,6 +17,8 @@ log = logging.getLogger(__name__)
 
 class Client(object):
     def __init__(self, protocol_version=47):
+        self.world = World()
+        self.player = None
         self.protocol_version = protocol_version
         self.proto = fastmc.proto.protocol(protocol_version)
         self._sock = None
@@ -43,6 +48,15 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundKeepAlive.id): self.on_play_keepalive,
             (fastmc.proto.PLAY, self.proto.PlayClientboundSetCompression.id): self.on_play_set_compression,
             (fastmc.proto.PLAY, self.proto.PlayClientboundChatMesage.id): self.on_play_chat_message,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnMob.id): self.on_play_spawn_mob,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityVelocity.id): self.on_play_entity_velocity,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityRelativeMove.id): self.on_play_entity_relative_move,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityLook.id): self.on_play_entity_look,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityLookAndRelativeMove.id): self.on_play_entity_look_and_relative_move,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityTeleport.id): self.on_play_entity_teleport,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityMetadata.id): self.on_play_entity_metadata,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundDestroyEntities.id): self.on_play_destroy_entities,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerPositionAndLook.id): self.on_play_player_position_and_look,
         }
 
     def set_to_login_state(self):
@@ -232,6 +246,66 @@ class Client(object):
         clean_message = parse_chat_json(pkt.chat)
         if clean_message:
             log.info('chat: %s', clean_message)
+
+    def on_play_spawn_mob(self, pkt):
+        self.world.entities[pkt.eid] = Entity(
+            pkt.eid,
+            pkt.type,
+            pkt.x,
+            pkt.y,
+            pkt.z,
+            pkt.pitch,
+            pkt.head_pitch,
+            pkt.yaw,
+            pkt.velocity_x,
+            pkt.velocity_y,
+            pkt.velocity_z,
+            pkt.metadata)
+
+    def on_play_entity_velocity(self, pkt):
+        if pkt.eid not in self.world.entities:
+            return
+        self.world.entities[pkt.eid].velocity_x = pkt.velocity_x
+        self.world.entities[pkt.eid].velocity_y = pkt.velocity_y
+        self.world.entities[pkt.eid].velocity_z = pkt.velocity_z
+
+    def on_play_entity_relative_move(self, pkt):
+        if pkt.eid not in self.world.entities:
+            return
+        self.world.entities[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
+
+    def on_play_entity_look(self, pkt):
+        if pkt.eid not in self.world.entities:
+            return
+        self.world.entities[pkt.eid].look(pkt.yaw, pkt.pitch)
+
+    def on_play_entity_look_and_relative_move(self, pkt):
+        if pkt.eid not in self.world.entities:
+            return
+        self.world.entities[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
+        self.world.entities[pkt.eid].look(pkt.yaw, pkt.pitch)
+
+    def on_play_entity_teleport(self, pkt):
+        if pkt.eid not in self.world.entities:
+            return
+        self.world.entities[pkt.eid].teleport(pkt.x, pkt.y, pkt.z, pkt.yaw,
+                                              pkt.pitch)
+
+    def on_play_entity_metadata(self, pkt):
+        if pkt.eid not in self.world.entities:
+            return
+        self.world.entities[pkt.eid].metadata = pkt.metadata
+
+    def on_play_destroy_entities(self, pkt):
+        for eid in pkt.eids:
+            if eid in self.world.entities:
+                del self.world.entities[eid]
+
+    def on_play_player_position_and_look(self, pkt):
+        if self.player is None:
+            self.player = Player(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch, self.world)
+        else:
+            self.player.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
 
     def on_unhandled(self, pkt):
         if pkt.id in self.interesting:
