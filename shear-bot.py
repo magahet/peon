@@ -5,19 +5,20 @@ import argparse
 import logging
 import sys
 import time
+import utils
 
 
 def start_shear_bot(host, username, password, port=25565, auth=True):
     bot = peon.Client()
-    bot.interesting.extend([
-        bot.proto.PlayClientboundSpawnMob.id,
-        #bot.proto.PlayClientboundEntityMetadata.id,
-        #bot.proto.PlayClientboundPlayerPositionAndLook.id,
-        #bot.proto.PlayClientboundChunkData.id
-    ])
+    #bot.interesting.extend([
+        ##bot.proto.PlayClientboundSpawnMob.id,
+        ##bot.proto.PlayClientboundEntityMetadata.id,
+        ##bot.proto.PlayClientboundPlayerPositionAndLook.id,
+        ##bot.proto.PlayClientboundChunkData.id
+    #])
     bot.connect(host, username, password, port, auth)
-    while True:
-        time.sleep(1)
+    utils.start_shear_thread(bot)
+    utils.start_chat_interface(bot)
 
 
 if __name__ == '__main__':

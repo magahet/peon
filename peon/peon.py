@@ -294,7 +294,7 @@ class Client(object):
     def on_play_entity_metadata(self, pkt):
         if pkt.eid not in self.world.entities:
             return
-        self.world.entities[pkt.eid].metadata = pkt.metadata
+        self.world.entities[pkt.eid].metadata.update(pkt.metadata)
 
     def on_play_destroy_entities(self, pkt):
         for eid in pkt.eids:
