@@ -12,6 +12,7 @@ from world import World
 from player import Player
 from entity import Entity
 from window import Window
+from chunk import ChunkColumn
 
 
 log = logging.getLogger(__name__)
@@ -51,6 +52,7 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundKeepAlive.id): self.on_play_keepalive,
             (fastmc.proto.PLAY, self.proto.PlayClientboundSetCompression.id): self.on_play_set_compression,
             (fastmc.proto.PLAY, self.proto.PlayClientboundChatMesage.id): self.on_play_chat_message,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundHealthUpdate.id): self.on_play_health_update,
             (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnMob.id): self.on_play_spawn_mob,
             (fastmc.proto.PLAY, self.proto.PlayClientboundEntityVelocity.id): self.on_play_entity_velocity,
             (fastmc.proto.PLAY, self.proto.PlayClientboundEntityRelativeMove.id): self.on_play_entity_relative_move,
@@ -59,6 +61,9 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundEntityTeleport.id): self.on_play_entity_teleport,
             (fastmc.proto.PLAY, self.proto.PlayClientboundEntityMetadata.id): self.on_play_entity_metadata,
             (fastmc.proto.PLAY, self.proto.PlayClientboundDestroyEntities.id): self.on_play_destroy_entities,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSetExperience.id): self.on_play_set_experience,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundChunkData.id): self.on_play_chunk_data,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundMapChunkBulk.id): self.on_play_map_chunk_bulk,
             (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerPositionAndLook.id): self.on_play_player_position_and_look,
             (fastmc.proto.PLAY, self.proto.PlayClientboundOpenWindow.id): self.on_play_open_window,
             (fastmc.proto.PLAY, self.proto.PlayClientboundCloseWindow.id): self.on_play_close_window,
@@ -293,6 +298,12 @@ class Client(object):
         if clean_message:
             log.info('chat: %s', clean_message)
 
+    def on_play_health_update(self, pkt):
+        if self.player is not None:
+            self.player._health = pkt.health
+            self.player._food = pkt.food
+            self.player._food_saturation = pkt.food_saturation
+
     def on_play_spawn_mob(self, pkt):
         self.world.entities[pkt.eid] = Entity(
             pkt.eid,
@@ -346,6 +357,25 @@ class Client(object):
         for eid in pkt.eids:
             if eid in self.world.entities:
                 del self.world.entities[eid]
+
+    def on_play_set_experience(self, pkt):
+        if self.player is not None:
+            self.player._xp_bar = pkt.bar
+            self.player._xp_level = pkt.level
+            self.player._xp_total = pkt.total_exp
+
+    def on_play_chunk_data(self, pkt):
+        self.world.chunks[(pkt.chunk_x, pkt.chunk_z)] = ChunkColumn(
+            pkt.chunk_x,
+            pkt.chunk_z,
+            pkt.continuous,
+            pkt.primary_bitmap,
+            pkt.data
+        )
+
+    def on_play_map_chunk_bulk(self, pkt):
+        print pkt
+        print
 
     def on_play_player_position_and_look(self, pkt):
         if self.player is None:
