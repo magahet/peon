@@ -68,3 +68,19 @@ def start_cmd_interface(bot, handlers):
             continue
         if args[0] in handlers:
             handlers[args[0]](bot, *args[1:])
+
+
+def jitter_step(bot):
+    initial_x = bot.player.x
+    bot.send(bot.proto.PlayServerboundPlayerPosition.id,
+             x=initial_x + 0.1,
+             y=bot.player.y,
+             z=bot.player.z,
+             on_ground=bot.player.on_ground
+             )
+    bot.send(bot.proto.PlayServerboundPlayerPosition.id,
+             x=initial_x,
+             y=bot.player.y,
+             z=bot.player.z,
+             on_ground=bot.player.on_ground
+             )

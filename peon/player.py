@@ -1,14 +1,36 @@
 from scipy.spatial.distance import euclidean
+from fastmc.proto import Slot
 
 
 class Player(object):
 
     def __init__(self, x, y, z, yaw, pitch, world):
+        self._health = 0
+        self._food = 0
+        self._food_saturation = 0
+        self._xp_bar = -1
+        self._xp_level = -1
+        self._xp_total = -1
+        self._available_enchantments = {}
+        self._open_window_id = 0
+        self._held_slot_num = 0
+        self._cursor_slot = Slot(-1, None, None, None)
+        self.windows = {}
         self.world = world
         self.teleport(x, y, z, yaw, pitch)
+        self.on_ground = True
 
     def __repr__(self):
         return 'Player(x={}, y={}, z={})'.format(self.x, self.y, self.z)
+
+    @property
+    def position(self):
+        return (self.x, self.y, self.z)
+
+    def move(self, dx=0, dy=0, dz=0):
+        self.x += dx
+        self.y += dy
+        self.z += dz
 
     def teleport(self, x, y, z, yaw, pitch):
         self.x = x

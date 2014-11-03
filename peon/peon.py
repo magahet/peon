@@ -7,9 +7,11 @@ import threading
 import Queue
 import os
 import time
+import math
 from world import World
 from player import Player
 from entity import Entity
+from window import Window
 
 
 log = logging.getLogger(__name__)
@@ -35,6 +37,7 @@ class Client(object):
         self._thread_funcs = {
             'reader': self._do_read_thread,
             'writer': self._do_send_thread,
+            'position_update': self._do_send_position,
         }
         self._post_send_hooks = {
             (fastmc.proto.HANDSHAKE, self.proto.HandshakeServerboundHandshake.id): self.set_to_login_state,
@@ -57,6 +60,10 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundEntityMetadata.id): self.on_play_entity_metadata,
             (fastmc.proto.PLAY, self.proto.PlayClientboundDestroyEntities.id): self.on_play_destroy_entities,
             (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerPositionAndLook.id): self.on_play_player_position_and_look,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundOpenWindow.id): self.on_play_open_window,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundCloseWindow.id): self.on_play_close_window,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSetSlot.id): self.on_set_slot,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundWindowItem.id): self.on_window_item,
         }
 
     def set_to_login_state(self):
@@ -134,6 +141,45 @@ class Client(object):
                 hook = self._post_send_hooks.get((self.writer.state, packet_id))
                 if hook:
                     hook()
+        finally:
+            os.kill(self.parent_pid, 0)
+
+    def _do_send_position(self):
+
+        def calc_yaw(x0, z0, x, z):
+            l = x - x0
+            w = z - z0
+            c = math.sqrt(l * l + w * w)
+            alpha1 = -math.asin(l / c) / math.pi * 180
+            alpha2 = math.acos(w / c) / math.pi * 180
+            if alpha2 > 90:
+                return 180 - alpha1
+            else:
+                return alpha1
+
+        try:
+            while self.player is None:
+                time.sleep(0.01)
+            my_generation = self._sock_generation
+            while my_generation == self._sock_generation and self._mc_sock is not None:
+                first_position = self.player.position
+                time.sleep(0.01)
+                if first_position == self.player.position:
+                    self.send(self.proto.PlayServerboundPlayerPosition.id,
+                              x=self.player.x,
+                              y=self.player.y,
+                              z=self.player.z,
+                              on_ground=self.player.on_ground)
+                else:
+                    yaw = calc_yaw(first_position[0], first_position[1],
+                                   self.player.x, self.player.z)
+                    self.send(self.proto.PlayServerboundPlayerPositionAndLook.id,
+                              x=self.player.x,
+                              y=self.player.y,
+                              z=self.player.z,
+                              yaw=yaw,
+                              pitch=0,
+                              on_ground=self.player.on_ground)
         finally:
             os.kill(self.parent_pid, 0)
 
@@ -306,6 +352,26 @@ class Client(object):
             self.player = Player(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch, self.world)
         else:
             self.player.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
+
+    def on_play_open_window(self, pkt):
+        self.player._open_window_id = pkt.window_id
+        if pkt.window_id not in self.player.windows:
+            time.sleep(1)
+        if pkt.window_id in self.player.windows:
+            self.player.windows[pkt.window_id].inventory_type = pkt.type
+            self.player.windows[pkt.window_id].window_title = pkt.title
+
+    def on_play_close_window(self, pkt):
+        self.player._open_window_id = 0
+
+    def on_set_slot(self, pkt):
+        if pkt.window_id == -1 and pkt.slot == -1:
+            self._cursor_slot = pkt.slot
+        elif pkt.window_id in self.player.windows:
+            self.player.windows[pkt.window_id].set_slot(pkt.slot, pkt.item)
+
+    def on_window_item(self, pkt):
+        self.player.windows[pkt.window_id] = Window(pkt.window_id, pkt.slots)
 
     def on_unhandled(self, pkt):
         if pkt.id in self.interesting:
