@@ -24,8 +24,17 @@ class Player(object):
         return 'Player(x={}, y={}, z={})'.format(self.x, self.y, self.z)
 
     @property
+    def held_item(self):
+        if self.inventory:
+            self.inventory.get_held()[self._held_slot_num]
+
+    @property
     def position(self):
         return (self.x, self.y, self.z)
+
+    @property
+    def inventory(self):
+        return self.windows.get(0)
 
     def move(self, dx=0, dy=0, dz=0):
         self.x += dx

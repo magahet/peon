@@ -65,6 +65,7 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundChunkData.id): self.on_play_chunk_data,
             (fastmc.proto.PLAY, self.proto.PlayClientboundMapChunkBulk.id): self.on_play_map_chunk_bulk,
             (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerPositionAndLook.id): self.on_play_player_position_and_look,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundHeldItemChange.id): self.on_play_held_item_change,
             (fastmc.proto.PLAY, self.proto.PlayClientboundOpenWindow.id): self.on_play_open_window,
             (fastmc.proto.PLAY, self.proto.PlayClientboundCloseWindow.id): self.on_play_close_window,
             (fastmc.proto.PLAY, self.proto.PlayClientboundSetSlot.id): self.on_set_slot,
@@ -374,8 +375,19 @@ class Client(object):
         )
 
     def on_play_map_chunk_bulk(self, pkt):
-        print pkt
-        print
+        self.world.unpack_from_fastmc(pkt.bulk)
+        #for chunk_column in pkt.bulk.chunks:
+            #self.world.chunks[(chunk_column.x, chunk_column.y)] = ChunkColumn(
+                #chunk_x=chunk_column.x,
+                #chunk_z=chunk_column.z,
+                #continuous=True,
+                #primary_bitmap=chunk_column.primary_bitmap
+                #data=buffer(pkt.bulk.data, chunk_column.data_offset,
+            #)
+
+    def on_play_held_item_change(self, pkt):
+        if self.player is not None:
+            self.player._held_slot_num = pkt.slot
 
     def on_play_player_position_and_look(self, pkt):
         if self.player is None:
