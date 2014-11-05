@@ -29,9 +29,10 @@ class Player(object):
 
     @property
     def held_item(self):
-        inventory = self.windows.get(0)
+        inventory = self.inventory
         if inventory is not None:
-            inventory.get_held()[self._held_slot_num]
+            held = inventory.get_held()
+        return held[self._held_slot_num]
 
     @property
     def position(self):
