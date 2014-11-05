@@ -43,6 +43,7 @@ class Client(object):
         self._post_send_hooks = {
             (fastmc.proto.HANDSHAKE, self.proto.HandshakeServerboundHandshake.id): self.set_to_login_state,
             (fastmc.proto.LOGIN, self.proto.LoginServerboundEncryptionResponse.id): self.set_sock_cipher,
+            (fastmc.proto.PLAY, self.proto.PlayServerboundHeldItemChange.id): self.set_held_item,
         }
         self.interesting = []
         self._handlers = {
@@ -72,15 +73,18 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundWindowItem.id): self.on_window_item,
         }
 
-    def set_to_login_state(self):
+    def set_to_login_state(self, **kwargs):
         self.reader.switch_state(fastmc.proto.LOGIN)
         self.writer.switch_state(fastmc.proto.LOGIN)
 
-    def set_sock_cipher(self):
+    def set_sock_cipher(self, **kwargs):
         self._mc_sock.set_cipher(
             fastmc.auth.generated_cipher(self._shared_secret),
             fastmc.auth.generated_cipher(self._shared_secret),
         )
+
+    def set_held_item(self, slot):
+        self.player._held_slot_num = slot
 
     def connect(self, host, username, password, port=25565, auth=True):
         if auth:
@@ -101,6 +105,7 @@ class Client(object):
         log.info('logging in')
         while self.reader.state != fastmc.proto.PLAY:
             time.sleep(.1)
+        self.send(self.proto.PlayServerboundHeldItemChange.id, slot=0)
 
     def send_login_request(self, host, port=25565):
         self.send(self.proto.HandshakeServerboundHandshake.id,
@@ -146,7 +151,7 @@ class Client(object):
                 sock.send(out_buf)
                 hook = self._post_send_hooks.get((self.writer.state, packet_id))
                 if hook:
-                    hook()
+                    hook(**kwargs)
         finally:
             os.kill(self.parent_pid, 0)
 
