@@ -1,5 +1,6 @@
 """
 
+From: https://github.com/barneygale/smpmap
 This module intends to give an overview of how chunks are packed and unpacked
 in the minecraft smp protocol. It provides a simple world manager that makes
 use of the smp packet format internally.
