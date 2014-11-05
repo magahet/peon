@@ -36,9 +36,7 @@ def start_shear_thread(bot):
             for entity in bot.player.iter_entities_in_range('Sheep'):
                 is_sheared = entity.metadata.get(16, (0, 0))[1] >= 16
                 is_child = entity.metadata.get(12, (0, 0))[1] < 0
-                #inventory = bot.player.inventory.get_held()
-                #held_item_id = inventory[bot.player._held_slot_num].item_id
-                #holding_shears = held_item_id == shears_id
+                #holding_shears = bot.player.held_item.item_id == shears_id
                 if not is_child and not is_sheared:
                     log.debug("Entity metadata: %s", str(entity.metadata))
                     log.info("Sending UseEntity for eid: [%d]", entity.eid)

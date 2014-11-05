@@ -12,7 +12,6 @@ from world import World
 from player import Player
 from entity import Entity
 from window import Window
-from chunk import ChunkColumn
 
 
 log = logging.getLogger(__name__)
@@ -369,13 +368,14 @@ class Client(object):
         self.player._xp_total = pkt.total_exp
 
     def on_play_chunk_data(self, pkt):
-        self.world.chunks[(pkt.chunk_x, pkt.chunk_z)] = ChunkColumn(
-            pkt.chunk_x,
-            pkt.chunk_z,
-            pkt.continuous,
-            pkt.primary_bitmap,
-            pkt.data
-        )
+        pass
+        #self.world.chunks[(pkt.chunk_x, pkt.chunk_z)] = ChunkColumn(
+            #pkt.chunk_x,
+            #pkt.chunk_z,
+            #pkt.continuous,
+            #pkt.primary_bitmap,
+            #pkt.data
+        #)
 
     def on_play_map_chunk_bulk(self, pkt):
         self.world.unpack_from_fastmc(pkt.bulk)
