@@ -2,6 +2,7 @@ import threading
 import time
 import os
 import logging
+#from peon import BlockTypes
 
 
 log = logging.getLogger(__name__)
@@ -30,12 +31,16 @@ def start_afk_thread(bot):
 
 def start_shear_thread(bot):
     def do_shear_thread(bot, pid):
+        #shears_id = BlockTypes.get_id('Shears')
         while True:
             for entity in bot.player.iter_entities_in_range('Sheep'):
                 is_sheared = entity.metadata.get(16, (0, 0))[1] >= 16
                 is_child = entity.metadata.get(12, (0, 0))[1] < 0
+                #inventory = bot.player.inventory.get_held()
+                #held_item_id = inventory[bot.player._held_slot_num].item_id
+                #holding_shears = held_item_id == shears_id
                 if not is_child and not is_sheared:
-                    log.info("Entity metadata: %s", str(entity.metadata))
+                    log.debug("Entity metadata: %s", str(entity.metadata))
                     log.info("Sending UseEntity for eid: [%d]", entity.eid)
                     bot.send(bot.proto.PlayServerboundUseEntity.id,
                              target=entity.eid,
@@ -43,6 +48,7 @@ def start_shear_thread(bot):
                              )
             time.sleep(1)
 
+    time.sleep(5)
     pid = os.getppid()
     thread = threading.Thread(target=do_shear_thread, name='afk', args=(bot, pid))
     thread.daemon = True

@@ -4,7 +4,12 @@ from fastmc.proto import Slot
 
 class Player(object):
 
-    def __init__(self, x, y, z, yaw, pitch, world):
+    def __init__(self, world):
+        self.x = None
+        self.y = None
+        self.z = None
+        self.yaw = None
+        self.pitch = None
         self._health = 0
         self._food = 0
         self._food_saturation = 0
@@ -17,7 +22,6 @@ class Player(object):
         self._cursor_slot = Slot(-1, None, None, None)
         self.windows = {}
         self.world = world
-        self.teleport(x, y, z, yaw, pitch)
         self.on_ground = True
 
     def __repr__(self):
@@ -25,8 +29,9 @@ class Player(object):
 
     @property
     def held_item(self):
-        if self.inventory:
-            self.inventory.get_held()[self._held_slot_num]
+        inventory = self.windows.get(0)
+        if inventory is not None:
+            inventory.get_held()[self._held_slot_num]
 
     @property
     def position(self):

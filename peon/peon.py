@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 class Client(object):
     def __init__(self, protocol_version=47):
         self.world = World()
-        self.player = None
+        self.player = Player(self.world)
         self.protocol_version = protocol_version
         self.proto = fastmc.proto.protocol(protocol_version)
         self._sock = None
@@ -164,7 +164,7 @@ class Client(object):
                 return alpha1
 
         try:
-            while self.player is None:
+            while self.player.x is None:
                 time.sleep(0.01)
             my_generation = self._sock_generation
             while my_generation == self._sock_generation and self._mc_sock is not None:
@@ -300,10 +300,9 @@ class Client(object):
             log.info('chat: %s', clean_message)
 
     def on_play_health_update(self, pkt):
-        if self.player is not None:
-            self.player._health = pkt.health
-            self.player._food = pkt.food
-            self.player._food_saturation = pkt.food_saturation
+        self.player._health = pkt.health
+        self.player._food = pkt.food
+        self.player._food_saturation = pkt.food_saturation
 
     def on_play_spawn_mob(self, pkt):
         self.world.entities[pkt.eid] = Entity(
@@ -360,10 +359,9 @@ class Client(object):
                 del self.world.entities[eid]
 
     def on_play_set_experience(self, pkt):
-        if self.player is not None:
-            self.player._xp_bar = pkt.bar
-            self.player._xp_level = pkt.level
-            self.player._xp_total = pkt.total_exp
+        self.player._xp_bar = pkt.bar
+        self.player._xp_level = pkt.level
+        self.player._xp_total = pkt.total_exp
 
     def on_play_chunk_data(self, pkt):
         self.world.chunks[(pkt.chunk_x, pkt.chunk_z)] = ChunkColumn(
@@ -386,14 +384,10 @@ class Client(object):
             #)
 
     def on_play_held_item_change(self, pkt):
-        if self.player is not None:
-            self.player._held_slot_num = pkt.slot
+        self.player._held_slot_num = pkt.slot
 
     def on_play_player_position_and_look(self, pkt):
-        if self.player is None:
-            self.player = Player(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch, self.world)
-        else:
-            self.player.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
+        self.player.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
 
     def on_play_open_window(self, pkt):
         self.player._open_window_id = pkt.window_id
