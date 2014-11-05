@@ -47,7 +47,7 @@ bot.world
 bot.world.entities
 
 # method to get nearby entities
-bot.player.iter\_entities\_in\_range(\_type='Sheep', reach=4)
+[e for e in bot.player.iter_entities_in_range(_type='Sheep', reach=4)]
 ```
 
 
