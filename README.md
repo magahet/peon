@@ -12,35 +12,43 @@ Small Tutorial
 ==============
 
 ## Get fastmc for protocol handling
- git clone https://github.com/dividuum/fastmc.git
- cd fastmc
- python setup.py install
+```
+git clone https://github.com/dividuum/fastmc.git
+cd fastmc
+python setup.py install
+```
 
 ## Get peon
- git clone https://github.com/magahet/peon.git
- cd peon
+```
+git clone https://github.com/magahet/peon.git
+cd peon
+```
    
 
 ## Starting peon
- ipython
- import peon
- bot = peon.Client()
- bot.connect('myminecraftserver.org', 'peon', 'mypassword', auth=False)
+```
+ipython
+import peon
+bot = peon.Client()
+bot.connect('myminecraftserver.org', 'peon', 'mypassword', auth=False)
+```
  
 Authentication flag determines if bot will authenticate with central minecraft servers. If you're playing on an offline mode server, this can be set to False.
 
 ## Some available attributes
- # inventory
- bot.player.inventory
+```
+# inventory
+bot.player.inventory
 
- # world
- bot.world
+# world
+bot.world
 
- # entities
- bot.world.entities
+# entities
+bot.world.entities
 
- # method to get nearby entities
- bot.player.iter\_entities\_in\_range(\_type='Sheep', reach=4)
+# method to get nearby entities
+bot.player.iter\_entities\_in\_range(\_type='Sheep', reach=4)
+```
 
 
 ## Examples of slightly more complex actions
