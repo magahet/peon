@@ -12,4 +12,12 @@ class Window(object):
         return self.slots[-9:]
 
     def set_slot(self, index, slot):
-        self.slots[index] = slot
+        self.slots[index] = Slot(slot)
+
+
+class Slot(object):
+    def __init__(self, slot):
+        self.item_id == slot.item_id
+        self.count == slot.count
+        self.damage == slot.damage
+        self.nbt == slot.nbt
