@@ -2,6 +2,8 @@ import threading
 import time
 import os
 import logging
+from scipy.spatial.distance import euclidean
+#import numpy as np
 #from peon import BlockTypes
 
 
@@ -88,3 +90,19 @@ def jitter_step(bot):
              z=bot.player.z,
              on_ground=bot.player.on_ground
              )
+
+
+def move_to(bot, x, y, z, speed=4.25):
+    dt = 0.1
+    delta = speed * dt
+    pos = (bot.player.x, bot.player.y, bot.player.z)
+    while euclidean((x, y, z), pos) > 0.1:
+        dx = x - bot.player.x
+        dy = y - bot.player.y
+        dz = z - bot.player.z
+        print dx, dy, dz
+        args = (min(dx, delta), min(dy, delta), min(dz, delta))
+        print args
+        bot.player.move(*args)
+        time.sleep(dt)
+        pos = (bot.player.x, bot.player.y, bot.player.z)

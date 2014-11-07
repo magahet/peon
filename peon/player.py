@@ -1,5 +1,6 @@
 from scipy.spatial.distance import euclidean
 from fastmc.proto import Slot
+import numpy as np
 
 
 class Player(object):
@@ -28,15 +29,22 @@ class Player(object):
         return 'Player(x={}, y={}, z={})'.format(self.x, self.y, self.z)
 
     @property
+    def position(self):
+        return (self.x, self.y, self.z)
+
+    def get_position(self, dx=0, dy=0, dz=0, floor=False):
+        position = np.add((self.x, self.y, self.z), (dx, dy, dz))
+        if floor:
+            return tuple([int(i) for i in np.floor(position)])
+        else:
+            return tuple(position)
+
+    @property
     def held_item(self):
         inventory = self.inventory
         if inventory is not None:
             held = inventory.get_held()
         return held[self._held_slot_num]
-
-    @property
-    def position(self):
-        return (self.x, self.y, self.z)
 
     @property
     def inventory(self):

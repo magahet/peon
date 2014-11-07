@@ -44,7 +44,9 @@ class Client(object):
             (fastmc.proto.LOGIN, self.proto.LoginServerboundEncryptionResponse.id): self.set_sock_cipher,
             (fastmc.proto.PLAY, self.proto.PlayServerboundHeldItemChange.id): self.set_held_item,
         }
-        self.interesting = []
+        self.interesting = [
+            self.proto.PlayClientboundPlayerPositionAndLook.id
+        ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
             (fastmc.proto.LOGIN, self.proto.LoginClientboundLoginSuccess.id): self.on_login_login_success,
@@ -392,6 +394,8 @@ class Client(object):
         self.player._held_slot_num = pkt.slot
 
     def on_play_player_position_and_look(self, pkt):
+        print pkt
+        print
         self.player.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
 
     def on_play_open_window(self, pkt):
