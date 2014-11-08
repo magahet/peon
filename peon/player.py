@@ -1,3 +1,4 @@
+import time
 from scipy.spatial.distance import euclidean
 from fastmc.proto import Slot
 import numpy as np
@@ -49,6 +50,24 @@ class Player(object):
     @property
     def inventory(self):
         return self.windows.get(0)
+
+    def move_to(self, x, y, z, speed=10):
+        def abs_min(n, delta):
+            if n < 0:
+                return max(n, -delta)
+            else:
+                return min(n, delta)
+
+        x += 0.5
+        z += 0.5
+        dt = 0.1
+        delta = speed * dt
+        while euclidean((x, y, z), self.get_position()) > 0.1:
+            dx = x - self.x
+            dy = y - self.y
+            dz = z - self.z
+            self.move(abs_min(dx, delta), abs_min(dy, delta), abs_min(dz, delta))
+            time.sleep(dt)
 
     def move(self, dx=0, dy=0, dz=0):
         self.x += dx

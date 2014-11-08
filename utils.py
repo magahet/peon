@@ -92,17 +92,20 @@ def jitter_step(bot):
              )
 
 
-def move_to(bot, x, y, z, speed=4.25):
+def move_to(bot, x, y, z, speed=10):
+    def abs_min(n, delta):
+        if n < 0:
+            return max(n, -delta)
+        else:
+            return min(n, delta)
+
     dt = 0.1
     delta = speed * dt
-    pos = (bot.player.x, bot.player.y, bot.player.z)
-    while euclidean((x, y, z), pos) > 0.1:
+    while euclidean((x, y, z), bot.player.get_position(floor=True)) > 0.01:
         dx = x - bot.player.x
         dy = y - bot.player.y
         dz = z - bot.player.z
-        print dx, dy, dz
-        args = (min(dx, delta), min(dy, delta), min(dz, delta))
+        args = (abs_min(dx, delta), abs_min(dy, delta), abs_min(dz, delta))
         print args
         bot.player.move(*args)
         time.sleep(dt)
-        pos = (bot.player.x, bot.player.y, bot.player.z)
