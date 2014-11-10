@@ -26,6 +26,9 @@ class Player(object):
         self.windows = {}
         self.world = world
         self.on_ground = True
+        self.is_moving = threading.Event()
+        self.move_lock = threading.Lock()
+        self.move_corrected_by_server = threading.Event()
 
     def __repr__(self):
         return 'Player(x={}, y={}, z={})'.format(self.x, self.y, self.z)
@@ -35,6 +38,8 @@ class Player(object):
         return (self.x, self.y, self.z)
 
     def get_position(self, dx=0, dy=0, dz=0, floor=False):
+        if self.x is None:
+            return (None, None, None)
         position = np.add((self.x, self.y, self.z), (dx, dy, dz))
         if floor:
             return tuple([int(i) for i in np.floor(position)])
@@ -59,49 +64,42 @@ class Player(object):
             else:
                 return min(n, delta)
 
-        x += 0.5
-        z += 0.5
+        #x += 0.5
+        #z += 0.5
         dt = 0.1
         delta = speed * dt
+        self.is_moving.set()
+        self.move_corrected_by_server.clear()
         while euclidean((x, y, z), self.get_position()) > 0.1:
+            if self.move_corrected_by_server.is_set():
+                self.move_corrected_by_server.clear()
+                self.is_moving.clear()
+                return False
             dx = x - self.x
             dy = y - self.y
             dz = z - self.z
             self.move(abs_min(dx, delta), abs_min(dy, delta), abs_min(dz, delta))
             time.sleep(dt)
+        self.is_moving.clear()
+        return True
 
     def move(self, dx=0, dy=0, dz=0):
+        self.move_lock.acquire()
         self.x += dx
         self.y += dy
         self.z += dz
+        print 'moving rel:', (dx, dy, dz)
+        print 'moving:', self.position
+        self.move_lock.release()
 
     def teleport(self, x, y, z, yaw, pitch):
+        self.move_lock.acquire()
         self.x = x
         self.y = y
         self.z = z
         self.yaw = yaw
         self.pitch = pitch
-
-    def drop(self):
-        def do_drop_thread(bot, name):
-            pos = bot.get_position(dy=-1, floor=True)
-            while pos is None:
-                pos = bot.get_position(dy=-1, floor=True)
-                time.sleep(0.01)
-            next_pos = bot.world.get_next_highest_solid_block(*pos)
-            while next_pos is None:
-                next_pos = bot.world.get_next_highest_solid_block(*pos)
-                time.sleep(0.01)
-            x, y, z = next_pos
-            print 'next_pos:', (x, y, z)
-            bot.move_to(x, y + 1, z, speed=13)
-
-        name = 'drop'
-        thread = threading.Thread(target=do_drop_thread, name=name,
-                                  args=(self, name))
-        thread.daemon = True
-        thread.start()
-        return thread
+        self.move_lock.release()
 
     def iter_entities_in_range(self, types=None, reach=4):
         for entity in self.world.iter_entities(types=types):

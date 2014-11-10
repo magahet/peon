@@ -14,6 +14,7 @@ import struct
 import zlib
 
 from cStringIO import StringIO
+from math import floor
 
 
 class BiomeData:
@@ -134,6 +135,7 @@ class World:
     """ A bunch of ChunkColumns. """
 
     def __init__(self):
+        self.dimmension = 0
         self.columns = {}  # chunk columns are address by a tuple (x, z)
 
     def unpack_raw(self, buff, ty):
@@ -155,6 +157,18 @@ class World:
             # Unpack the chunk column data!
             column.unpack(StringIO(buffer(data, chunk.data_offset, offsets[num + 1])),
                           chunk.primary_bitmap, sky_light_sent)
+
+    def unpack_chunk_from_fastmc(self, x, z, continuous, primary_bitmap, data):
+        key = (x, z)
+        if key in self.columns:
+            column = self.columns[key]
+        else:
+            column = ChunkColumn()
+            self.columns[key] = column
+
+            # Unpack the chunk column data!
+            column.unpack(StringIO(buffer(data, 0, len(data))),
+                          primary_bitmap, self.dimmension == 0)
 
     def unpack(self, buff):
         chunk_count = self.unpack_raw(buff, 'h')[0]  # short
@@ -182,9 +196,9 @@ class World:
             column.unpack(data, mask1, light_data)
 
     def get(self, x, y, z, key):
-        x, rx = divmod(x, 16)
-        y, ry = divmod(y, 16)
-        z, rz = divmod(z, 16)
+        x, rx = divmod(int(floor(x)), 16)
+        y, ry = divmod(int(floor(y)), 16)
+        z, rz = divmod(int(floor(z)), 16)
 
         if not (x, z) in self.columns:
             return None

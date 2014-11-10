@@ -16,8 +16,11 @@ class World(smpmap.World):
             if types is None or entity._type in type_ids:
                 yield entity
 
+    def is_solid_block(self, x, y, z):
+        _type = self.get_id(x, y, z)
+        return None if _type is None else ItemTypes.is_solid(_type)
+
     def get_next_highest_solid_block(self, x, y, z):
-        for y in xrange(y, -1, -1):
-            _type = self.get_id(x, y, z)
-            if ItemTypes.is_solid(_type):
+        for y in xrange(int(y), -1, -1):
+            if self.is_solid_block(x, y, z):
                 return (x, y, z)

@@ -38,6 +38,7 @@ class Client(object):
             'reader': self._do_read_thread,
             'writer': self._do_send_thread,
             'position_update': self._do_send_position,
+            'falling': self._do_falling,
         }
         self._active_threads = set(self._thread_funcs.keys())
         self._post_send_hooks = {
@@ -66,6 +67,8 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundDestroyEntities.id): self.on_play_destroy_entities,
             (fastmc.proto.PLAY, self.proto.PlayClientboundSetExperience.id): self.on_play_set_experience,
             (fastmc.proto.PLAY, self.proto.PlayClientboundChunkData.id): self.on_play_chunk_data,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundMultiBlockChange.id): self.on_play_multi_block_change,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundBlockChange.id): self.on_play_block_change,
             (fastmc.proto.PLAY, self.proto.PlayClientboundMapChunkBulk.id): self.on_play_map_chunk_bulk,
             (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerPositionAndLook.id): self.on_play_player_position_and_look,
             (fastmc.proto.PLAY, self.proto.PlayClientboundHeldItemChange.id): self.on_play_held_item_change,
@@ -121,6 +124,9 @@ class Client(object):
         self.send(self.proto.LoginServerboundLoginStart.id,
                   name=self.username
                   )
+
+    def respawn(self):
+        self.send(self.proto.PlayServerboundClientStatus.id, action_id=0)
 
     def start_threads(self):
         for name, func in self._thread_funcs.iteritems():
@@ -195,6 +201,25 @@ class Client(object):
                               on_ground=self.player.on_ground)
         finally:
             os.kill(self.parent_pid, 0)
+
+    def _do_falling(self):
+        while True:
+            time.sleep(0.01)
+            if self.player.is_moving.is_set():
+                continue
+            pos = self.player.position
+            if None in pos:
+                continue
+            x, y, z = pos
+            if self.world.is_solid_block(x, y - 1, z):
+                continue
+            print 'falling', (x, y, z)
+            next_pos = self.world.get_next_highest_solid_block(x, y, z)
+            if next_pos is None:
+                continue
+            x, y, z = next_pos
+            print 'down to: ', (x, y, z)
+            self.player.move_to(x, y + 1, z, speed=13)
 
     ##############################################################################
 
@@ -374,34 +399,45 @@ class Client(object):
         self.player._xp_total = pkt.total_exp
 
     def on_play_chunk_data(self, pkt):
-        pass
-        #self.world.chunks[(pkt.chunk_x, pkt.chunk_z)] = ChunkColumn(
-            #pkt.chunk_x,
-            #pkt.chunk_z,
-            #pkt.continuous,
-            #pkt.primary_bitmap,
-            #pkt.data
-        #)
+        self.world.unpack_chunk_from_fastmc(
+            pkt.chunk_x,
+            pkt.chunk_z,
+            pkt.continuous,
+            pkt.primary_bitmap,
+            pkt.data
+        )
+
+    def on_play_multi_block_change(self, pkt):
+        for change in pkt.changes:
+            self.world.put(
+                change.x + pkt.chunk_x * 16,
+                change.y,
+                change.x + pkt.chunk_x * 16,
+                'block_data',
+                change.block_id
+            )
+
+    def on_play_block_change(self, pkt):
+        self.world.put(
+            pkt.location.x,
+            pkt.location.y,
+            pkt.location.z,
+            'block_data',
+            pkt.block_id
+        )
 
     def on_play_map_chunk_bulk(self, pkt):
         self.world.unpack_from_fastmc(pkt.bulk)
-        #for chunk_column in pkt.bulk.chunks:
-            #self.world.chunks[(chunk_column.x, chunk_column.y)] = ChunkColumn(
-                #chunk_x=chunk_column.x,
-                #chunk_z=chunk_column.z,
-                #continuous=True,
-                #primary_bitmap=chunk_column.primary_bitmap
-                #data=buffer(pkt.bulk.data, chunk_column.data_offset,
-            #)
 
     def on_play_held_item_change(self, pkt):
         self.player._held_slot_num = pkt.slot
 
     def on_play_player_position_and_look(self, pkt):
-        print pkt
+        print 'PlayerPositionAndLook(x={}, y={}, z={})'.format(
+            pkt.x, pkt.y, pkt.z)
         print
+        self.player.move_corrected_by_server.set()
         self.player.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
-        self.player.drop()
 
     def on_play_open_window(self, pkt):
         self.player._open_window_id = pkt.window_id
