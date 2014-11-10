@@ -20,4 +20,4 @@ class World(smpmap.World):
         for y in xrange(y, -1, -1):
             _type = self.get_id(x, y, z)
             if ItemTypes.is_solid(_type):
-                return (x, y, z), _type
+                return (x, y, z)

@@ -2,6 +2,7 @@ import time
 from scipy.spatial.distance import euclidean
 from fastmc.proto import Slot
 import numpy as np
+import threading
 
 
 class Player(object):
@@ -82,9 +83,25 @@ class Player(object):
         self.pitch = pitch
 
     def drop(self):
-        pos, _ = self.world.get_next_highest_solid_block(
-            *self.get_position(dy=-1, floor=True))
-        self.move_to(*pos, speed=13)
+        def do_drop_thread(bot, name):
+            pos = bot.get_position(dy=-1, floor=True)
+            while pos is None:
+                pos = bot.get_position(dy=-1, floor=True)
+                time.sleep(0.01)
+            next_pos = bot.world.get_next_highest_solid_block(*pos)
+            while next_pos is None:
+                next_pos = bot.world.get_next_highest_solid_block(*pos)
+                time.sleep(0.01)
+            x, y, z = next_pos
+            print 'next_pos:', (x, y, z)
+            bot.move_to(x, y + 1, z, speed=13)
+
+        name = 'drop'
+        thread = threading.Thread(target=do_drop_thread, name=name,
+                                  args=(self, name))
+        thread.daemon = True
+        thread.start()
+        return thread
 
     def iter_entities_in_range(self, types=None, reach=4):
         for entity in self.world.iter_entities(types=types):

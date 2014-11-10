@@ -187,17 +187,18 @@ class World:
         z, rz = divmod(z, 16)
 
         if not (x, z) in self.columns:
-            return 0
+            return None
         column = self.columns[(x, z)]
 
         chunk = column.chunks[y]
         if chunk is None:
-            return 0
+            return None
 
         return chunk[key].get(rx, ry, rz)
 
     def get_id(self, x, y, z):
-        return self.get(x, y, z, 'block_data') >> 4
+        raw_id = self.get(x, y, z, 'block_data')
+        return None if raw_id is None else raw_id >> 4
 
     def get_meta(self, x, y, z):
         return self.get(x, y, z, 'block_data') & 15
@@ -240,6 +241,7 @@ class World:
             self.columns[(x, z)] = column
 
         return column.biome.put(rx, rz, data)
+
 
 if __name__ == '__main__':
     world = World()

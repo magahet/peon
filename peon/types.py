@@ -79,4 +79,4 @@ class ItemTypes(object):
 
     @classmethod
     def is_solid(cls, item_id):
-        return item_id != 0
+        return bool(item_id)
