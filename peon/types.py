@@ -76,3 +76,7 @@ class ItemTypes(object):
     def get_name(cls, id_query, damage_query=None):
         return cls.types_by_id.get((id_query, damage_query),
                                    cls.types_by_id.get((id_query, None)))
+
+    @classmethod
+    def is_solid(cls, item_id):
+        return item_id != 0

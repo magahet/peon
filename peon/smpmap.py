@@ -41,15 +41,15 @@ class BiomeData:
 
 class ChunkData:
     """ A 16x16x16 array for storing block IDs. """
-    length = 16 * 16 * 16
+    length = 16 * 16 * 16 * 2
     data = None
 
     def fill(self):
         if not self.data:
-            self.data = array.array('B', [0] * self.length)
+            self.data = array.array('H', [0] * self.length)
 
     def unpack(self, buff):
-        self.data = array.array('B', buff.read(self.length))
+        self.data = array.array('H', buff.read(self.length))
 
     def pack(self):
         self.fill()
@@ -141,7 +141,9 @@ class World:
 
     def unpack_from_fastmc(self, map_chunk_bulk_14w28a):
         sky_light_sent, data, chunks = map_chunk_bulk_14w28a
-        for chunk in chunks:
+        offsets = [c.data_offset for c in chunks]
+        offsets.append(len(data))
+        for num, chunk in enumerate(chunks):
             # Grab the relevant column
             key = (chunk.x, chunk.z)
             if key in self.columns:
@@ -151,7 +153,7 @@ class World:
                 self.columns[key] = column
 
             # Unpack the chunk column data!
-            column.unpack(StringIO(buffer(data, 0, chunk.data_offset)),
+            column.unpack(StringIO(buffer(data, chunk.data_offset, offsets[num + 1])),
                           chunk.primary_bitmap, sky_light_sent)
 
     def unpack(self, buff):

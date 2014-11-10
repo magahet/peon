@@ -81,8 +81,22 @@ class Player(object):
         self.yaw = yaw
         self.pitch = pitch
 
-    def iter_entities_in_range(self, _type=None, reach=4):
-        for entity in self.world.iter_entities(_type=_type):
+    def drop(self):
+        pos, _ = self.world.get_next_highest_solid_block(
+            *self.get_position(dy=-1, floor=True))
+        self.move_to(*pos, speed=13)
+
+    def iter_entities_in_range(self, types=None, reach=4):
+        for entity in self.world.iter_entities(types=types):
             if euclidean((self.x, self.y, self.z),
                          (entity.x, entity.y, entity.z)) <= reach:
                 yield entity
+
+    def get_closest_entity(self, types=None, limit=None):
+        closest_entity, dist = None, None
+        for entity in self.world.iter_entities(types=types):
+            cur_dist = euclidean(self.position, (entity.x, entity.y, entity.z))
+            if closest_entity is None or (cur_dist < limit and cur_dist < dist):
+                closest_entity = entity
+                dist = cur_dist
+        return (closest_entity, dist)

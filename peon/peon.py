@@ -39,13 +39,14 @@ class Client(object):
             'writer': self._do_send_thread,
             'position_update': self._do_send_position,
         }
+        self._active_threads = set(self._thread_funcs.keys())
         self._post_send_hooks = {
             (fastmc.proto.HANDSHAKE, self.proto.HandshakeServerboundHandshake.id): self.set_to_login_state,
             (fastmc.proto.LOGIN, self.proto.LoginServerboundEncryptionResponse.id): self.set_sock_cipher,
             (fastmc.proto.PLAY, self.proto.PlayServerboundHeldItemChange.id): self.set_held_item,
         }
         self.interesting = [
-            self.proto.PlayClientboundPlayerPositionAndLook.id
+            #self.proto.PlayClientboundChunkData.id
         ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
@@ -212,6 +213,9 @@ class Client(object):
             pkt, pkt_raw = reader.read(in_buf)
             if pkt is None:
                 break
+            if pkt.id in self.interesting:
+                print pkt
+                print
             log.debug('handler: (%s, %s)', reader.state, pkt.id)
             handler = self._handlers.get((reader.state, pkt.id))
             if handler:
@@ -397,6 +401,7 @@ class Client(object):
         print pkt
         print
         self.player.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
+        self.player.drop()
 
     def on_play_open_window(self, pkt):
         self.player._open_window_id = pkt.window_id
@@ -419,6 +424,7 @@ class Client(object):
         self.player.windows[pkt.window_id] = Window(pkt.window_id, pkt.slots)
 
     def on_unhandled(self, pkt):
-        if pkt.id in self.interesting:
-            print pkt
-            print
+        pass
+        #if pkt.id in self.interesting:
+            #print pkt
+            #print
