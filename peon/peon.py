@@ -204,22 +204,22 @@ class Client(object):
 
     def _do_falling(self):
         while True:
-            time.sleep(0.01)
+            time.sleep(0.1)
             if self.player.is_moving.is_set():
                 continue
             pos = self.player.position
             if None in pos:
                 continue
             x, y, z = pos
-            if self.world.is_solid_block(x, y - 1, z):
+            standing = self.world.is_solid_block(x, y - 1, z)
+            if standing is None or standing:
                 continue
-            print 'falling', (x, y, z)
             next_pos = self.world.get_next_highest_solid_block(x, y, z)
             if next_pos is None:
                 continue
+            self.player.on_ground = False
             x, y, z = next_pos
-            print 'down to: ', (x, y, z)
-            self.player.move_to(x, y + 1, z, speed=13)
+            self.player.on_ground = self.player.move_to(x, y + 1, z, speed=13)
 
     ##############################################################################
 

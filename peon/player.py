@@ -2,6 +2,7 @@ import time
 from scipy.spatial.distance import euclidean
 from fastmc.proto import Slot
 import numpy as np
+from math import floor
 import threading
 
 
@@ -57,15 +58,17 @@ class Player(object):
     def inventory(self):
         return self.windows.get(0)
 
-    def move_to(self, x, y, z, speed=10):
+    def move_to(self, x, y, z, speed=10, center=False):
         def abs_min(n, delta):
             if n < 0:
                 return max(n, -delta)
             else:
                 return min(n, delta)
 
-        #x += 0.5
-        #z += 0.5
+        if center:
+            x = floor(x) + 0.5
+            z = floor(z) + 0.5
+
         dt = 0.1
         delta = speed * dt
         self.is_moving.set()
