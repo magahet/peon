@@ -19,10 +19,11 @@ log = logging.getLogger(__name__)
 
 class Client(object):
     def __init__(self, protocol_version=47):
-        self.world = World()
-        self.player = Player(self.world)
         self.protocol_version = protocol_version
         self.proto = fastmc.proto.protocol(protocol_version)
+        self._send_queue = Queue.Queue(10)
+        self.world = World()
+        self.player = Player(self.proto, self._send_queue, self.world)
         self._sock = None
         self._mc_sock = None
         self._sock_generation = 0
@@ -30,7 +31,6 @@ class Client(object):
         self.reader = None
         self.in_buf = fastmc.proto.ReadBuffer()
         self._recv_condition = threading.Condition()
-        self._send_queue = Queue.Queue(10)
         self.parent_pid = os.getppid()
         self.last_keepalive = time.time()
         self._threads = {}
@@ -38,7 +38,6 @@ class Client(object):
             'reader': self._do_read_thread,
             'writer': self._do_send_thread,
             'position_update': self._do_send_position,
-            'falling': self._do_falling,
         }
         self._active_threads = set(self._thread_funcs.keys())
         self._post_send_hooks = {
@@ -201,25 +200,6 @@ class Client(object):
                               on_ground=self.player.on_ground)
         finally:
             os.kill(self.parent_pid, 0)
-
-    def _do_falling(self):
-        while True:
-            time.sleep(0.1)
-            if self.player.is_moving.is_set():
-                continue
-            pos = self.player.position
-            if None in pos:
-                continue
-            x, y, z = pos
-            standing = self.world.is_solid_block(x, y - 1, z)
-            if standing is None or standing:
-                continue
-            next_pos = self.world.get_next_highest_solid_block(x, y, z)
-            if next_pos is None:
-                continue
-            self.player.on_ground = False
-            x, y, z = next_pos
-            self.player.on_ground = self.player.move_to(x, y + 1, z, speed=13)
 
     ##############################################################################
 

@@ -1,19 +1,24 @@
-from types import (MobTypes, ItemTypes)
+from scipy.spatial.distance import euclidean
+from math import floor
 import smpmap
+import astar
+from types import (MobTypes, ItemTypes)
+from sys import maxint
 
 
 class World(smpmap.World):
     def __init__(self):
         self.columns = {}
         self.entities = {}
+        self.dimmension = 0
 
     def iter_entities(self, types=None):
         if isinstance(types, list):
-            type_ids = [t if isinstance(t, int)
-                        else MobTypes.get_id(t)
-                        for t in types]
+            types = [t if isinstance(t, int)
+                     else MobTypes.get_id(t)
+                     for t in types]
         for entity in self.entities.values():
-            if types is None or entity._type in type_ids:
+            if types is None or entity._type in types:
                 yield entity
 
     def is_solid_block(self, x, y, z):
@@ -58,3 +63,19 @@ class World(smpmap.World):
             not self.is_solid_block(x, y + 1, z),
             not self.is_solid_block(x, y, z),
         ])
+
+    def find_path(self, x0, y0, z0, x, y, z, limit=maxint, debug=None):
+
+        def iter_moveable_adjacent(pos):
+            return self.iter_moveable_adjacent(*pos)
+
+        return astar.astar(
+            (floor(x0), floor(y0), floor(z0)),      # start_pos
+            iter_moveable_adjacent,                 # neighbors
+            lambda p: p == (x, y, z),               # at_goal
+            0,                                      # start_g
+            lambda p1, p2: euclidean(p1, p2),       # cost
+            lambda p: euclidean(p, (x, y, z)),      # heuristic
+            limit,                                  # limit
+            debug                                   # debug
+        )

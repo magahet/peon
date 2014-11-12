@@ -2,6 +2,9 @@ import os
 import json
 
 
+HOSTILE_MOBS = set(range(48, 69))
+
+
 class MobTypes(object):
     types = (
         (48, 'Mob'),
