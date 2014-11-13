@@ -2,7 +2,17 @@ import os
 import json
 
 
-HOSTILE_MOBS = set(range(48, 69))
+HOSTILE_MOBS = set(range(48, 65) + range(66, 69))
+DANGER_BLOCKS = set([
+    'Flowing Lava',
+    'Still Lava'
+])
+LIQUID_BLOCKS = set([
+    'Flowing Water',
+    'Still Water',
+    'Flowing Lava',
+    'Still Lava',
+])
 
 
 class MobTypes(object):
@@ -59,9 +69,20 @@ class MobTypes(object):
 class ItemTypes(object):
     types_by_id = {}
     types_by_name = {}
-    with open(os.path.join(os.path.dirname(__file__), 'all.json')) as _file:
-        types = json.load(_file).get('minecraft')
+    blocks_by_id = {}
+    blocks_by_name = {}
+    solid_types = set([])
+    non_climbable_types = set([])
+    with open(os.path.join(os.path.dirname(__file__), 'types.json')) as _file:
+        types = json.load(_file)
     for _, data in types.iteritems():
+        if 'blockID' in data:
+            blocks_by_id[data.get('blockID')] = data.get('name')
+            blocks_by_name[data.get('name')] = data.get('blockID')
+            if data.get('solid', False):
+                solid_types.add(data.get('blockID'))
+            if not data.get('climbable', True):
+                non_climbable_types.add(data.get('blockID'))
         if 'damageValues' not in data:
             types_by_id[(data.get('itemID'), None)] = data.get('name')
             types_by_name[data.get('name')] = (data.get('itemID'), None)
@@ -81,5 +102,26 @@ class ItemTypes(object):
                                    cls.types_by_id.get((id_query, None)))
 
     @classmethod
-    def is_solid(cls, item_id):
-        return bool(item_id)
+    def is_solid(cls, block_id):
+        return block_id in cls.solid_types
+
+    @classmethod
+    def is_safe_non_solid(cls, block_id):
+        return all([
+            block_id not in cls.solid_types,
+            cls.blocks_by_name.get(block_id, '') not in DANGER_BLOCKS,
+        ])
+
+    @classmethod
+    def is_breathable(cls, block_id):
+        return all([
+            block_id not in cls.solid_types,
+            cls.blocks_by_name.get(block_id, '') not in LIQUID_BLOCKS,
+        ])
+
+    @classmethod
+    def is_climbable(cls, block_id):
+        return all([
+            cls.is_solid(block_id),
+            block_id not in cls.non_climbable_types
+        ])

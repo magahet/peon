@@ -1,0 +1,3992 @@
+{
+  "acacia_door": {
+    "blockID": 196, 
+    "itemID": 430, 
+    "name": "Acacia Door", 
+    "solid": true, 
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          null
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "acacia_fence": {
+    "blockID": 192, 
+    "itemID": 192, 
+    "name": "Acacia Fence", 
+    "solid": true, 
+    "climbable": false, 
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "acacia_fence_gate": {
+    "blockID": 187, 
+    "itemID": 187, 
+    "name": "Acacia Fence Gate", 
+    "solid": true, 
+    "climbable": false, 
+    "obtaining": [
+      {
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          "minecraft:stick", 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          "minecraft:stick", 
+          {
+            "damage": 4, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick"
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "acacia_stairs": {
+    "blockID": 163, 
+    "itemID": 163, 
+    "name": "Acacia Wood Stairs",
+    "solid": true
+  }, 
+  "activator_rail": {
+    "blockID": 157, 
+    "itemID": 157, 
+    "name": "Activator Rail"
+  }, 
+  "air": {
+    "blast_resistance": -1, 
+    "blockID": 0, 
+    "itemID": 0, 
+    "luminance": false, 
+    "name": "Air", 
+    "renewable": false, 
+    "stackable": null, 
+    "tool": null, 
+    "transparent": true
+  }, 
+  "anvil": {
+    "blockID": 145, 
+    "damageValues": {
+      "4": {
+        "name": "Slightly Damaged Anvil"
+      }, 
+      "8": {
+        "name": "Very Damaged Anvil"
+      }
+    }, 
+    "itemID": 145, 
+    "name": "Anvil",
+    "solid": true
+  }, 
+  "apple": {
+    "itemID": 260, 
+    "name": "Apple"
+  }, 
+  "armor_stand": {
+    "itemID": 416, 
+    "name": "Armor Stand", 
+    "solid": true, 
+    "obtaining": [
+      {
+        "recipe": [
+          "minecraft:stick", 
+          "minecraft:stick", 
+          "minecraft:stick", 
+          null, 
+          "minecraft:stick", 
+          null, 
+          "minecraft:stick", 
+          "minecraft:stone_slab", 
+          "minecraft:stick"
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "arrow": {
+    "itemID": 262, 
+    "name": "Arrow"
+  }, 
+  "baked_potato": {
+    "itemID": 393, 
+    "name": "Baked Potato"
+  }, 
+  "banner": {
+    "damageValues": {
+      "0": {
+        "name": "Black Banner"
+      }, 
+      "1": {
+        "name": "Red Banner"
+      }, 
+      "2": {
+        "name": "Green Banner"
+      }, 
+      "3": {
+        "name": "Brown Banner"
+      }, 
+      "4": {
+        "name": "Blue Banner"
+      }, 
+      "5": {
+        "name": "Purple Banner"
+      }, 
+      "6": {
+        "name": "Cyan Banner"
+      }, 
+      "7": {
+        "name": "Light Gray Banner"
+      }, 
+      "8": {
+        "name": "Gray Banner"
+      }, 
+      "9": {
+        "name": "Pink Banner"
+      }, 
+      "10": {
+        "name": "Lime Banner"
+      }, 
+      "11": {
+        "name": "Yellow Banner"
+      }, 
+      "12": {
+        "name": "Light Blue Banner"
+      }, 
+      "13": {
+        "name": "Magenta Banner"
+      }, 
+      "14": {
+        "name": "Orange Banner"
+      }, 
+      "15": {
+        "name": "White Banner"
+      }
+    }, 
+    "itemID": 425, 
+    "name": "Banner"
+  }, 
+  "barrier": {
+    "blockID": 166, 
+    "itemID": 166, 
+    "name": "Barrier",
+    "solid": true
+  }, 
+  "beacon": {
+    "blockID": 138, 
+    "itemID": 138, 
+    "name": "Beacon",
+    "solid": true
+  }, 
+  "bed": {
+    "FIXME": "Beds are complicated stuff", 
+    "blockID": 26, 
+    "blockInfo": {
+      "damageValues": {
+        "0": {
+          "texture_east": "bed_feet_side", 
+          "texture_south": null, 
+          "texture_top": "bed_feet_top", 
+          "texture_west": "bed_feet_side"
+        }
+      }
+    }, 
+    "itemID": 355, 
+    "name": "Bed", 
+    "solid": true, 
+    "subtype": "bed"
+  }, 
+  "bedrock": {
+    "blockID": 7, 
+    "itemID": 7, 
+    "name": "Bedrock", 
+    "solid": true
+  }, 
+  "beef": {
+    "itemID": 363, 
+    "name": "Raw Beef"
+  }, 
+  "birch_door": {
+    "blockID": 194, 
+    "itemID": 428, 
+    "name": "Birch Door", 
+    "solid": true,
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          null
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "birch_fence": {
+    "blockID": 189, 
+    "itemID": 189, 
+    "name": "Birch Fence", 
+    "solid": true,
+    "climbable": false, 
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "birch_fence_gate": {
+    "blockID": 184, 
+    "itemID": 184, 
+    "name": "Birch Fence Gate", 
+    "solid": true,
+    "climbable": false, 
+    "obtaining": [
+      {
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          "minecraft:stick", 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          "minecraft:stick", 
+          {
+            "damage": 2, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick"
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "birch_stairs": {
+    "blockID": 135, 
+    "itemID": 135, 
+    "name": "Birch Wood Stairs",
+    "solid": true
+  }, 
+  "blaze_powder": {
+    "itemID": 377, 
+    "name": "Blaze Powder"
+  }, 
+  "blaze_rod": {
+    "itemID": 369, 
+    "name": "Blaze Rod"
+  }, 
+  "boat": {
+    "itemID": 333, 
+    "name": "Boat"
+  }, 
+  "bone": {
+    "itemID": 352, 
+    "name": "Bone"
+  }, 
+  "book": {
+    "itemID": 340, 
+    "name": "Book"
+  }, 
+  "bookshelf": {
+    "blockID": 47, 
+    "itemID": 47, 
+    "name": "Bookshelf", 
+    "solid": true, 
+    "texture_bottom": "planks_oak", 
+    "texture_top": "planks_oak"
+  }, 
+  "bow": {
+    "durability": 384, 
+    "itemID": 261, 
+    "name": "Bow"
+  }, 
+  "bowl": {
+    "itemID": 281, 
+    "name": "Bowl"
+  }, 
+  "bread": {
+    "itemID": 297, 
+    "name": "Bread"
+  }, 
+  "brewing_stand": {
+    "blockID": 117, 
+    "itemID": 379, 
+    "name": "Brewing Stand",
+    "solid": true
+  }, 
+  "brick": {
+    "itemID": 336, 
+    "name": "Brick"
+  }, 
+  "brick_block": {
+    "blockID": 45, 
+    "itemID": 45, 
+    "name": "Brick", 
+    "solid": true
+  }, 
+  "brick_stairs": {
+    "blockID": 108, 
+    "itemID": 108, 
+    "name": "Brick Stairs",
+    "solid": true
+  }, 
+  "brown_mushroom": {
+    "blockID": 39, 
+    "itemID": 39, 
+    "name": "Brown Mushroom"
+  }, 
+  "brown_mushroom_block": {
+    "blockID": 99, 
+    "itemID": 99, 
+    "name": "Huge Brown Mushroom"
+  }, 
+  "bucket": {
+    "itemID": 325, 
+    "name": "Bucket"
+  }, 
+  "cactus": {
+    "blockID": 81, 
+    "itemID": 81, 
+    "name": "Cactus",
+    "solid": true
+  }, 
+  "cake": {
+    "blockID": 92, 
+    "itemID": 354, 
+    "name": "Cake",
+    "solid": true
+  }, 
+  "carpet": {
+    "blockID": 171, 
+    "damageValues": {
+      "0": {
+        "name": "White Carpet"
+      }, 
+      "1": {
+        "name": "Orange Carpet"
+      }, 
+      "2": {
+        "name": "Magenta Carpet"
+      }, 
+      "3": {
+        "name": "Light Blue Carpet"
+      }, 
+      "4": {
+        "name": "Yellow Carpet"
+      }, 
+      "5": {
+        "name": "Lime Carpet"
+      }, 
+      "6": {
+        "name": "Pink Carpet"
+      }, 
+      "7": {
+        "name": "Gray Carpet"
+      }, 
+      "8": {
+        "name": "Light Gray Carpet"
+      }, 
+      "9": {
+        "name": "Cyan Carpet"
+      }, 
+      "10": {
+        "name": "Purple Carpet"
+      }, 
+      "11": {
+        "name": "Blue Carpet"
+      }, 
+      "12": {
+        "name": "Brown Carpet"
+      }, 
+      "13": {
+        "name": "Green Carpet"
+      }, 
+      "14": {
+        "name": "Red Carpet"
+      }, 
+      "15": {
+        "name": "Black Carpet"
+      }
+    }, 
+    "itemID": 171, 
+    "name": "Carpet"
+  }, 
+  "carrot": {
+    "itemID": 391, 
+    "name": "Carrot"
+  }, 
+  "carrot_on_a_stick": {
+    "durability": 25, 
+    "itemID": 398, 
+    "name": "Carrot on a Stick"
+  }, 
+  "carrots": {
+    "blockID": 141, 
+    "itemID": 141, 
+    "name": "Carrot Crops"
+  }, 
+  "cauldron": {
+    "blockID": 118, 
+    "itemID": 380, 
+    "name": "Cauldron",
+    "solid": true
+  }, 
+  "chainmail_boots": {
+    "durability": 195, 
+    "itemID": 305, 
+    "name": "Chain Boots"
+  }, 
+  "chainmail_chestplate": {
+    "durability": 240, 
+    "itemID": 303, 
+    "name": "Chain Chestplate"
+  }, 
+  "chainmail_helmet": {
+    "durability": 165, 
+    "itemID": 302, 
+    "name": "Chain Helmet"
+  }, 
+  "chainmail_leggings": {
+    "durability": 225, 
+    "itemID": 304, 
+    "name": "Chain Leggings"
+  }, 
+  "chest": {
+    "blockID": 54, 
+    "itemID": 54, 
+    "name": "Chest", 
+    "solid": true,
+    "subtype": "chest"
+  }, 
+  "chest_minecart": {
+    "itemID": 342, 
+    "name": "Minecart with Chest"
+  }, 
+  "chicken": {
+    "itemID": 365, 
+    "name": "Raw Chicken"
+  }, 
+  "clay": {
+    "blockID": 82, 
+    "itemID": 82, 
+    "name": "Clay Block",
+    "solid": true
+  }, 
+  "clay_ball": {
+    "itemID": 337, 
+    "name": "Clay Ball"
+  }, 
+  "clock": {
+    "itemID": 347, 
+    "name": "Clock"
+  }, 
+  "coal": {
+    "damageValues": {
+      "1": {
+        "name": "Charcoal"
+      }
+    }, 
+    "itemID": 263, 
+    "name": "Coal"
+  }, 
+  "coal_block": {
+    "blockID": 173, 
+    "itemID": 173, 
+    "name": "Block of Coal",
+    "solid": true
+  }, 
+  "coal_ore": {
+    "blockID": 16, 
+    "itemID": 16, 
+    "name": "Coal Ore", 
+    "solid": true
+  }, 
+  "cobblestone": {
+    "blockID": 4, 
+    "itemID": 4, 
+    "name": "Cobblestone", 
+    "solid": true
+  }, 
+  "cobblestone_wall": {
+    "blockID": 139, 
+    "damageValues": {
+      "1": {
+        "name": "Mossy Cobblestone Wall"
+      }
+    }, 
+    "itemID": 139, 
+    "name": "Cobblestone Wall",
+    "solid": true,
+    "climbable": false
+  }, 
+  "cocoa": {
+    "blockID": 127, 
+    "itemID": 127, 
+    "name": "Cocoa"
+  }, 
+  "command_block": {
+    "blockID": 137, 
+    "itemID": 137, 
+    "name": "Command Block",
+    "solid": true
+  }, 
+  "command_block_minecart": {
+    "itemID": 422, 
+    "name": "Minecart with Command Block"
+  }, 
+  "comparator": {
+    "itemID": 404, 
+    "name": "Comparator"
+  }, 
+  "compass": {
+    "itemID": 345, 
+    "name": "Compass"
+  }, 
+  "cooked_beef": {
+    "itemID": 364, 
+    "name": "Steak"
+  }, 
+  "cooked_chicken": {
+    "itemID": 366, 
+    "name": "Cooked Chicken"
+  }, 
+  "cooked_fish": {
+    "damageValues": {
+      "1": {
+        "name": "Cooked Salmon"
+      }
+    }, 
+    "itemID": 350, 
+    "name": "Cooked Fish"
+  }, 
+  "cooked_mutton": {
+    "itemID": 424, 
+    "name": "Cooked Mutton"
+  }, 
+  "cooked_porkchop": {
+    "itemID": 320, 
+    "name": "Cooked Porkchop"
+  }, 
+  "cooked_rabbit": {
+    "itemID": 412, 
+    "name": "Cooked Rabbit"
+  }, 
+  "cookie": {
+    "itemID": 357, 
+    "name": "Cookie"
+  }, 
+  "crafting_table": {
+    "blockID": 58, 
+    "itemID": 58, 
+    "name": "Crafting Table", 
+    "solid": true, 
+    "texture_bottom": "planks_oak", 
+    "texture_east": "crafting_table_side", 
+    "texture_north": "crafting_table_front", 
+    "texture_south": "crafting_table_side", 
+    "texture_top": "crafting_table_top", 
+    "texture_west": "crafting_table_front"
+  }, 
+  "dark_oak_door": {
+    "itemID": 431, 
+    "name": "Dark Oak Door", 
+    "solid": true,
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          null
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "dark_oak_fence": {
+    "blockID": 191, 
+    "itemID": 191, 
+    "name": "Dark Oak Fence", 
+    "solid": true,
+    "climbable": false, 
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "dark_oak_fence_gate": {
+    "blockID": 186, 
+    "itemID": 186, 
+    "name": "Dark Oak Fence Gate", 
+    "solid": true,
+    "climbable": false, 
+    "obtaining": [
+      {
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          "minecraft:stick", 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          "minecraft:stick", 
+          {
+            "damage": 5, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick"
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "dark_oak_stairs": {
+    "blockID": 164, 
+    "itemID": 164, 
+    "name": "Dark Oak Wood Stairs",
+    "solid": true
+  }, 
+  "daylight_detector": {
+    "blockID": 151, 
+    "itemID": 151, 
+    "name": "Daylight Sensor",
+    "solid": true
+  }, 
+  "daylight_detector_inverted": {
+    "blockID": 178, 
+    "itemID": 178, 
+    "name": "Inverted Daylight Sensor",
+    "solid": true
+  }, 
+  "deadbush": {
+    "blockID": 32, 
+    "itemID": 32, 
+    "name": "Dead Bush"
+  }, 
+  "detector_rail": {
+    "blockID": 28, 
+    "damageValues": {
+      "1": {
+        "texture_top": "rail_detector_powered"
+      }
+    }, 
+    "itemID": 28, 
+    "name": "Detector Rail", 
+    "texture_top": "rail_detector"
+  }, 
+  "diamond": {
+    "itemID": 264, 
+    "name": "Diamond"
+  }, 
+  "diamond_axe": {
+    "durability": 1561, 
+    "itemID": 279, 
+    "name": "Diamond Axe"
+  }, 
+  "diamond_block": {
+    "blockID": 57, 
+    "itemID": 57, 
+    "name": "Block of Diamond", 
+    "solid": true
+  }, 
+  "diamond_boots": {
+    "durability": 429, 
+    "itemID": 313, 
+    "name": "Diamond Boots"
+  }, 
+  "diamond_chestplate": {
+    "durability": 528, 
+    "itemID": 311, 
+    "name": "Diamond Chestplate"
+  }, 
+  "diamond_helmet": {
+    "durability": 363, 
+    "itemID": 310, 
+    "name": "Diamond Helmet"
+  }, 
+  "diamond_hoe": {
+    "durability": 1561, 
+    "itemID": 293, 
+    "name": "Diamond Hoe"
+  }, 
+  "diamond_horse_armor": {
+    "itemID": 419, 
+    "name": "Diamond Horse Armor"
+  }, 
+  "diamond_leggings": {
+    "durability": 495, 
+    "itemID": 312, 
+    "name": "Diamond Leggings"
+  }, 
+  "diamond_ore": {
+    "blockID": 56, 
+    "itemID": 56, 
+    "name": "Diamond Ore", 
+    "solid": true
+  }, 
+  "diamond_pickaxe": {
+    "durability": 1561, 
+    "itemID": 278, 
+    "name": "Diamond Pickaxe"
+  }, 
+  "diamond_shovel": {
+    "durability": 1561, 
+    "itemID": 277, 
+    "name": "Diamond Shovel"
+  }, 
+  "diamond_sword": {
+    "durability": 1561, 
+    "itemID": 276, 
+    "name": "Diamond Sword"
+  }, 
+  "dirt": {
+    "blockID": 3, 
+    "damageValues": {
+      "1": {
+        "name": "Coarse Dirt"
+      }, 
+      "2": {
+        "name": "Podzol", 
+        "texture_side": "dirt_podzol_side", 
+        "texture_top": "dirt_podzol_top"
+      }
+    }, 
+    "itemID": 3, 
+    "name": "Dirt", 
+    "solid": true
+  }, 
+  "dispenser": {
+    "blockID": 23, 
+    "damageValues": {
+      "0": {
+        "texture_bottom": "furnace_front_vertical"
+      }, 
+      "1": {
+        "texture_top": "furnace_front_vertical"
+      }, 
+      "2": {
+        "texture_north": "furnace_front_horizontal"
+      }, 
+      "3": {
+        "texture_south": "furnace_front_horizontal"
+      }, 
+      "4": {
+        "texture_west": "furnace_front_horizontal"
+      }, 
+      "5": {
+        "texture_east": "furnace_front_horizontal"
+      }
+    }, 
+    "itemID": 23, 
+    "name": "Dispenser", 
+    "solid": true
+  }, 
+  "double_plant": {
+    "blockID": 175, 
+    "damageValues": {
+      "0": {
+        "name": "Sunflower"
+      }, 
+      "1": {
+        "name": "Lilac"
+      }, 
+      "2": {
+        "name": "Double Tallgrass"
+      }, 
+      "3": {
+        "name": "Large Fern"
+      }, 
+      "4": {
+        "name": "Rose Bush"
+      }, 
+      "5": {
+        "name": "Peony"
+      }
+    }, 
+    "itemID": 175, 
+    "name": "Large Flower"
+  }, 
+  "double_stone_slab": {
+    "blockID": 43, 
+    "damageValues": {
+      "0": {
+        "name": "Double Stone Slab"
+      }, 
+      "1": {
+        "name": "Double Sandstone Slab", 
+        "texture_bottom": "sandstone_bottom", 
+        "texture_top": "sandstone_top"
+      }, 
+      "2": {
+        "name": "Double Stone-Wood Slab"
+      }, 
+      "3": {
+        "name": "Double Cobblestone Slab"
+      }, 
+      "4": {
+        "name": "Double Brick Slab"
+      }, 
+      "5": {
+        "name": "Double Stone Brick Slab"
+      }, 
+      "6": {
+        "name": "Double Nether Brick Slab"
+      }, 
+      "7": {
+        "name": "Double Quartz Slab", 
+        "texture_bottom": "quartz_block_bottom", 
+        "texture_top": "quartz_block_top"
+      }
+    }, 
+    "itemID": 43, 
+    "name": "Double Slab", 
+    "solid": true
+  }, 
+  "double_stone_slab2": {
+    "blockID": 181, 
+    "damageValues": {
+      "0": {
+        "name": "Double Red Sandstone Slab"
+      }
+    }, 
+    "itemID": 181, 
+    "name": "Double Slab",
+    "solid": true
+  }, 
+  "double_wooden_slab": {
+    "blockID": 125, 
+    "damageValues": {
+      "0": {
+        "name": "Double Oak Wood Slab"
+      }, 
+      "1": {
+        "name": "Double Spruce Wood Slab"
+      }, 
+      "2": {
+        "name": "Double Birch Wood Slab"
+      }, 
+      "3": {
+        "name": "Double Jungle Wood Slab"
+      }, 
+      "4": {
+        "name": "Double Acacia Wood Slab"
+      }, 
+      "5": {
+        "name": "Double Dark Oak Wood Slab"
+      }
+    }, 
+    "itemID": 125, 
+    "name": "Double Wooden Slab",
+    "solid": true
+  }, 
+  "dragon_egg": {
+    "blockID": 122, 
+    "itemID": 122, 
+    "name": "Dragon Egg",
+    "solid": true
+  }, 
+  "dropper": {
+    "blockID": 158, 
+    "itemID": 158, 
+    "name": "Dropper",
+    "solid": true
+  }, 
+  "dye": {
+    "damageValues": {
+      "0": {
+        "name": "Ink Sac"
+      }, 
+      "1": {
+        "name": "Rose Red"
+      }, 
+      "2": {
+        "name": "Cactus Green"
+      }, 
+      "3": {
+        "name": "Cocoa Beans"
+      }, 
+      "4": {
+        "name": "Lapis Lazuli"
+      }, 
+      "5": {
+        "name": "Purple Dye"
+      }, 
+      "6": {
+        "name": "Cyan Dye"
+      }, 
+      "7": {
+        "name": "Light Gray Dye"
+      }, 
+      "8": {
+        "name": "Gray Dye"
+      }, 
+      "9": {
+        "name": "Pink Dye"
+      }, 
+      "10": {
+        "name": "Lime Dye"
+      }, 
+      "11": {
+        "name": "Dandelion Yellow"
+      }, 
+      "12": {
+        "name": "Light Blue Dye"
+      }, 
+      "13": {
+        "name": "Magenta Dye"
+      }, 
+      "14": {
+        "name": "Orange Dye"
+      }, 
+      "15": {
+        "name": "Bone Meal"
+      }
+    }, 
+    "itemID": 351, 
+    "name": "Dye"
+  }, 
+  "egg": {
+    "itemID": 344, 
+    "name": "Egg"
+  }, 
+  "emerald": {
+    "itemID": 388, 
+    "name": "Emerald"
+  }, 
+  "emerald_block": {
+    "blockID": 133, 
+    "itemID": 133, 
+    "name": "Block of Emerald",
+    "solid": true
+  }, 
+  "emerald_ore": {
+    "blockID": 129, 
+    "itemID": 129, 
+    "name": "Emerald Ore",
+    "solid": true
+  }, 
+  "enchanted_book": {
+    "itemID": 403, 
+    "name": "Enchanted Book"
+  }, 
+  "enchanting_table": {
+    "blockID": 116, 
+    "itemID": 116, 
+    "name": "Enchantment Table",
+    "solid": true
+  }, 
+  "end_portal": {
+    "blockID": 119, 
+    "itemID": 119, 
+    "name": "End Portal",
+    "solid": true
+  }, 
+  "end_portal_frame": {
+    "blockID": 120, 
+    "itemID": 120, 
+    "name": "End Portal Frame",
+    "solid": true
+  }, 
+  "end_stone": {
+    "blockID": 121, 
+    "itemID": 121, 
+    "name": "End Stone",
+    "solid": true
+  }, 
+  "ender_chest": {
+    "blockID": 130, 
+    "itemID": 130, 
+    "name": "Ender Chest",
+    "solid": true
+  }, 
+  "ender_eye": {
+    "itemID": 381, 
+    "name": "Eye of Ender"
+  }, 
+  "ender_pearl": {
+    "itemID": 368, 
+    "name": "Ender Pearl"
+  }, 
+  "experience_bottle": {
+    "itemID": 384, 
+    "name": "Bottle o'Enchanting"
+  }, 
+  "farmland": {
+    "blockID": 60, 
+    "damageValues": {
+      "0": {
+        "texture_top": "farmland_dry"
+      }
+    }, 
+    "itemID": 60, 
+    "name": "Farmland", 
+    "solid": true,
+    "subtype": "farmland", 
+    "texture_top": "farmland_wet"
+  }, 
+  "feather": {
+    "itemID": 288, 
+    "name": "Feather"
+  }, 
+  "fence": {
+    "blockID": 85, 
+    "itemID": 85, 
+    "name": "Oak Fence", 
+    "solid": true,
+    "climbable": false, 
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "fence_gate": {
+    "blockID": 107, 
+    "itemID": 107, 
+    "name": "Oak Fence Gate", 
+    "solid": true,
+    "climbable": false, 
+    "obtaining": [
+      {
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          "minecraft:stick", 
+          {
+            "damage": 0, 
+            "id": "minecaft:planks"
+          }, 
+          "minecraft:stick", 
+          "minecraft:stick", 
+          {
+            "damage": 0, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick"
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "fermented_spider_eye": {
+    "itemID": 376, 
+    "name": "Fermented Spider Eye"
+  }, 
+  "filled_map": {
+    "itemID": 358, 
+    "name": "Map"
+  }, 
+  "fire": {
+    "blockID": 51, 
+    "itemID": 51, 
+    "name": "Fire", 
+    "subtype": "fire", 
+    "texture_bottom": "fire_layer_0", 
+    "texture_side": "fire_layer_1", 
+    "texture_top": "fire_layer_0"
+  }, 
+  "fire_charge": {
+    "itemID": 385, 
+    "name": "Fire Charge"
+  }, 
+  "firework_charge": {
+    "itemID": 402, 
+    "name": "Firework Star"
+  }, 
+  "fireworks": {
+    "itemID": 401, 
+    "name": "Firework Rocket"
+  }, 
+  "fish": {
+    "damageValues": {
+      "1": {
+        "name": "Raw Salmon"
+      }, 
+      "2": {
+        "name": "Clownfish"
+      }, 
+      "3": {
+        "name": "Pufferfish"
+      }
+    }, 
+    "itemID": 349, 
+    "name": "Raw Fish"
+  }, 
+  "fishing_rod": {
+    "durability": 64, 
+    "itemID": 346, 
+    "name": "Fishing Rod"
+  }, 
+  "flint": {
+    "itemID": 318, 
+    "name": "Flint"
+  }, 
+  "flint_and_steel": {
+    "durability": 64, 
+    "itemID": 259, 
+    "name": "Flint and Steel"
+  }, 
+  "flower_pot": {
+    "blockID": 140, 
+    "itemID": 390, 
+    "name": "Flower Pot"
+  }, 
+  "flowing_lava": {
+    "blockID": 10, 
+    "itemID": 10, 
+    "name": "Flowing Lava", 
+    "subtype": "lava.flow"
+  }, 
+  "flowing_water": {
+    "blockID": 8, 
+    "itemID": 8, 
+    "name": "Flowing Water", 
+    "subtype": "water.flow"
+  }, 
+  "furnace": {
+    "blockID": 61, 
+    "damageValues": {
+      "2": {
+        "texture_north": "furnace_front_on"
+      }, 
+      "3": {
+        "texture_south": "furnace_front_on"
+      }, 
+      "4": {
+        "texture_west": "furnace_front_on"
+      }, 
+      "5": {
+        "texture_east": "furnace_front_on"
+      }
+    }, 
+    "itemID": 61, 
+    "name": "Furnace", 
+    "solid": true, 
+    "texture_bottom": "furnace_top", 
+    "texture_side": "furnace_side", 
+    "texture_top": "furnace_top"
+  }, 
+  "furnace_minecart": {
+    "itemID": 343, 
+    "name": "Minecart with Furnace"
+  }, 
+  "ghast_tear": {
+    "itemID": 370, 
+    "name": "Ghast Tear"
+  }, 
+  "glass": {
+    "blockID": 20, 
+    "itemID": 20, 
+    "name": "Glass", 
+    "solid": true
+  }, 
+  "glass_bottle": {
+    "itemID": 374, 
+    "name": "Glass Bottle"
+  }, 
+  "glass_pane": {
+    "blockID": 102, 
+    "itemID": 102, 
+    "name": "Glass Pane",
+    "solid": true
+  }, 
+  "glowstone": {
+    "blockID": 89, 
+    "itemID": 89, 
+    "name": "Glowstone",
+    "solid": true
+  }, 
+  "glowstone_dust": {
+    "itemID": 348, 
+    "name": "Glowstone Dust"
+  }, 
+  "gold_block": {
+    "blockID": 41, 
+    "itemID": 41, 
+    "name": "Block of Gold", 
+    "solid": true
+  }, 
+  "gold_ingot": {
+    "itemID": 266, 
+    "name": "Gold Ingot"
+  }, 
+  "gold_nugget": {
+    "itemID": 371, 
+    "name": "Gold Nugget"
+  }, 
+  "gold_ore": {
+    "blockID": 14, 
+    "itemID": 14, 
+    "name": "Gold Ore", 
+    "solid": true
+  }, 
+  "golden_apple": {
+    "damageValues": {
+      "0": {
+        "obtaining": [
+          {
+            "recipe": [
+              "minecraft:gold_ingot", 
+              "minecraft:gold_ingot", 
+              "minecraft:gold_ingot", 
+              "minecraft:gold_ingot", 
+              "minecraft:apple", 
+              "minecraft:gold_ingot", 
+              "minecraft:gold_ingot", 
+              "minecraft:gold_ingot", 
+              "minecraft:gold_ingot"
+            ], 
+            "type": "craftingShaped"
+          }
+        ]
+      }, 
+      "1": {
+        "alwaysGlow": true, 
+        "name": "Notch Apple", 
+        "obtaining": [
+          {
+            "recipe": [
+              "minecraft:gold_block", 
+              "minecraft:gold_block", 
+              "minecraft:gold_block", 
+              "minecraft:gold_block", 
+              "minecraft:apple", 
+              "minecraft:gold_block", 
+              "minecraft:gold_block", 
+              "minecraft:gold_block", 
+              "minecraft:gold_block"
+            ], 
+            "type": "craftingShaped"
+          }
+        ]
+      }
+    }, 
+    "itemID": 322, 
+    "name": "Golden Apple"
+  }, 
+  "golden_axe": {
+    "durability": 33, 
+    "itemID": 286, 
+    "name": "Golden Axe"
+  }, 
+  "golden_boots": {
+    "itemID": 317, 
+    "name": "Golden Boots"
+  }, 
+  "golden_carrot": {
+    "itemID": 396, 
+    "name": "Golden Carrot"
+  }, 
+  "golden_chestplate": {
+    "itemID": 315, 
+    "name": "Golden Chestplate"
+  }, 
+  "golden_helmet": {
+    "itemID": 314, 
+    "name": "Golden Helmet"
+  }, 
+  "golden_hoe": {
+    "durability": 32, 
+    "itemID": 294, 
+    "name": "Gold Hoe"
+  }, 
+  "golden_horse_armor": {
+    "itemID": 418, 
+    "name": "Golden Horse Armor"
+  }, 
+  "golden_leggings": {
+    "itemID": 316, 
+    "name": "Golden Leggings"
+  }, 
+  "golden_pickaxe": {
+    "durability": 32, 
+    "itemID": 285, 
+    "name": "Golden Pickaxe"
+  }, 
+  "golden_rail": {
+    "blockID": 27, 
+    "damageValues": {
+      "1": {
+        "texture_top": "rail_golden_powered"
+      }
+    }, 
+    "itemID": 27, 
+    "name": "Powered Rail", 
+    "texture_top": "rail_golden"
+  }, 
+  "golden_shovel": {
+    "durability": 32, 
+    "itemID": 284, 
+    "name": "Golden Shovel"
+  }, 
+  "golden_sword": {
+    "durability": 32, 
+    "itemID": 283, 
+    "name": "Golden Sword"
+  }, 
+  "grass": {
+    "blockID": 2, 
+    "color_map": "grass", 
+    "itemID": 2, 
+    "name": "Grass Block", 
+    "solid": true, 
+    "texture_bottom": "dirt", 
+    "texture_needs_colorisation": true, 
+    "texture_snow": "grass_side_snowed", 
+    "texture_top_uncolored": "grass_top", 
+    "texture_uncolored": "grass_side_overlay"
+  }, 
+  "gravel": {
+    "blockID": 13, 
+    "itemID": 13, 
+    "name": "Gravel", 
+    "solid": true
+  }, 
+  "gunpowder": {
+    "itemID": 289, 
+    "name": "Gunpowder"
+  }, 
+  "hardened_clay": {
+    "blockID": 172, 
+    "itemID": 172, 
+    "name": "Hardened Clay",
+    "solid": true
+  }, 
+  "hay_block": {
+    "blockID": 170, 
+    "itemID": 170, 
+    "name": "Hay Bale",
+    "solid": true
+  }, 
+  "heavy_weighted_pressure_plate": {
+    "blockID": 148, 
+    "itemID": 148, 
+    "name": "Weighted Pressure Plate (Heavy)"
+  }, 
+  "hopper": {
+    "blockID": 154, 
+    "itemID": 154, 
+    "name": "Hopper",
+    "solid": true
+  }, 
+  "hopper_minecart": {
+    "itemID": 408, 
+    "name": "Minecart with Hopper"
+  }, 
+  "ice": {
+    "blockID": 79, 
+    "itemID": 79, 
+    "name": "Ice",
+    "solid": true
+  }, 
+  "iron_axe": {
+    "durability": 250, 
+    "itemID": 258, 
+    "name": "Iron Axe"
+  }, 
+  "iron_bars": {
+    "blockID": 101, 
+    "itemID": 101, 
+    "name": "Iron Bars",
+    "solid": true
+  }, 
+  "iron_block": {
+    "blockID": 42, 
+    "itemID": 42, 
+    "name": "Block of Iron", 
+    "solid": true
+  }, 
+  "iron_boots": {
+    "durability": 195, 
+    "itemID": 309, 
+    "name": "Iron Boots"
+  }, 
+  "iron_chestplate": {
+    "durability": 240, 
+    "itemID": 307, 
+    "name": "Iron Chestplate"
+  }, 
+  "iron_door": {
+    "blockID": 71, 
+    "itemID": 330, 
+    "name": "Iron Door", 
+    "solid": true,
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          "minecraft:iron_ingot", 
+          "minecraft:iron_ingot", 
+          null, 
+          "minecraft:iron_ingot", 
+          "minecraft:iron_ingot", 
+          null, 
+          "minecraft:iron_ingot", 
+          "minecraft:iron_ingot", 
+          null
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "iron_helmet": {
+    "durability": 165, 
+    "itemID": 306, 
+    "name": "Iron Helmet"
+  }, 
+  "iron_hoe": {
+    "durability": 250, 
+    "itemID": 292, 
+    "name": "Iron Hoe"
+  }, 
+  "iron_horse_armor": {
+    "itemID": 417, 
+    "name": "Iron Horse Armor"
+  }, 
+  "iron_ingot": {
+    "itemID": 265, 
+    "name": "Iron Ingot"
+  }, 
+  "iron_leggings": {
+    "durability": 225, 
+    "itemID": 308, 
+    "name": "Iron Leggings"
+  }, 
+  "iron_ore": {
+    "blockID": 15, 
+    "itemID": 15, 
+    "name": "Iron Ore", 
+    "solid": true
+  }, 
+  "iron_pickaxe": {
+    "durability": 250, 
+    "itemID": 257, 
+    "name": "Iron Pickaxe"
+  }, 
+  "iron_shovel": {
+    "durability": 250, 
+    "itemID": 256, 
+    "name": "Iron Shovel"
+  }, 
+  "iron_sword": {
+    "durability": 250, 
+    "itemID": 267, 
+    "name": "Iron Sword"
+  }, 
+  "iron_trapdoor": {
+    "blockID": 167, 
+    "itemID": 167, 
+    "name": "Iron Trapdoor",
+    "solid": true
+  }, 
+  "item_frame": {
+    "itemID": 389, 
+    "name": "Item Frame"
+  }, 
+  "jukebox": {
+    "blockID": 84, 
+    "itemID": 84, 
+    "name": "Jukebox",
+    "solid": true
+  }, 
+  "jungle_door": {
+    "blockID": 195, 
+    "itemID": 429, 
+    "name": "Jungle Door", 
+    "solid": true,
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          null
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "jungle_fence": {
+    "blockID": 190, 
+    "itemID": 190, 
+    "name": "Jungle Fence", 
+    "solid": true,
+    "climbable": false, 
+    "obtaining": [
+      {
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "jungle_fence_gate": {
+    "blockID": 185, 
+    "itemID": 185, 
+    "name": "Jungle Fence Gate", 
+    "solid": true,
+    "climbable": false, 
+    "obtaining": [
+      {
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          "minecraft:stick", 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          "minecraft:stick", 
+          {
+            "damage": 3, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick"
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "jungle_stairs": {
+    "blockID": 136, 
+    "itemID": 136, 
+    "name": "Jungle Wood Stairs",
+    "solid": true
+  }, 
+  "ladder": {
+    "blockID": 65, 
+    "itemID": 65, 
+    "name": "Ladder",
+    "solid": true
+  }, 
+  "lapis_block": {
+    "blockID": 22, 
+    "itemID": 22, 
+    "name": "Lapis Lazuli Block", 
+    "solid": true
+  }, 
+  "lapis_ore": {
+    "blockID": 21, 
+    "itemID": 21, 
+    "name": "Lapis Lazuli Ore", 
+    "solid": true
+  }, 
+  "lava": {
+    "blockID": 11, 
+    "itemID": 11, 
+    "name": "Still Lava", 
+    "subtype": "lava.still"
+  }, 
+  "lava_bucket": {
+    "itemID": 327, 
+    "name": "Lava Bucket"
+  }, 
+  "lead": {
+    "itemID": 420, 
+    "name": "Lead"
+  }, 
+  "leather": {
+    "itemID": 334, 
+    "name": "Leather"
+  }, 
+  "leather_boots": {
+    "durability": 65, 
+    "itemID": 301, 
+    "name": "Leather Boots"
+  }, 
+  "leather_chestplate": {
+    "durability": 80, 
+    "itemID": 299, 
+    "name": "Leather Tunic"
+  }, 
+  "leather_helmet": {
+    "durability": 55, 
+    "itemID": 298, 
+    "name": "Leather Cap"
+  }, 
+  "leather_leggings": {
+    "durability": 75, 
+    "itemID": 300, 
+    "name": "Leather Pants"
+  }, 
+  "leaves": {
+    "blockID": 18, 
+    "color_map": "foliage", 
+    "damageValues": {
+      "0": {
+        "name": "Oak Leaves", 
+        "texture_uncolored": "leaves_oak_opaque"
+      }, 
+      "1": {
+        "name": "Spruce Leaves", 
+        "texture_uncolored": "leaves_spruce_opaque"
+      }, 
+      "2": {
+        "name": "Birch Leaves", 
+        "texture_uncolored": "leaves_birch_opaque"
+      }, 
+      "3": {
+        "name": "Jungle Leaves", 
+        "texture_uncolored": "leaves_jungle_opaque"
+      }
+    }, 
+    "itemID": 18, 
+    "name": "Leaves", 
+    "solid": true, 
+    "texture_needs_colorisation": true
+  }, 
+  "leaves2": {
+    "blockID": 161, 
+    "damageValues": {
+      "0": {
+        "name": "Acacia Leaves"
+      }, 
+      "1": {
+        "name": "Dark Oak Leaves"
+      }
+    }, 
+    "itemID": 161, 
+    "name": "Leaves",
+    "solid": true
+  }, 
+  "lever": {
+    "blockID": 69, 
+    "itemID": 69, 
+    "name": "Lever"
+  }, 
+  "light_weighted_pressure_plate": {
+    "blockID": 147, 
+    "itemID": 147, 
+    "name": "Weighted Pressure Plate (Light)",
+    "solid": true
+  }, 
+  "lit_furnace": {
+    "blockID": 62, 
+    "itemID": 62, 
+    "name": "Burning Furnace", 
+    "solid": true, 
+    "texture_bottom": "furnace_top", 
+    "texture_side": "furnace_side", 
+    "texture_top": "furnace_top"
+  }, 
+  "lit_pumpkin": {
+    "blockID": 91, 
+    "itemID": 91, 
+    "name": "Jack o'Lantern",
+    "solid": true
+  }, 
+  "lit_redstone_lamp": {
+    "blockID": 124, 
+    "itemID": 124, 
+    "name": "Lit Redstone Lamp",
+    "solid": true
+  }, 
+  "lit_redstone_ore": {
+    "blockID": 74, 
+    "itemID": 74, 
+    "name": "Redstone Ore",
+    "solid": true
+  }, 
+  "log": {
+    "blockID": 17, 
+    "damageValues": {
+      "0": {
+        "name": "Oak Wood"
+      }, 
+      "1": {
+        "name": "Spruce Wood", 
+        "texture_top": "log_spruce_top"
+      }, 
+      "2": {
+        "name": "Birch Wood", 
+        "texture_top": "log_birch_top"
+      }, 
+      "3": {
+        "name": "Jungle Wood", 
+        "texture_top": "log_jungle_top"
+      }
+    }, 
+    "itemID": 17, 
+    "name": "Wood", 
+    "solid": true, 
+    "texture_top": "log_oak_top"
+  }, 
+  "log2": {
+    "blockID": 162, 
+    "damageValues": {
+      "0": {
+        "name": "Acacia Wood"
+      }, 
+      "1": {
+        "name": "Dark Oak Wood"
+      }
+    }, 
+    "itemID": 162, 
+    "name": "Wood",
+    "solid": true
+  }, 
+  "magma_cream": {
+    "itemID": 378, 
+    "name": "Magma Cream"
+  }, 
+  "map": {
+    "itemID": 395, 
+    "name": "Empty Map", 
+    "obtaining": [
+      {
+        "recipe": [
+          "minecraft:paper", 
+          "minecraft:paper", 
+          "minecraft:paper", 
+          "minecraft:paper", 
+          "minecraft:compass", 
+          "minecraft:paper", 
+          "minecraft:paper", 
+          "minecraft:paper", 
+          "minecraft:paper"
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "melon": {
+    "itemID": 360, 
+    "name": "Melon"
+  }, 
+  "melon_block": {
+    "blockID": 103, 
+    "itemID": 103, 
+    "name": "Melon",
+    "solid": true
+  }, 
+  "melon_seeds": {
+    "itemID": 362, 
+    "name": "Melon Seeds"
+  }, 
+  "melon_stem": {
+    "blockID": 105, 
+    "itemID": 105, 
+    "name": "Melon Stem"
+  }, 
+  "milk_bucket": {
+    "itemID": 335, 
+    "name": "Milk"
+  }, 
+  "minecart": {
+    "itemID": 328, 
+    "name": "Minecart"
+  }, 
+  "mob_spawner": {
+    "blockID": 52, 
+    "itemID": 52, 
+    "name": "Spawner", 
+    "solid": true,
+    "subtype": "mobspawner"
+  }, 
+  "monster_egg": {
+    "blockID": 97, 
+    "damageValues": {
+      "0": {
+        "name": "Stone Monster Egg"
+      }, 
+      "1": {
+        "name": "Cobblestone Monster Egg"
+      }, 
+      "2": {
+        "name": "Stone Brick Monster Egg"
+      }, 
+      "3": {
+        "name": "Mossy Stone Brick Monster Egg"
+      }, 
+      "4": {
+        "name": "Cracked Stone Brick Monster Egg"
+      }, 
+      "5": {
+        "name": "Chiseled Stone Brick Monster Egg"
+      }
+    }, 
+    "itemID": 97, 
+    "name": "Monster Egg"
+  }, 
+  "mossy_cobblestone": {
+    "blockID": 48, 
+    "itemID": 48, 
+    "name": "Moss Stone", 
+    "solid": true
+  }, 
+  "mushroom_stew": {
+    "itemID": 282, 
+    "name": "Mushroom Stew"
+  }, 
+  "mutton": {
+    "itemID": 423, 
+    "name": "Raw Mutton"
+  }, 
+  "mycelium": {
+    "blockID": 110, 
+    "itemID": 110, 
+    "name": "Mycelium",
+    "solid": true
+  }, 
+  "name_tag": {
+    "itemID": 421, 
+    "name": "Name Tag"
+  }, 
+  "nether_brick": {
+    "blockID": 112, 
+    "itemID": 112, 
+    "name": "Nether Brick",
+    "solid": true
+  }, 
+  "nether_brick_fence": {
+    "blockID": 113, 
+    "itemID": 113, 
+    "name": "Nether Brick Fence",
+    "solid": true,
+    "climbable": false 
+  }, 
+  "nether_brick_stairs": {
+    "blockID": 114, 
+    "itemID": 114, 
+    "name": "Nether Brick Stairs",
+    "solid": true
+  }, 
+  "nether_star": {
+    "alwaysGlow": true, 
+    "itemID": 399, 
+    "name": "Nether Star"
+  }, 
+  "nether_wart": {
+    "blockID": 115, 
+    "itemID": 372, 
+    "name": "Nether Wart"
+  }, 
+  "netherbrick": {
+    "itemID": 405, 
+    "name": "Nether Brick"
+  }, 
+  "netherrack": {
+    "blockID": 87, 
+    "itemID": 87, 
+    "name": "Netherrack",
+    "solid": true
+  }, 
+  "noteblock": {
+    "blockID": 25, 
+    "itemID": 25, 
+    "name": "Note Block", 
+    "solid": true
+  }, 
+  "oak_stairs": {
+    "blockID": 53, 
+    "itemID": 53, 
+    "name": "Oak Wood Stairs", 
+    "solid": true,
+    "subtype": "stairs"
+  }, 
+  "obsidian": {
+    "blockID": 49, 
+    "itemID": 49, 
+    "name": "Obsidian", 
+    "solid": true
+  }, 
+  "packed_ice": {
+    "blockID": 174, 
+    "itemID": 174, 
+    "name": "Packed Ice",
+    "solid": true
+  }, 
+  "painting": {
+    "itemID": 321, 
+    "name": "Painting"
+  }, 
+  "paper": {
+    "itemID": 339, 
+    "name": "Paper"
+  }, 
+  "piston": {
+    "FIXME": "All rotational values", 
+    "blockID": 33, 
+    "damageValues": {
+      "1": {
+        "texture_bottom": "piston_bottom", 
+        "texture_top": "piston_top_normal"
+      }, 
+      "2": {
+        "texture_side": "piston_bottom@2"
+      }
+    }, 
+    "itemID": 33, 
+    "name": "Piston", 
+    "solid": true,
+    "texture_bottom": "piston_top_normal", 
+    "texture_side": "piston_side", 
+    "texture_top": "piston_bottom"
+  }, 
+  "piston_extension": {
+    "blockID": 36, 
+    "itemID": 36, 
+    "name": "Extending Piston Head",
+    "solid": true
+  }, 
+  "piston_head": {
+    "blockID": 34, 
+    "itemID": 34, 
+    "name": "Piston Head",
+    "solid": true
+  }, 
+  "planks": {
+    "blockID": 5, 
+    "damageValues": {
+      "0": {
+        "name": "Oak Wood Planks"
+      }, 
+      "1": {
+        "name": "Spruce Wood Planks"
+      }, 
+      "2": {
+        "name": "Birch Wood Planks"
+      }, 
+      "3": {
+        "name": "Jungle Wood Planks"
+      }, 
+      "4": {
+        "name": "Acacia Wood Planks"
+      }, 
+      "5": {
+        "name": "Dark Oak Wood Planks"
+      }
+    }, 
+    "itemID": 5, 
+    "name": "Wooden Planks", 
+    "solid": true
+  }, 
+  "poisonous_potato": {
+    "itemID": 394, 
+    "name": "Poisonous Potato"
+  }, 
+  "porkchop": {
+    "itemID": 319, 
+    "name": "Raw Porkchop"
+  }, 
+  "portal": {
+    "blockID": 90, 
+    "itemID": 90, 
+    "name": "Nether Portal"
+  }, 
+  "potato": {
+    "itemID": 392, 
+    "name": "Potato"
+  }, 
+  "potatoes": {
+    "blockID": 142, 
+    "itemID": 142, 
+    "name": "Potato Crops"
+  }, 
+  "potion": {
+    "damageValues": {
+      "0": {
+        "name": "Water Bottle"
+      }, 
+      "16": {
+        "alwaysGlow": true, 
+        "name": "Awkward Potion"
+      }, 
+      "32": {
+        "alwaysGlow": true, 
+        "name": "Thick Potion"
+      }, 
+      "64": {
+        "alwaysGlow": true, 
+        "name": "Mundane Potion, extended"
+      }, 
+      "8192": {
+        "alwaysGlow": true, 
+        "name": "Mundane Potion"
+      }, 
+      "8193": {
+        "alwaysGlow": true, 
+        "name": "Potion of Regeneration"
+      }, 
+      "8194": {
+        "alwaysGlow": true, 
+        "name": "Potion of Swiftness"
+      }, 
+      "8195": {
+        "alwaysGlow": true, 
+        "name": "Potion of Fire Resistance"
+      }, 
+      "8196": {
+        "alwaysGlow": true, 
+        "name": "Potion of Poison"
+      }, 
+      "8197": {
+        "alwaysGlow": true, 
+        "name": "Potion of Healing"
+      }, 
+      "8198": {
+        "alwaysGlow": true, 
+        "name": "Potion of Night Vision"
+      }, 
+      "8200": {
+        "alwaysGlow": true, 
+        "name": "Potion of Weakness"
+      }, 
+      "8201": {
+        "alwaysGlow": true, 
+        "name": "Potion of Strength"
+      }, 
+      "8202": {
+        "alwaysGlow": true, 
+        "name": "Potion of Slowness"
+      }, 
+      "8203": {
+        "alwaysGlow": true, 
+        "name": "Potion of Leaping"
+      }, 
+      "8204": {
+        "alwaysGlow": true, 
+        "name": "Potion of Harming"
+      }, 
+      "8205": {
+        "alwaysGlow": true, 
+        "name": "Potion of Water Breathing"
+      }, 
+      "8206": {
+        "alwaysGlow": true, 
+        "name": "Potion of Invisibility"
+      }, 
+      "8225": {
+        "alwaysGlow": true, 
+        "name": "Potion of Regeneration \u2161"
+      }, 
+      "8226": {
+        "alwaysGlow": true, 
+        "name": "Potion of Swiftness \u2161"
+      }, 
+      "8227": {
+        "alwaysGlow": true, 
+        "name": "Potion of Fire Resistance"
+      }, 
+      "8228": {
+        "alwaysGlow": true, 
+        "name": "Potion of Poison \u2161"
+      }, 
+      "8229": {
+        "alwaysGlow": true, 
+        "name": "Potion of Healing \u2161"
+      }, 
+      "8230": {
+        "alwaysGlow": true, 
+        "name": "Potion of Night Vision"
+      }, 
+      "8232": {
+        "alwaysGlow": true, 
+        "name": "Potion of Weakness"
+      }, 
+      "8233": {
+        "alwaysGlow": true, 
+        "name": "Potion of Strength \u2161"
+      }, 
+      "8234": {
+        "alwaysGlow": true, 
+        "name": "Potion of Slowness"
+      }, 
+      "8235": {
+        "alwaysGlow": true, 
+        "name": "Potion of Leaping \u2161"
+      }, 
+      "8236": {
+        "alwaysGlow": true, 
+        "name": "Potion of Harming \u2161"
+      }, 
+      "8237": {
+        "alwaysGlow": true, 
+        "name": "Potion of Water Breathing"
+      }, 
+      "8238": {
+        "alwaysGlow": true, 
+        "name": "Potion of Invisibility"
+      }, 
+      "8257": {
+        "alwaysGlow": true, 
+        "name": "Potion of Regeneration, extended"
+      }, 
+      "8258": {
+        "alwaysGlow": true, 
+        "name": "Potion of Swiftness, extended"
+      }, 
+      "8259": {
+        "alwaysGlow": true, 
+        "name": "Potion of Fire Resistance, extended"
+      }, 
+      "8260": {
+        "alwaysGlow": true, 
+        "name": "Potion of Poison, extended"
+      }, 
+      "8261": {
+        "alwaysGlow": true, 
+        "name": "Potion of Healing"
+      }, 
+      "8262": {
+        "alwaysGlow": true, 
+        "name": "Potion of Night Vision, extended"
+      }, 
+      "8264": {
+        "alwaysGlow": true, 
+        "name": "Potion of Weakness, extended"
+      }, 
+      "8265": {
+        "alwaysGlow": true, 
+        "name": "Potion of Strength, extended"
+      }, 
+      "8266": {
+        "alwaysGlow": true, 
+        "name": "Potion of Slowness, extended"
+      }, 
+      "8267": {
+        "alwaysGlow": true, 
+        "name": "Potion of Leaping"
+      }, 
+      "8268": {
+        "alwaysGlow": true, 
+        "name": "Potion of Harming"
+      }, 
+      "8269": {
+        "alwaysGlow": true, 
+        "name": "Potion of Water Breathing, extended"
+      }, 
+      "8270": {
+        "alwaysGlow": true, 
+        "name": "Potion of Invisibility, extended"
+      }, 
+      "16384": {
+        "alwaysGlow": true, 
+        "name": "Splash Mundane Potion"
+      }, 
+      "16385": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Regeneration"
+      }, 
+      "16386": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Swiftness"
+      }, 
+      "16387": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Fire Resistance"
+      }, 
+      "16388": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Poison"
+      }, 
+      "16389": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Healing"
+      }, 
+      "16390": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Night Vision"
+      }, 
+      "16392": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Weakness"
+      }, 
+      "16393": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Strength"
+      }, 
+      "16394": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Slowness"
+      }, 
+      "16395": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Leaping"
+      }, 
+      "16396": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Harming"
+      }, 
+      "16397": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Water Breathing"
+      }, 
+      "16398": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Invisibility"
+      }, 
+      "16417": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Regeneration \u2161"
+      }, 
+      "16418": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Swiftness \u2161"
+      }, 
+      "16419": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Fire Resistance"
+      }, 
+      "16420": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Poison \u2161"
+      }, 
+      "16421": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Healing \u2161"
+      }, 
+      "16422": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Night Vision"
+      }, 
+      "16424": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Weakness"
+      }, 
+      "16425": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Strength \u2161"
+      }, 
+      "16426": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Slowness"
+      }, 
+      "16427": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Leaping \u2161"
+      }, 
+      "16428": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Harming \u2161"
+      }, 
+      "16429": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Water Breathing"
+      }, 
+      "16430": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Invisibility"
+      }, 
+      "16449": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Regeneration, extended"
+      }, 
+      "16450": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Swiftness, extended"
+      }, 
+      "16451": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Fire Resistance, extended"
+      }, 
+      "16452": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Poison, extended"
+      }, 
+      "16453": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Healing"
+      }, 
+      "16454": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Night Vision, extended"
+      }, 
+      "16456": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Weakness, extended"
+      }, 
+      "16457": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Strength, extended"
+      }, 
+      "16458": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Slowness, extended"
+      }, 
+      "16459": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Leaping"
+      }, 
+      "16460": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Harming"
+      }, 
+      "16461": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Water Breathing, extended"
+      }, 
+      "16462": {
+        "alwaysGlow": true, 
+        "name": "Splash Potion of Invisibility, extended"
+      }
+    }, 
+    "itemID": 373, 
+    "name": "Potion"
+  }, 
+  "powered_comparator": {
+    "blockID": 150, 
+    "itemID": 150, 
+    "name": "Alternative Powered Comparator"
+  }, 
+  "powered_repeater": {
+    "blockID": 94, 
+    "itemID": 94, 
+    "name": "Powered Repeater"
+  }, 
+  "prismarine": {
+    "blockID": 168, 
+    "damageValues": {
+      "1": {
+        "name": "Prismarine Bricks"
+      }, 
+      "2": {
+        "name": "Dark Prismarine"
+      }
+    }, 
+    "itemID": 168, 
+    "name": "Prismarine",
+    "solid": true
+  }, 
+  "prismarine_crystals": {
+    "itemID": 410, 
+    "name": "Prismarine Crystal"
+  }, 
+  "prismarine_shard": {
+    "itemID": 409, 
+    "name": "Prismarine Shard"
+  }, 
+  "pumpkin": {
+    "blockID": 86, 
+    "itemID": 86, 
+    "name": "Pumpkin",
+    "solid": true
+  }, 
+  "pumpkin_pie": {
+    "itemID": 400, 
+    "name": "Pumpkin Pie"
+  }, 
+  "pumpkin_seeds": {
+    "itemID": 361, 
+    "name": "Pumpkin Seeds"
+  }, 
+  "pumpkin_stem": {
+    "blockID": 104, 
+    "itemID": 104, 
+    "name": "Pumpkin Stem"
+  }, 
+  "quartz": {
+    "itemID": 406, 
+    "name": "Nether Quartz"
+  }, 
+  "quartz_block": {
+    "blockID": 155, 
+    "damageValues": {
+      "1": {
+        "name": "Chiseled Quartz Block"
+      }, 
+      "2": {
+        "name": "Pillar Quartz Block"
+      }, 
+      "3": {
+        "name": "Pillar Quartz Block"
+      }, 
+      "4": {
+        "name": "Pillar Quartz Block"
+      }
+    }, 
+    "itemID": 155, 
+    "name": "Block of Quartz",
+    "solid": true
+  }, 
+  "quartz_ore": {
+    "blockID": 153, 
+    "itemID": 153, 
+    "name": "Nether Quartz Ore",
+    "solid": true
+  }, 
+  "quartz_stairs": {
+    "blockID": 156, 
+    "itemID": 156, 
+    "name": "Quartz Stairs",
+    "solid": true
+  }, 
+  "rabbit": {
+    "itemID": 411, 
+    "name": "Raw Rabbit"
+  }, 
+  "rabbit_foot": {
+    "itemID": 414, 
+    "name": "Rabbit's Foot"
+  }, 
+  "rabbit_hide": {
+    "itemID": 415, 
+    "name": "Rabbit Hide"
+  }, 
+  "rabbit_stew": {
+    "itemID": 413, 
+    "name": "Rabbit Stew"
+  }, 
+  "rail": {
+    "blockID": 66, 
+    "itemID": 66, 
+    "name": "Rail"
+  }, 
+  "record_11": {
+    "itemID": 2266, 
+    "name": "Music Disc: C418 \u2014 11"
+  }, 
+  "record_13": {
+    "itemID": 2256, 
+    "name": "Music Disc: C418 \u2014 13"
+  }, 
+  "record_blocks": {
+    "itemID": 2258, 
+    "name": "Music Disc: C418 \u2014 blocks"
+  }, 
+  "record_cat": {
+    "itemID": 2257, 
+    "name": "Music Disc: C418 \u2014 cat"
+  }, 
+  "record_chirp": {
+    "itemID": 2259, 
+    "name": "Music Disc: C418 \u2014 chirp"
+  }, 
+  "record_far": {
+    "itemID": 2260, 
+    "name": "Music Disc: C418 \u2014 far"
+  }, 
+  "record_mall": {
+    "itemID": 2261, 
+    "name": "Music Disc: C418 \u2014 mall"
+  }, 
+  "record_mellohi": {
+    "itemID": 2262, 
+    "name": "Music Disc: C418 \u2014 mellohi"
+  }, 
+  "record_stal": {
+    "itemID": 2263, 
+    "name": "Music Disc: C418 \u2014 stal"
+  }, 
+  "record_strad": {
+    "itemID": 2264, 
+    "name": "Music Disc: C418 \u2014 strad"
+  }, 
+  "record_wait": {
+    "itemID": 2267, 
+    "name": "Music Disc: C418 \u2014 wait"
+  }, 
+  "record_ward": {
+    "itemID": 2265, 
+    "name": "Music Disc: C418 \u2014 ward"
+  }, 
+  "red_flower": {
+    "blockID": 38, 
+    "damageValues": {
+      "0": {
+        "name": "Poppy"
+      }, 
+      "1": {
+        "name": "Blue Orchid"
+      }, 
+      "2": {
+        "name": "Allium"
+      }, 
+      "3": {
+        "name": "Azure Bluet"
+      }, 
+      "4": {
+        "name": "Red Tulip"
+      }, 
+      "5": {
+        "name": "Orange Tulip"
+      }, 
+      "6": {
+        "name": "White Tulip"
+      }, 
+      "7": {
+        "name": "Pink Tulip"
+      }, 
+      "8": {
+        "name": "Oxeye Daisy"
+      }
+    }, 
+    "itemID": 38, 
+    "name": "Flower" 
+  }, 
+  "red_mushroom": {
+    "blockID": 40, 
+    "itemID": 40, 
+    "name": "Red Mushroom"
+  }, 
+  "red_mushroom_block": {
+    "blockID": 100, 
+    "itemID": 100, 
+    "name": "Huge Red Mushroom",
+    "solid": true
+  }, 
+  "red_sandstone": {
+    "blockID": 179, 
+    "damageValues": {
+      "0": {
+        "obtaining": [
+          {
+            "recipe": [
+              {
+                "damage": 1, 
+                "id": "minecraft:sand"
+              }, 
+              {
+                "damage": 1, 
+                "id": "minecraft:sand"
+              }, 
+              null, 
+              {
+                "damage": 1, 
+                "id": "minecraft:sand"
+              }, 
+              {
+                "damage": 1, 
+                "id": "minecraft:sand"
+              }, 
+              null, 
+              null, 
+              null, 
+              null
+            ], 
+            "type": "craftingShaped"
+          }
+        ]
+      }, 
+      "1": {
+        "name": "Smooth Red Sandstone", 
+        "obtaining": [
+          {
+            "outputAmount": 4, 
+            "recipe": [
+              {
+                "damage": 0, 
+                "id": "minecraft:red_sandstone"
+              }, 
+              {
+                "damage": 0, 
+                "id": "minecraft:red_sandstone"
+              }, 
+              null, 
+              {
+                "damage": 0, 
+                "id": "minecraft:red_sandstone"
+              }, 
+              {
+                "damage": 0, 
+                "id": "minecraft:red_sandstone"
+              }, 
+              null, 
+              null, 
+              null, 
+              null
+            ], 
+            "type": "craftingShaped"
+          }
+        ]
+      }, 
+      "2": {
+        "name": "Chiseled Red Sandstone", 
+        "obtaining": [
+          {
+            "recipe": [
+              {
+                "damage": 0, 
+                "id": "minecraft:stone_slab2"
+              }, 
+              null, 
+              null, 
+              {
+                "damage": 0, 
+                "id": "minecraft:stone_slab2"
+              }, 
+              null, 
+              null, 
+              null, 
+              null, 
+              null
+            ], 
+            "type": "craftingShaped"
+          }
+        ]
+      }
+    }, 
+    "itemID": 179, 
+    "name": "Red Sandstone",
+    "solid": true
+  }, 
+  "red_sandstone_stairs": {
+    "blockID": 180, 
+    "itemID": 180, 
+    "name": "Red Sandstone Stairs", 
+    "solid": true,
+    "obtaining": [
+      {
+        "outputAmount": 4, 
+        "recipe": [
+          null, 
+          null, 
+          "minecraft:red_sandstone", 
+          null, 
+          "minecraft:red_sandstone", 
+          "minecraft:red_sandstone", 
+          "minecraft:red_sandstone", 
+          "minecraft:red_sandstone", 
+          "minecraft:red_sandstone"
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "redstone": {
+    "itemID": 331, 
+    "name": "Redstone Dust"
+  }, 
+  "redstone_block": {
+    "blockID": 152, 
+    "itemID": 152, 
+    "name": "Block of Redstone",
+    "solid": true
+  }, 
+  "redstone_lamp": {
+    "blockID": 123, 
+    "itemID": 123, 
+    "name": "Redstone Lamp",
+    "solid": true
+  }, 
+  "redstone_ore": {
+    "blockID": 73, 
+    "itemID": 73, 
+    "name": "Redstone Ore",
+    "solid": true
+  }, 
+  "redstone_torch": {
+    "blockID": 76, 
+    "itemID": 76, 
+    "name": "Redstone Torch"
+  }, 
+  "redstone_wire": {
+    "blockID": 55, 
+    "itemID": 55, 
+    "name": "Redstone Wire", 
+    "subtype": "redstone.wire", 
+    "texture_redstone_wire_line": "redstone_dust_line"
+  }, 
+  "reeds": {
+    "blockID": 83, 
+    "itemID": 338, 
+    "name": "Sugar Cane"
+  }, 
+  "repeater": {
+    "itemID": 356, 
+    "name": "Repeater"
+  }, 
+  "rotten_flesh": {
+    "itemID": 367, 
+    "name": "Rotten Flesh"
+  }, 
+  "saddle": {
+    "itemID": 329, 
+    "name": "Saddle"
+  }, 
+  "sand": {
+    "blockID": 12, 
+    "damageValues": {
+      "1": {
+        "name": "Red Sand"
+      }
+    }, 
+    "itemID": 12, 
+    "name": "Sand", 
+    "solid": true
+  }, 
+  "sandstone": {
+    "blockID": 24, 
+    "damageValues": {
+      "1": {
+        "name": "Chiseled Sandstone"
+      }, 
+      "2": {
+        "name": "Smooth Sandstone"
+      }
+    }, 
+    "itemID": 24, 
+    "name": "Sandstone", 
+    "solid": true, 
+    "texture_bottom": "sandstone_bottom", 
+    "texture_top": "sandstone_top"
+  }, 
+  "sandstone_stairs": {
+    "blockID": 128, 
+    "itemID": 128, 
+    "name": "Sandstone Stairs",
+    "solid": true
+  }, 
+  "sapling": {
+    "blockID": 6, 
+    "damageValues": {
+      "0": {
+        "name": "Oak Sapling"
+      }, 
+      "1": {
+        "name": "Spruce Sapling"
+      }, 
+      "2": {
+        "name": "Birch Sapling"
+      }, 
+      "3": {
+        "name": "Jungle Sapling"
+      }, 
+      "4": {
+        "name": "Acacia Sapling"
+      }, 
+      "5": {
+        "name": "Dark Oak Sapling"
+      }
+    }, 
+    "itemID": 6, 
+    "name": "Sapling", 
+    "subtype": "sapling"
+  }, 
+  "sea_lantern": {
+    "blockID": 169, 
+    "itemID": 169, 
+    "name": "Sea Lantern",
+    "solid": true
+  }, 
+  "shears": {
+    "durability": 238, 
+    "itemID": 359, 
+    "name": "Shears"
+  }, 
+  "sign": {
+    "itemID": 323, 
+    "name": "Sign"
+  }, 
+  "skull": {
+    "blockID": 144, 
+    "damageValues": {
+      "0": {
+        "name": "Skeleton Skull"
+      }, 
+      "1": {
+        "name": "Wither Skeleton Skull"
+      }, 
+      "2": {
+        "name": "Zombie Head"
+      }, 
+      "3": {
+        "name": "Head"
+      }, 
+      "4": {
+        "name": "Creeper Head"
+      }
+    }, 
+    "itemID": 397, 
+    "name": "Mob Head"
+  }, 
+  "slime": {
+    "blockID": 165, 
+    "itemID": 165, 
+    "name": "Slime Block",
+    "solid": true
+  }, 
+  "slime_ball": {
+    "itemID": 341, 
+    "name": "Slimeball"
+  }, 
+  "snow": {
+    "blockID": 80, 
+    "itemID": 80, 
+    "name": "Snow Block",
+    "solid": true
+  }, 
+  "snow_layer": {
+    "blockID": 78, 
+    "itemID": 78, 
+    "name": "Snow"
+  }, 
+  "snowball": {
+    "itemID": 332, 
+    "name": "Snowball"
+  }, 
+  "soul_sand": {
+    "blockID": 88, 
+    "itemID": 88, 
+    "name": "Soul Sand",
+    "solid": true
+  }, 
+  "spawn_egg": {
+    "damageValues": {
+      "50": {
+        "name": "Spawn Creeper"
+      }, 
+      "51": {
+        "name": "Spawn Skeleton"
+      }, 
+      "52": {
+        "name": "Spawn Spider"
+      }, 
+      "54": {
+        "name": "Spawn Zombie"
+      }, 
+      "55": {
+        "name": "Spawn Slime"
+      }, 
+      "56": {
+        "name": "Spawn Ghast"
+      }, 
+      "57": {
+        "name": "Spawn Zombie Pigman"
+      }, 
+      "58": {
+        "name": "Spawn Enderman"
+      }, 
+      "59": {
+        "name": "Spawn Cave Spider"
+      }, 
+      "60": {
+        "name": "Spawn Silverfish"
+      }, 
+      "61": {
+        "name": "Spawn Blaze"
+      }, 
+      "62": {
+        "name": "Spawn Magma Cube"
+      }, 
+      "65": {
+        "name": "Spawn Bat"
+      }, 
+      "66": {
+        "name": "Spawn Witch"
+      }, 
+      "67": {
+        "name": "Spawn Endermite"
+      }, 
+      "68": {
+        "name": "Spawn Guardian"
+      }, 
+      "90": {
+        "name": "Spawn Pig"
+      }, 
+      "91": {
+        "name": "Spawn Sheep"
+      }, 
+      "92": {
+        "name": "Spawn Cow"
+      }, 
+      "93": {
+        "name": "Spawn Chicken"
+      }, 
+      "94": {
+        "name": "Spawn Squid"
+      }, 
+      "95": {
+        "name": "Spawn Wolf"
+      }, 
+      "96": {
+        "name": "Spawn Mooshroom"
+      }, 
+      "98": {
+        "name": "Spawn Ocelot"
+      }, 
+      "100": {
+        "name": "Spawn Horse"
+      }, 
+      "101": {
+        "name": "Spawn Rabbit"
+      }, 
+      "120": {
+        "name": "Spawn Villager"
+      }
+    }, 
+    "itemID": 383, 
+    "name": "Spawn Egg"
+  }, 
+  "speckled_melon": {
+    "itemID": 382, 
+    "name": "Glistering Melon"
+  }, 
+  "spider_eye": {
+    "itemID": 375, 
+    "name": "Spider Eye"
+  }, 
+  "sponge": {
+    "blockID": 19, 
+    "damageValues": {
+      "1": {
+        "name": "Wet Sponge"
+      }
+    }, 
+    "itemID": 19, 
+    "name": "Sponge", 
+    "solid": true
+  }, 
+  "spruce_door": {
+    "blockID": 193, 
+    "itemID": 427, 
+    "name": "Spruce Door", 
+    "solid": true,
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          null
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "spruce_fence": {
+    "blockID": 188, 
+    "itemID": 188, 
+    "name": "Spruce Fence", 
+    "solid": true,
+    "climbable": false,
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "spruce_fence_gate": {
+    "blockID": 183, 
+    "itemID": 183, 
+    "name": "Spruce Fence Gate", 
+    "solid": true,
+    "climbable": false,
+    "obtaining": [
+      {
+        "recipe": [
+          null, 
+          null, 
+          null, 
+          "mincraft:stick", 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick", 
+          "minecraft:stick", 
+          {
+            "damage": 1, 
+            "id": "minecraft:planks"
+          }, 
+          "minecraft:stick"
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "spruce_stairs": {
+    "blockID": 134, 
+    "itemID": 134, 
+    "name": "Spruce Wood Stairs",
+    "solid": true
+  }, 
+  "stained_glass": {
+    "blockID": 95, 
+    "damageValues": {
+      "0": {
+        "name": "White Stained Glass"
+      }, 
+      "1": {
+        "name": "Orange Stained Glass"
+      }, 
+      "2": {
+        "name": "Magenta Stained Glass"
+      }, 
+      "3": {
+        "name": "Light Blue Stained Glass"
+      }, 
+      "4": {
+        "name": "Yellow Stained Glass"
+      }, 
+      "5": {
+        "name": "Lime Stained Glass"
+      }, 
+      "6": {
+        "name": "Pink Stained Glass"
+      }, 
+      "7": {
+        "name": "Gray Stained Glass"
+      }, 
+      "8": {
+        "name": "Light Gray Stained Glass"
+      }, 
+      "9": {
+        "name": "Cyan Stained Glass"
+      }, 
+      "10": {
+        "name": "Purple Stained Glass"
+      }, 
+      "11": {
+        "name": "Blue Stained Glass"
+      }, 
+      "12": {
+        "name": "Brown Stained Glass"
+      }, 
+      "13": {
+        "name": "Green Stained Glass"
+      }, 
+      "14": {
+        "name": "Red Stained Glass"
+      }, 
+      "15": {
+        "name": "Black Stained Glass"
+      }
+    }, 
+    "itemID": 95, 
+    "name": "Stained Glass",
+    "solid": true
+  }, 
+  "stained_glass_pane": {
+    "blockID": 160, 
+    "damageValues": {
+      "0": {
+        "name": "White Stained Glass Pane"
+      }, 
+      "1": {
+        "name": "Orange Stained Glass Pane"
+      }, 
+      "2": {
+        "name": "Magenta Stained Glass Pane"
+      }, 
+      "3": {
+        "name": "Light Blue Stained Glass Pane"
+      }, 
+      "4": {
+        "name": "Yellow Stained Glass Pane"
+      }, 
+      "5": {
+        "name": "Lime Stained Glass Pane"
+      }, 
+      "6": {
+        "name": "Pink Stained Glass Pane"
+      }, 
+      "7": {
+        "name": "Gray Stained Glass Pane"
+      }, 
+      "8": {
+        "name": "Light Gray Stained Glass Pane"
+      }, 
+      "9": {
+        "name": "Cyan Stained Glass Pane"
+      }, 
+      "10": {
+        "name": "Purple Stained Glass Pane"
+      }, 
+      "11": {
+        "name": "Blue Stained Glass Pane"
+      }, 
+      "12": {
+        "name": "Brown Stained Glass Pane"
+      }, 
+      "13": {
+        "name": "Green Stained Glass Pane"
+      }, 
+      "14": {
+        "name": "Red Stained Glass Pane"
+      }, 
+      "15": {
+        "name": "Black Stained Glass Pane"
+      }
+    }, 
+    "itemID": 160, 
+    "name": "Stained Glass Pane",
+    "solid": true
+  }, 
+  "stained_hardened_clay": {
+    "blockID": 159, 
+    "damageValues": {
+      "0": {
+        "name": "White Stained Clay"
+      }, 
+      "1": {
+        "name": "Orange Stained Clay"
+      }, 
+      "2": {
+        "name": "Magenta Stained Clay"
+      }, 
+      "3": {
+        "name": "Light Blue Stained Clay"
+      }, 
+      "4": {
+        "name": "Yellow Stained Clay"
+      }, 
+      "5": {
+        "name": "Lime Stained Clay"
+      }, 
+      "6": {
+        "name": "Pink Stained Clay"
+      }, 
+      "7": {
+        "name": "Gray Stained Clay"
+      }, 
+      "8": {
+        "name": "Light Gray Stained Clay"
+      }, 
+      "9": {
+        "name": "Cyan Stained Clay"
+      }, 
+      "10": {
+        "name": "Purple Stained Clay"
+      }, 
+      "11": {
+        "name": "Blue Stained Clay"
+      }, 
+      "12": {
+        "name": "Brown Stained Clay"
+      }, 
+      "13": {
+        "name": "Green Stained Clay"
+      }, 
+      "14": {
+        "name": "Red Stained Clay"
+      }, 
+      "15": {
+        "name": "Black Stained Clay"
+      }
+    }, 
+    "itemID": 159, 
+    "name": "Stained Clay",
+    "solid": true
+  }, 
+  "standing_banner": {
+    "blockID": 176, 
+    "itemID": 176, 
+    "name": "Standing Banner"
+  }, 
+  "standing_sign": {
+    "blockID": 63, 
+    "itemID": 63, 
+    "name": "Sign", 
+    "subtype": "sign", 
+    "texture_sign": "planks_oak"
+  }, 
+  "stick": {
+    "itemID": 280, 
+    "name": "Stick"
+  }, 
+  "sticky_piston": {
+    "FIXME": "orientation", 
+    "blockID": 29, 
+    "itemID": 29, 
+    "name": "Sticky Piston", 
+    "solid": true,
+    "texture_north": "piston_top_normal", 
+    "texture_south": "piston_bottom"
+  }, 
+  "stone": {
+    "blast_resistance": 30, 
+    "blockID": 1, 
+    "damageValues": {
+      "1": {
+        "name": "Granite"
+      }, 
+      "2": {
+        "name": "Polished Granite"
+      }, 
+      "3": {
+        "name": "Diorite"
+      }, 
+      "4": {
+        "name": "Polished Diorite"
+      }, 
+      "5": {
+        "name": "Andesite"
+      }, 
+      "6": {
+        "name": "Polished Andesite"
+      }
+    }, 
+    "itemID": 1, 
+    "luminance": false, 
+    "name": "Stone", 
+    "renewable": true, 
+    "solid": true, 
+    "stackable": 64, 
+    "tool": "pick", 
+    "transparent": false
+  }, 
+  "stone_axe": {
+    "durability": 131, 
+    "itemID": 275, 
+    "name": "Stone Axe"
+  }, 
+  "stone_brick_stairs": {
+    "blockID": 109, 
+    "itemID": 109, 
+    "name": "Stone Brick Stairs",
+    "solid": true
+  }, 
+  "stone_button": {
+    "blockID": 77, 
+    "itemID": 77, 
+    "name": "Stone Button"
+  }, 
+  "stone_hoe": {
+    "durability": 131, 
+    "itemID": 291, 
+    "name": "Stone Hoe"
+  }, 
+  "stone_pickaxe": {
+    "durability": 131, 
+    "itemID": 274, 
+    "name": "Stone Pickaxe"
+  }, 
+  "stone_pressure_plate": {
+    "blockID": 70, 
+    "itemID": 70, 
+    "name": "Stone Pressure Plate",
+    "solid": true
+  }, 
+  "stone_shovel": {
+    "durability": 131, 
+    "itemID": 273, 
+    "name": "Stone Shovel"
+  }, 
+  "stone_slab": {
+    "blockID": 44, 
+    "damageValues": {
+      "0": {
+        "name": "Stone Slab", 
+        "obtaining": [
+          {
+            "outputAmount": 6, 
+            "recipe": [
+              null, 
+              null, 
+              null, 
+              {
+                "damage": 0, 
+                "id": "minecraft:stone"
+              }, 
+              {
+                "damage": 0, 
+                "id": "minecraft:stone"
+              }, 
+              {
+                "damage": 0, 
+                "id": "minecraft:stone"
+              }, 
+              null, 
+              null, 
+              null
+            ], 
+            "type": "craftingShaped"
+          }
+        ]
+      }, 
+      "1": {
+        "name": "Sandstone Slab", 
+        "texture_bottom": "sandstone_bottom", 
+        "texture_top": "sandstone_top"
+      }, 
+      "2": {
+        "name": "Stone-Wood Slab"
+      }, 
+      "3": {
+        "name": "Cobblestone Slab"
+      }, 
+      "4": {
+        "name": "Brick Slab"
+      }, 
+      "5": {
+        "name": "Stone Brick Slab"
+      }, 
+      "6": {
+        "name": "Nether Brick Slab"
+      }, 
+      "7": {
+        "name": "Quartz Slab", 
+        "texture_bottom": "quartz_block_bottom", 
+        "texture_top": "quartz_block_top"
+      }
+    }, 
+    "itemID": 44, 
+    "name": "Slab", 
+    "solid": true,
+    "subtype": "slab"
+  }, 
+  "stone_slab2": {
+    "blockID": 182, 
+    "damageValues": {
+      "0": {
+        "name": "Red Sandstone Slab", 
+        "obtaining": [
+          {
+            "outputAmount": 6, 
+            "recipe": [
+              "minecraft:red_sandstone", 
+              "minecraft:red_sandstone", 
+              "minecraft:red_sandstone", 
+              null, 
+              null, 
+              null, 
+              null, 
+              null, 
+              null
+            ], 
+            "type": "craftingShaped"
+          }
+        ]
+      }
+    }, 
+    "itemID": 182, 
+    "name": "Slab",
+    "solid": true
+  }, 
+  "stone_stairs": {
+    "blockID": 67, 
+    "itemID": 67, 
+    "name": "Cobblestone Stairs",
+    "solid": true
+  }, 
+  "stone_sword": {
+    "durability": 131, 
+    "itemID": 272, 
+    "name": "Stone Sword"
+  }, 
+  "stonebrick": {
+    "blockID": 98, 
+    "damageValues": {
+      "1": {
+        "name": "Mossy Stone Brick"
+      }, 
+      "2": {
+        "name": "Cracked Stone Brick"
+      }, 
+      "3": {
+        "name": "Chiseled Stone Brick"
+      }
+    }, 
+    "itemID": 98, 
+    "name": "Stone Brick",
+    "solid": true
+  }, 
+  "string": {
+    "itemID": 287, 
+    "name": "String"
+  }, 
+  "sugar": {
+    "itemID": 353, 
+    "name": "Sugar"
+  }, 
+  "tallgrass": {
+    "blockID": 31, 
+    "damageValues": {
+      "0": {
+        "name": "Shrub"
+      }, 
+      "1": {
+        "color_map": "foliage", 
+        "texture_needs_colorisation": true, 
+        "texture_uncolored": "tallgrass"
+      }, 
+      "2": {
+        "color_map": "foliage", 
+        "name": "Fern", 
+        "texture_needs_colorisation": true, 
+        "texture_uncolored": "fern"
+      }
+    }, 
+    "itemID": 31, 
+    "name": "Tall Grass"
+  }, 
+  "tnt": {
+    "blockID": 46, 
+    "itemID": 46, 
+    "name": "TNT", 
+    "solid": true, 
+    "texture_bottom": "tnt_bottom", 
+    "texture_top": "tnt_top"
+  }, 
+  "tnt_minecart": {
+    "itemID": 407, 
+    "name": "Minecart with TNT"
+  }, 
+  "torch": {
+    "blockID": 50, 
+    "itemID": 50, 
+    "name": "Torch", 
+    "subtype": "torch"
+  }, 
+  "trapdoor": {
+    "blockID": 96, 
+    "itemID": 96, 
+    "name": "Trapdoor",
+    "solid": true
+  }, 
+  "trapped_chest": {
+    "blockID": 146, 
+    "itemID": 146, 
+    "name": "Trapped Chest",
+    "solid": true
+  }, 
+  "tripwire": {
+    "blockID": 132, 
+    "itemID": 132, 
+    "name": "String"
+  }, 
+  "tripwire_hook": {
+    "blockID": 131, 
+    "itemID": 131, 
+    "name": "Tripwire Hook"
+  }, 
+  "unlit_redstone_torch": {
+    "blockID": 75, 
+    "itemID": 75, 
+    "name": "Redstone Torch"
+  }, 
+  "unpowered_comparator": {
+    "blockID": 149, 
+    "itemID": 149, 
+    "name": "Comparator"
+  }, 
+  "unpowered_repeater": {
+    "blockID": 93, 
+    "itemID": 93, 
+    "name": "Repeater"
+  }, 
+  "vine": {
+    "blockID": 106, 
+    "itemID": 106, 
+    "name": "Vines"
+  }, 
+  "wall_banner": {
+    "blockID": 177, 
+    "itemID": 177, 
+    "name": "Wall Banner"
+  }, 
+  "wall_sign": {
+    "blockID": 68, 
+    "itemID": 68, 
+    "name": "Sign"
+  }, 
+  "water": {
+    "blockID": 9, 
+    "itemID": 9, 
+    "name": "Still Water", 
+    "subtype": "water.still"
+  }, 
+  "water_bucket": {
+    "itemID": 326, 
+    "name": "Water Bucket"
+  }, 
+  "waterlily": {
+    "blockID": 111, 
+    "itemID": 111, 
+    "name": "Lily Pad",
+    "solid": true
+  }, 
+  "web": {
+    "blockID": 30, 
+    "itemID": 30, 
+    "name": "Cobweb", 
+    "solid": true
+  }, 
+  "wheat": {
+    "blockID": 59, 
+    "blockInfo": {
+      "damageValues": {
+        "0": {
+          "texture_side": "wheat_stage_0"
+        }, 
+        "1": {
+          "texture_side": "wheat_stage_1"
+        }, 
+        "2": {
+          "texture_side": "wheat_stage_2"
+        }, 
+        "3": {
+          "texture_side": "wheat_stage_3"
+        }, 
+        "4": {
+          "texture_side": "wheat_stage_4"
+        }, 
+        "5": {
+          "texture_side": "wheat_stage_5"
+        }, 
+        "6": {
+          "texture_side": "wheat_stage_6"
+        }, 
+        "7": {
+          "image": "wheat.png", 
+          "texture_side": "wheat_stage_7"
+        }
+      }, 
+      "image": "wheatseeds.png"
+    }, 
+    "itemID": 296, 
+    "name": "Wheat"
+  }, 
+  "wheat_seeds": {
+    "itemID": 295, 
+    "name": "Seeds"
+  }, 
+  "wooden_axe": {
+    "durability": 59, 
+    "itemID": 271, 
+    "name": "Wooden Axe"
+  }, 
+  "wooden_button": {
+    "blockID": 143, 
+    "itemID": 143, 
+    "name": "Wooden Button"
+  }, 
+  "wooden_door": {
+    "blockID": 64, 
+    "itemID": 324, 
+    "name": "Oak Door", 
+    "solid": true,
+    "obtaining": [
+      {
+        "outputAmount": 3, 
+        "recipe": [
+          {
+            "damage": 0, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 0, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 0, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 0, 
+            "id": "minecraft:planks"
+          }, 
+          null, 
+          {
+            "damage": 0, 
+            "id": "minecraft:planks"
+          }, 
+          {
+            "damage": 0, 
+            "id": "minecraft:planks"
+          }, 
+          null
+        ], 
+        "type": "craftingShaped"
+      }
+    ]
+  }, 
+  "wooden_hoe": {
+    "durability": 59, 
+    "itemID": 290, 
+    "name": "Wooden Hoe"
+  }, 
+  "wooden_pickaxe": {
+    "durability": 59, 
+    "itemID": 270, 
+    "name": "Wooden Pickaxe"
+  }, 
+  "wooden_pressure_plate": {
+    "blockID": 72, 
+    "itemID": 72, 
+    "name": "Wooden Pressure Plate",
+    "solid": true
+  }, 
+  "wooden_shovel": {
+    "durability": 59, 
+    "itemID": 269, 
+    "name": "Wooden Shovel"
+  }, 
+  "wooden_slab": {
+    "blockID": 126, 
+    "damageValues": {
+      "0": {
+        "name": "Oak Wood Slab"
+      }, 
+      "1": {
+        "name": "Spruce Wood Slab"
+      }, 
+      "2": {
+        "name": "Birch Wood Slab"
+      }, 
+      "3": {
+        "name": "Jungle Wood Slab"
+      }, 
+      "4": {
+        "name": "Acacia Wood Slab"
+      }, 
+      "5": {
+        "name": "Dark Oak Wood Slab"
+      }
+    }, 
+    "itemID": 126, 
+    "name": "Wooden Slab",
+    "solid": true
+  }, 
+  "wooden_sword": {
+    "durability": 59, 
+    "itemID": 268, 
+    "name": "Wooden Sword"
+  }, 
+  "wool": {
+    "blockID": 35, 
+    "damageValues": {
+      "0": {
+        "name": "White Wool"
+      }, 
+      "1": {
+        "name": "Orange Wool"
+      }, 
+      "2": {
+        "name": "Magenta Wool"
+      }, 
+      "3": {
+        "name": "Light Blue Wool"
+      }, 
+      "4": {
+        "name": "Yellow Wool"
+      }, 
+      "5": {
+        "name": "Lime Wool"
+      }, 
+      "6": {
+        "name": "Pink Wool"
+      }, 
+      "7": {
+        "name": "Gray Wool"
+      }, 
+      "8": {
+        "name": "Light Gray Wool"
+      }, 
+      "9": {
+        "name": "Cyan Wool"
+      }, 
+      "10": {
+        "name": "Purple Wool"
+      }, 
+      "11": {
+        "name": "Blue Wool"
+      }, 
+      "12": {
+        "name": "Brown Wool"
+      }, 
+      "13": {
+        "name": "Green Wool"
+      }, 
+      "14": {
+        "name": "Red Wool"
+      }, 
+      "15": {
+        "name": "Black Wool"
+      }
+    }, 
+    "itemID": 35, 
+    "name": "Wool", 
+    "solid": true
+  }, 
+  "writable_book": {
+    "itemID": 386, 
+    "name": "Book and Quill"
+  }, 
+  "written_book": {
+    "itemID": 387, 
+    "name": "Written Book"
+  }, 
+  "yellow_flower": {
+    "blockID": 37, 
+    "itemID": 37, 
+    "name": "Dandelion"
+  }
+}

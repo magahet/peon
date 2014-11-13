@@ -22,6 +22,10 @@ class Entity(object):
         return 'Entity(eid={}, _type={}, x={}, y={}, z={})'.format(
             self.eid, MobTypes.get_name(self._type), self.x, self.y, self.z)
 
+    @property
+    def position(self):
+        return (self.x, self.y, self.z)
+
     def move(self, dx, dy, dz):
         self.x += dx
         self.y += dy

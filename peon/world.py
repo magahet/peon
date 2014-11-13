@@ -25,6 +25,18 @@ class World(smpmap.World):
         _type = self.get_id(x, y, z)
         return None if _type is None else ItemTypes.is_solid(_type)
 
+    def is_climbable_block(self, x, y, z):
+        _type = self.get_id(x, y, z)
+        return None if _type is None else ItemTypes.is_climbable(_type)
+
+    def is_breathable_block(self, x, y, z):
+        _type = self.get_id(x, y, z)
+        return None if _type is None else ItemTypes.is_breathable(_type)
+
+    def is_safe_non_solid_block(self, x, y, z):
+        _type = self.get_id(x, y, z)
+        return None if _type is None else ItemTypes.is_safe_non_solid(_type)
+
     def get_next_highest_solid_block(self, x, y, z):
         for y in xrange(int(y), -1, -1):
             if self.is_solid_block(x, y, z):
@@ -47,15 +59,16 @@ class World(smpmap.World):
         if x0 == x or z0 == z:
             return self.is_standable(x, y, z)
         return all([
-            self.is_empty(x0, y, z),
-            self.is_empty(x, y, z0),
+            self.is_safe_non_solid_block(x0, y, z),
+            self.is_safe_non_solid_block(x, y, z0),
             self.is_standable(x, y, z),
         ])
 
     def is_standable(self, x, y, z):
         return all([
-            self.is_empty(x, y, z),
-            self.is_solid_block(x, y - 1, z),
+            self.is_breathable_block(x, y + 1, z),
+            self.is_safe_non_solid_block(x, y, z),
+            self.is_climbable_block(x, y - 1, z),
         ])
 
     def is_empty(self, x, y, z):

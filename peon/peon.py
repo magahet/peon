@@ -413,9 +413,6 @@ class Client(object):
         self.player._held_slot_num = pkt.slot
 
     def on_play_player_position_and_look(self, pkt):
-        print 'PlayerPositionAndLook(x={}, y={}, z={})'.format(
-            pkt.x, pkt.y, pkt.z)
-        print
         self.player.move_corrected_by_server.set()
         self.player.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
 

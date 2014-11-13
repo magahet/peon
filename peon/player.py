@@ -130,10 +130,15 @@ class Player(object):
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
         path = self.world.find_path(x0, y0, z0, x, y, z, limit=limit)
-        if path is None or len(path) <= space:
+        if path is None:
             return False
-        for x, y, z in path[:-space]:
+        if len(path) <= space:
+            return True
+        end = -space if space > 0 else len(path)
+        for x, y, z in path[:end]:
+            #print (x, y, z), types.ItemTypes().blocks_by_id.get(self.world.get_id(x, y, z))
             if not self.move_to(x, y, z, speed=speed, center=True):
+                print "can't move to:", (x, y, z)
                 return False
         return True
 
@@ -209,19 +214,6 @@ class Player(object):
     def equip_any_item_from_list(self, item_types):
         return True
 
-    def hunt(self, mob_types=None, count=1):
-        self.enable_auto_defend()
-        if mob_types:
-            for _type in mob_types:
-                if isinstance(_type, basestring):
-                    _type = types.MobTypes().get_id(_type)
-                self.auto_defend_mob_types.add(_type)
-        while count > 0:
-            entity, dist = self.get_closest_entity(mob_types, limit=10)
-            if entity is None:
-                time.sleep(1)
-                continue
-            self.navigate_to(entity.x, entity.y, entity.z, space=3, limit=20)
-            time.sleep(0.5)
-            if entity.eid not in self.world.entities:
-                count -= 1
+    def change_held_item(self, slot_num):
+        self.send(self.proto.PlayServerboundHeldItemChange.id,
+                  slot=slot_num)
