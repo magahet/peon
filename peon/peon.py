@@ -12,6 +12,7 @@ from world import World
 from player import Player
 from entity import Entity
 from window import Window
+from utils import ThreadSafeCounter
 
 
 log = logging.getLogger(__name__)
@@ -22,17 +23,21 @@ class Client(object):
         self.protocol_version = protocol_version
         self.proto = fastmc.proto.protocol(protocol_version)
         self._send_queue = Queue.Queue(10)
+        self._recv_condition = threading.Condition()
         self.world = World()
-        self.player = Player(self.proto, self._send_queue, self.world)
+        self.player = Player(self.proto,
+                             self._send_queue,
+                             self._recv_condition,
+                             self.world)
         self._sock = None
         self._mc_sock = None
         self._sock_generation = 0
         self.writer = None
         self.reader = None
         self.in_buf = fastmc.proto.ReadBuffer()
-        self._recv_condition = threading.Condition()
         self.parent_pid = os.getppid()
         self.last_keepalive = time.time()
+        self._action_num_counter = ThreadSafeCounter(1)
         self._threads = {}
         self._thread_funcs = {
             'reader': self._do_read_thread,
@@ -75,6 +80,7 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundCloseWindow.id): self.on_play_close_window,
             (fastmc.proto.PLAY, self.proto.PlayClientboundSetSlot.id): self.on_set_slot,
             (fastmc.proto.PLAY, self.proto.PlayClientboundWindowItem.id): self.on_window_item,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundConfirmTransaction.id): self.on_confirm_transaction,
         }
 
     def set_to_login_state(self, **kwargs):
@@ -434,7 +440,18 @@ class Client(object):
             self.player.windows[pkt.window_id].set_slot(pkt.slot, pkt.item)
 
     def on_window_item(self, pkt):
-        self.player.windows[pkt.window_id] = Window(pkt.window_id, pkt.slots)
+        self.player.windows[pkt.window_id] = Window(pkt.window_id,
+                                                    pkt.slots,
+                                                    self._action_num_counter,
+                                                    self._send_queue,
+                                                    self.proto,
+                                                    self._recv_condition
+                                                    )
+
+    def on_confirm_transaction(self, pkt):
+        if pkt.window_id in self.player.windows:
+            window = self.player.windows[pkt.window_id]
+            window._confirmations[pkt.action_num] = pkt.accepted
 
     def on_unhandled(self, pkt):
         pass

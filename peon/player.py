@@ -10,9 +10,11 @@ from sys import maxint
 
 class Player(object):
 
-    def __init__(self, proto, send_queue, world, auto_defend=True):
+    def __init__(self, proto, send_queue, recv_condition, world,
+                 auto_defend=True):
         self.proto = proto
         self._send_queue = send_queue
+        self._recv_condition = recv_condition
         self.x = None
         self.y = None
         self.z = None
@@ -46,6 +48,13 @@ class Player(object):
         }
         self._active_threads = set(self._thread_funcs.keys())
         self.start_threads()
+
+    def wait_for(self, what, timeout=10):
+        start = time.time()
+        with self._recv_condition:
+            while not what() and time.time() - start < timeout:
+                self._recv_condition.wait(timeout=1)
+        return what()
 
     def start_threads(self):
         for name, func in self._thread_funcs.iteritems():
@@ -90,13 +99,13 @@ class Player(object):
                     'Wooden Sword',
                 ])
                 for eid in eids_in_range:
-                    self.send(self.proto.PlayServerboundUseEntity.id,
-                              target=eid,
-                              type=1
-                              )
+                    self._send(self.proto.PlayServerboundUseEntity.id,
+                               target=eid,
+                               type=1
+                               )
             time.sleep(0.1)
 
-    def send(self, packet_id, **kwargs):
+    def _send(self, packet_id, **kwargs):
         self._send_queue.put((packet_id, kwargs))
 
     def __repr__(self):
@@ -214,6 +223,37 @@ class Player(object):
     def equip_any_item_from_list(self, item_types):
         return True
 
+    def equip_item(self, item):
+        pass
+        '''
+        item = k
+        if self.get_slot(0, self._held_slot_num+36).itemId == tool_id: return True
+            slot_num = self.find_tool(tool_id, held_only=True)
+        if slot_num is not None:
+            self.change_held_slot(slot_num-36)
+            return True
+        slot_num = self.find_tool(tool_id, inventory_only=True)
+        if slot_num is None:
+            logging.debug('could not find tool_id: %d', tool_id)
+            return False
+        open_slot_num = self.find_tool(-1, held_only=True)
+        if open_slot_num is None:
+            held_slot_num = random.randrange(36,45)
+            if not self.click_slot(0, held_slot_num, shift=True):
+                logging.debug('could not move held item to inventory: %d', held_slot_num)
+                return False
+        if not self.click_slot(0, slot_num):
+            logging.debug('could not click on slot num: %d', slot_num)
+            return False
+        if not self.click_slot(0, open_slot_num):
+            logging.debug('could not click on slot num: %d', open_slot_num)
+            return False
+        '''
+
     def change_held_item(self, slot_num):
-        self.send(self.proto.PlayServerboundHeldItemChange.id,
-                  slot=slot_num)
+        self._send(self.proto.PlayServerboundHeldItemChange.id,
+                   slot=slot_num)
+
+    def eat(self):
+        pass
+        #self.equip_any_item_from_list(self, types.FOOD)
