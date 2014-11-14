@@ -83,10 +83,9 @@ class ItemTypes(object):
                 solid_types.add(data.get('blockID'))
             if not data.get('climbable', True):
                 non_climbable_types.add(data.get('blockID'))
-        if 'damageValues' not in data:
-            types_by_id[(data.get('itemID'), None)] = data.get('name')
-            types_by_name[data.get('name')] = (data.get('itemID'), None)
-        else:
+        types_by_id[(data.get('itemID'), None)] = data.get('name')
+        types_by_name[data.get('name')] = (data.get('itemID'), None)
+        if 'damageValues' in data:
             item_id = data.get('itemID')
             for damage_value, sub_data in data.get('damageValues', {}).iteritems():
                 types_by_id[(item_id, int(damage_value))] = sub_data.get('name')
@@ -125,3 +124,21 @@ class ItemTypes(object):
             cls.is_solid(block_id),
             block_id not in cls.non_climbable_types
         ])
+
+
+class InventoryTypes(object):
+    types = {
+        None: (
+            ([0], "crafting output"),
+            (range(1, 5), "crafting input"),
+            (range(5, 9), "armor"),
+            (range(9, 36), "main inventory"),
+            (range(36, 45), "held items"),
+        ),
+    }
+
+    @classmethod
+    def get_slot_description(cls, _type, slot_num):
+        for _range, description in cls.types.get(_type, []):
+            if slot_num in _range:
+                return description

@@ -5,6 +5,7 @@ import numpy as np
 from math import floor
 import threading
 import types
+import itertools
 from sys import maxint
 
 
@@ -29,6 +30,7 @@ class Player(object):
         self._available_enchantments = {}
         self._open_window_id = 0
         self._held_slot_num = 0
+        self._held_slot_cycle = itertools.cycle(range(10))
         self._cursor_slot = Slot(-1, None, None, None)
         self.windows = {}
         self.world = world
@@ -49,7 +51,7 @@ class Player(object):
         self._active_threads = set(self._thread_funcs.keys())
         self.start_threads()
 
-    def wait_for(self, what, timeout=10):
+    def _wait_for(self, what, timeout=10):
         start = time.time()
         with self._recv_condition:
             while not what() and time.time() - start < timeout:
@@ -128,7 +130,7 @@ class Player(object):
     def held_item(self):
         inventory = self.inventory
         if inventory is not None:
-            held = inventory.get_held()
+            held = inventory.held
         return held[self._held_slot_num]
 
     @property
@@ -224,31 +226,23 @@ class Player(object):
         return True
 
     def equip_item(self, item):
-        pass
-        '''
-        item = k
-        if self.get_slot(0, self._held_slot_num+36).itemId == tool_id: return True
-            slot_num = self.find_tool(tool_id, held_only=True)
-        if slot_num is not None:
-            self.change_held_slot(slot_num-36)
+        if item == self.held_item:  # item already in hand
             return True
-        slot_num = self.find_tool(tool_id, inventory_only=True)
-        if slot_num is None:
-            logging.debug('could not find tool_id: %d', tool_id)
-            return False
-        open_slot_num = self.find_tool(-1, held_only=True)
-        if open_slot_num is None:
-            held_slot_num = random.randrange(36,45)
-            if not self.click_slot(0, held_slot_num, shift=True):
-                logging.debug('could not move held item to inventory: %d', held_slot_num)
+        elif item in self.inventory.held:  # item in held_items
+            self.change_held_item(self.inventory.held.index(item))
+        elif item in self.inventory:
+            held_slot = self._held_slot_cycle.next()
+            inventory_held_slot = self.inventory.count - 1 - held_slot
+            if not self.inventory.swap_slots(inventory_held_slot,
+                                             self.inventory.index(item)):
                 return False
-        if not self.click_slot(0, slot_num):
-            logging.debug('could not click on slot num: %d', slot_num)
+            held_index = self.inventory.held.index(item)
+            if held_index is None:
+                return False
+            self.change_held_item(held_index)
+        else:
             return False
-        if not self.click_slot(0, open_slot_num):
-            logging.debug('could not click on slot num: %d', open_slot_num)
-            return False
-        '''
+        return self._wait_for(lambda: item == self.held_item)
 
     def change_held_item(self, slot_num):
         self._send(self.proto.PlayServerboundHeldItemChange.id,
