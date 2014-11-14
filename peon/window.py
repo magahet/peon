@@ -44,7 +44,10 @@ class Window(object):
         return self.slots.index(_type)
 
     def set_slot(self, index, slot):
-        self.slots[index] = Slot(slot)
+        if slot is None:
+            self.slots[index] = None
+        else:
+            self.slots[index] = Slot(slot)
 
     @property
     def main_inventory(self):

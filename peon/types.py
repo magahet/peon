@@ -13,6 +13,23 @@ LIQUID_BLOCKS = set([
     'Flowing Lava',
     'Still Lava',
 ])
+FOOD = set([
+    'Cooked Porkchop',
+    'Steak',
+    'Cooked Mutton',
+    'Cooked Salmon',
+    'Baked Potato',
+    'Cooked Chicken',
+    'Cooked Rabbit',
+    'Rabbit Stew',
+    'Mushroom Stew',
+    'Bread',
+    'Cooked Fish',
+    'Carrot',
+    'Apple',
+    'Melon',
+    'Cookie',
+])
 
 
 class MobTypes(object):
@@ -64,6 +81,7 @@ class MobTypes(object):
         for _id, name in cls.types:
             if _id == id_query:
                 return name
+        return 'Unknown'
 
 
 class ItemTypes(object):

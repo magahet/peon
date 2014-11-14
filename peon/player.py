@@ -1,6 +1,6 @@
 import time
 from scipy.spatial.distance import euclidean
-from fastmc.proto import Slot
+from fastmc.proto import (Slot, Position)
 import numpy as np
 from math import floor
 import threading
@@ -12,7 +12,7 @@ from sys import maxint
 class Player(object):
 
     def __init__(self, proto, send_queue, recv_condition, world,
-                 auto_defend=True):
+                 auto_defend=True, auto_eat=True):
         self.proto = proto
         self._send_queue = send_queue
         self._recv_condition = recv_condition
@@ -22,7 +22,7 @@ class Player(object):
         self.yaw = None
         self.pitch = None
         self._health = 0
-        self._food = 0
+        self._food = None
         self._food_saturation = 0
         self._xp_bar = -1
         self._xp_level = -1
@@ -43,10 +43,15 @@ class Player(object):
         if auto_defend:
             self._auto_defend.set()
         self.auto_defend_mob_types = types.HOSTILE_MOBS
+        self._auto_eat = threading.Event()
+        self._auto_eat_level = 18
+        if auto_eat:
+            self._auto_eat.set()
         self._threads = {}
         self._thread_funcs = {
             'falling': self._do_falling,
             'auto_defend': self._do_auto_defend,
+            'auto_eat': self._do_auto_eat,
         }
         self._active_threads = set(self._thread_funcs.keys())
         self.start_threads()
@@ -107,6 +112,15 @@ class Player(object):
                                )
             time.sleep(0.1)
 
+    def _do_auto_eat(self):
+        self._wait_for(lambda: None not in (self.inventory, self._food))
+        while True:
+            self._auto_eat.wait()
+            if self._food < self._auto_eat_level:
+                if not self.eat(self._auto_eat_level):
+                    print 'Hungry, but no food!'
+            time.sleep(10)
+
     def _send(self, packet_id, **kwargs):
         self._send_queue.put((packet_id, kwargs))
 
@@ -129,8 +143,9 @@ class Player(object):
     @property
     def held_item(self):
         inventory = self.inventory
-        if inventory is not None:
-            held = inventory.held
+        if inventory is None:
+            return None
+        held = inventory.held
         return held[self._held_slot_num]
 
     @property
@@ -223,7 +238,10 @@ class Player(object):
         self.auto_defend_mob_types = mob_types
 
     def equip_any_item_from_list(self, item_types):
-        return True
+        for _type in item_types:
+            if self.equip_item(_type):
+                return True
+        return False
 
     def equip_item(self, item):
         if item == self.held_item:  # item already in hand
@@ -248,6 +266,29 @@ class Player(object):
         self._send(self.proto.PlayServerboundHeldItemChange.id,
                    slot=slot_num)
 
-    def eat(self):
-        pass
-        #self.equip_any_item_from_list(self, types.FOOD)
+    def eat(self, target=20):
+        if self._food >= target:
+            return True
+        with self._action_lock:
+            if not self.equip_any_item_from_list(types.FOOD):
+                return False
+            while self.held_item is not None and self._food < target:
+                count = self.held_item.count
+                self._send(self.proto.PlayServerboundBlockPlacement.id,
+                           location=Position(-1, 255, -1),
+                           direction=-1,
+                           held_item=self.held_item,
+                           cursor_x=-1,
+                           cursor_y=-1,
+                           cursor_z=-1)
+                self._wait_for(
+                    lambda: (
+                        self.held_item is None or
+                        self.held_item.count < count
+                    )
+                )
+            self._send(self.proto.PlayServerboundPlayerDigging.id,
+                       status=5,
+                       location=Position(0, 0, 0),
+                       face=127)
+        return self._food >= target
