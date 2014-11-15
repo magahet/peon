@@ -2,7 +2,7 @@ import os
 import json
 
 
-HOSTILE_MOBS = set(range(48, 65) + range(66, 69))
+HOSTILE_MOBS = set(range(48, 57) + range(58, 65) + range(66, 69))
 DANGER_BLOCKS = set([
     'Flowing Lava',
     'Still Lava'

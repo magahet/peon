@@ -7,12 +7,15 @@ import threading
 import types
 import itertools
 from sys import maxint
+import logging
+
+
+log = logging.getLogger(__name__)
 
 
 class Player(object):
 
-    def __init__(self, proto, send_queue, recv_condition, world,
-                 auto_defend=True, auto_eat=True):
+    def __init__(self, proto, send_queue, recv_condition, world):
         self.proto = proto
         self._send_queue = send_queue
         self._recv_condition = recv_condition
@@ -21,7 +24,7 @@ class Player(object):
         self.z = None
         self.yaw = None
         self.pitch = None
-        self._health = 0
+        self._health = None
         self._food = None
         self._food_saturation = 0
         self._xp_bar = -1
@@ -35,23 +38,25 @@ class Player(object):
         self.windows = {}
         self.world = world
         self.on_ground = True
-        self.is_moving = threading.Event()
+        self._is_moving = threading.Event()
         self._move_lock = threading.Lock()
         self.move_corrected_by_server = threading.Event()
         self._action_lock = threading.Lock()
-        self._auto_defend = threading.Event()
-        if auto_defend:
-            self._auto_defend.set()
+        self._auto_actions = {
+            'defend': threading.Event(),
+            'eat': threading.Event(),
+            'hunt': threading.Event(),
+        }
         self.auto_defend_mob_types = types.HOSTILE_MOBS
         self._auto_eat = threading.Event()
         self._auto_eat_level = 18
-        if auto_eat:
-            self._auto_eat.set()
+        self.auto_hunt_settings = {}
         self._threads = {}
         self._thread_funcs = {
             'falling': self._do_falling,
             'auto_defend': self._do_auto_defend,
             'auto_eat': self._do_auto_eat,
+            'auto_hunt': self._do_auto_hunt,
         }
         self._active_threads = set(self._thread_funcs.keys())
         self.start_threads()
@@ -72,7 +77,7 @@ class Player(object):
 
     def _do_falling(self):
         while True:
-            if self.is_moving.is_set():
+            if self._is_moving.is_set():
                 continue
             pos = self.position
             if None in pos:
@@ -90,8 +95,9 @@ class Player(object):
             time.sleep(0.1)
 
     def _do_auto_defend(self):
+        auto_defend = self._auto_actions.get('defend')
         while True:
-            self._auto_defend.wait()
+            auto_defend.wait()
             eids_in_range = [e.eid for e in self.iter_entities_in_range(
                 self.auto_defend_mob_types)]
             if not eids_in_range:
@@ -113,13 +119,23 @@ class Player(object):
             time.sleep(0.1)
 
     def _do_auto_eat(self):
+        auto_eat = self._auto_actions.get('eat')
         self._wait_for(lambda: None not in (self.inventory, self._food))
         while True:
-            self._auto_eat.wait()
+            auto_eat.wait()
             if self._food < self._auto_eat_level:
                 if not self.eat(self._auto_eat_level):
-                    print 'Hungry, but no food!'
+                    log.warn('Hungry, but no food!')
             time.sleep(10)
+
+    def _do_auto_hunt(self):
+        auto_hunt = self._auto_actions.get('hunt')
+        self._wait_for(
+            lambda: None not in (self.inventory, self._food, self._health))
+        while True:
+            auto_hunt.wait()
+            self.hunt(**self.auto_hunt_settings)
+            time.sleep(1)
 
     def _send(self, packet_id, **kwargs):
         self._send_queue.put((packet_id, kwargs))
@@ -162,9 +178,8 @@ class Player(object):
             return True
         end = -space if space > 0 else len(path)
         for x, y, z in path[:end]:
-            #print (x, y, z), types.ItemTypes().blocks_by_id.get(self.world.get_id(x, y, z))
             if not self.move_to(x, y, z, speed=speed, center=True):
-                print "can't move to:", (x, y, z)
+                log.error("can't move to: %s", str((x, y, z)))
                 return False
         return True
 
@@ -181,19 +196,19 @@ class Player(object):
 
         dt = 0.1
         delta = speed * dt
-        self.is_moving.set()
+        self._is_moving.set()
         self.move_corrected_by_server.clear()
         while euclidean((x, y, z), self.get_position()) > 0.1:
             if self.move_corrected_by_server.is_set():
                 self.move_corrected_by_server.clear()
-                self.is_moving.clear()
+                self._is_moving.clear()
                 return False
             dx = x - self.x
             dy = y - self.y
             dz = z - self.z
             self.move(abs_min(dx, delta), abs_min(dy, delta), abs_min(dz, delta))
             time.sleep(dt)
-        self.is_moving.clear()
+        self._is_moving.clear()
         return True
 
     def move(self, dx=0, dy=0, dz=0):
@@ -201,8 +216,6 @@ class Player(object):
             self.x += dx
             self.y += dy
             self.z += dz
-        #print 'moving rel:', (dx, dy, dz)
-        #print 'moving:', self.position
 
     def teleport(self, x, y, z, yaw, pitch):
         self._move_lock.acquire()
@@ -228,11 +241,19 @@ class Player(object):
                 dist = cur_dist
         return (closest_entity, dist)
 
-    def enable_auto_defend(self):
-        self._auto_defend.set()
+    def enable_auto_action(self, name):
+        auto_action = self._auto_actions.get(name)
+        if auto_action is None:
+            return False
+        auto_action.set()
+        return True
 
-    def disable_auto_defend(self):
-        self._auto_defend.clear()
+    def disable_auto_action(self, name):
+        auto_action = self._auto_actions.get(name)
+        if auto_action is None:
+            return False
+        auto_action.clear()
+        return True
 
     def set_auto_defend_mob_types(self, mob_types):
         self.auto_defend_mob_types = mob_types
@@ -272,6 +293,7 @@ class Player(object):
         with self._action_lock:
             if not self.equip_any_item_from_list(types.FOOD):
                 return False
+            log.info('Eating: %s', self.held_item.name)
             while self.held_item is not None and self._food < target:
                 count = self.held_item.count
                 self._send(self.proto.PlayServerboundBlockPlacement.id,
@@ -292,3 +314,35 @@ class Player(object):
                        location=Position(0, 0, 0),
                        face=127)
         return self._food >= target
+
+    def hunt(self, home=None, mob_types=None, space=3, speed=10):
+        if not self._health or self._health <= 10:
+            log.warn('health unknown or too low: %s', self._health)
+            return False
+        home = self.get_position(floor=True) if home is None else home
+        self.enable_auto_action('defend')
+        original_set = self.auto_defend_mob_types.copy()
+        if mob_types:
+            for _type in mob_types:
+                if isinstance(_type, basestring):
+                    _type = types.MobTypes().get_id(_type)
+                self.auto_defend_mob_types.add(_type)
+        else:
+            mob_types = types.HOSTILE_MOBS
+        for entity in self.iter_entities_in_range(mob_types, reach=30):
+            log.info("hunting entity: %s", str(entity))
+            eid = entity.eid
+            count = 0
+            while eid in self.world.entities and self._health > 10 and count < 100:
+                count += 1
+                x, y, z = entity.position
+                if not self.navigate_to(
+                        x, y, z, space=space, speed=speed, limit=60):
+                    log.warn("can't nav to entity: %s", str(entity))
+                    break
+                time.sleep(0.1)
+            else:
+                self.auto_defend_mob_types = original_set
+                return self.navigate_to(*home)
+        self.auto_defend_mob_types = original_set
+        return self.navigate_to(*home)
