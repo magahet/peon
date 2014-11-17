@@ -1,5 +1,6 @@
 from heapq import heappush, heappop
 from sys import maxint
+import time
 
 
 # Represent each node as a list, ordering the elements so that a heap of nodes
@@ -10,7 +11,7 @@ from sys import maxint
 F, H, NUM, G, POS, OPEN, VALID, PARENT = xrange(8)
 
 
-def astar(start_pos, neighbors, goal, start_g, cost, heuristic, limit=maxint,
+def astar(start_pos, neighbors, goal, start_g, cost, heuristic, timeout=5,
           debug=None):
 
     """Find the shortest path from start to goal.
@@ -28,13 +29,18 @@ def astar(start_pos, neighbors, goal, start_g, cost, heuristic, limit=maxint,
       heuristic(pos) - A function returning an estimate of the total cost
                        remaining for reaching goal from the given position.
                        Overestimates can yield suboptimal paths.
-      limit          - The maximum number of positions to search.
+      timeout        - The maximum number of seconds to search.
       debug(nodes)   - This function will be called with a dictionary of all
                        nodes.
 
     The function returns the best path found. The returned path excludes the
     starting position.
     """
+
+    # Test for one step paths
+    for pos in neighbors(start_pos):
+        if goal(pos):
+            return [pos]
 
     # Create the start node.
     nums = iter(xrange(maxint))
@@ -50,6 +56,9 @@ def astar(start_pos, neighbors, goal, start_g, cost, heuristic, limit=maxint,
 
     # Track the best path found so far.
     best = start
+
+    # Record start time
+    start_time = time.time()
 
     while heap:
 
@@ -69,8 +78,10 @@ def astar(start_pos, neighbors, goal, start_g, cost, heuristic, limit=maxint,
             if neighbor is None:
 
                 # Limit the search.
-                if len(nodes) >= limit:
-                    continue
+                #if len(nodes) >= limit:
+                    #continue
+                if time.time() - start_time > timeout:
+                    return None
 
                 # We have found a new node.
                 neighbor_h = heuristic(neighbor_pos)

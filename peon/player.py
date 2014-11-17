@@ -6,7 +6,6 @@ from math import floor
 import threading
 import types
 import itertools
-from sys import maxint
 import logging
 
 
@@ -168,16 +167,19 @@ class Player(object):
     def inventory(self):
         return self.windows.get(0)
 
-    def navigate_to(self, x, y, z, speed=10, space=0, limit=maxint):
+    def navigate_to(self, x, y, z, speed=10, space=0, timeout=None):
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
-        path = self.world.find_path(x0, y0, z0, x, y, z, limit=limit)
-        if path is None:
-            return False
-        if len(path) <= space:
+        log.debug('navigating from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
+        if (x0, y0, z0) == (x, y, z):
             return True
-        end = -space if space > 0 else len(path)
-        for x, y, z in path[:end]:
+        path = self.world.find_path(x0, y0, z0, x, y, z, space=space, timeout=timeout)
+        if not path:
+            return False
+        return self.follow_path(path)
+
+    def follow_path(self, path, speed=10):
+        for x, y, z in path:
             if not self.move_to(x, y, z, speed=speed, center=True):
                 log.error("can't move to: %s", str((x, y, z)))
                 return False
@@ -315,34 +317,45 @@ class Player(object):
                        face=127)
         return self._food >= target
 
-    def hunt(self, home=None, mob_types=None, space=3, speed=10):
+    def hunt(self, home=None, mob_types=None, space=3, speed=10, _range=50):
         if not self._health or self._health <= 10:
             log.warn('health unknown or too low: %s', self._health)
             return False
         home = self.get_position(floor=True) if home is None else home
+        if not self.navigate_to(*home, timeout=30):
+            log.warn('failed nav to home')
+            return False
         self.enable_auto_action('defend')
-        original_set = self.auto_defend_mob_types.copy()
-        if mob_types:
-            for _type in mob_types:
-                if isinstance(_type, basestring):
-                    _type = types.MobTypes().get_id(_type)
-                self.auto_defend_mob_types.add(_type)
-        else:
+        if mob_types is None:
             mob_types = types.HOSTILE_MOBS
-        for entity in self.iter_entities_in_range(mob_types, reach=30):
+        for entity in self.iter_entities_in_range(mob_types, reach=_range):
             log.info("hunting entity: %s", str(entity))
-            eid = entity.eid
-            count = 0
-            while eid in self.world.entities and self._health > 10 and count < 100:
-                count += 1
-                x, y, z = entity.position
-                if not self.navigate_to(
-                        x, y, z, space=space, speed=speed, limit=60):
-                    log.warn("can't nav to entity: %s", str(entity))
-                    break
-                time.sleep(0.1)
-            else:
-                self.auto_defend_mob_types = original_set
-                return self.navigate_to(*home)
-        self.auto_defend_mob_types = original_set
-        return self.navigate_to(*home)
+            x0, y0, z0 = self.get_position(floor=True)
+            x, y, z = entity.get_position(floor=True)
+            path = self.world.find_path(x0, y0, z0, x, y, z, space=space, timeout=30)
+            if path:
+                break
+        else:
+            return False
+        self.follow_path(path)
+        self.attack_entity(entity)
+        self.navigate_to(*path[-1])
+        path.reverse()
+        path.append(home)
+        self.follow_path(path)
+        return self.navigate_to(*home, timeout=30)
+
+    def attack_entity(self, entity, space=3, timeout=6):
+        on_kill_list = entity._type in self.auto_defend_mob_types
+        if not on_kill_list:
+            self.auto_defend_mob_types.add(entity._type)
+        start = time.time()
+        while self._health > 10 and entity.eid in self.world.entities:
+            x, y, z = entity.get_position(floor=True)
+            if not self.navigate_to(x, y, z, space=space, timeout=2):
+                break
+            elif time.time() - start > timeout:
+                break
+            time.sleep(0.1)
+        if not on_kill_list:
+            self.auto_defend_mob_types.remove(entity._type)

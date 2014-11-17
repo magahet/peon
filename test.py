@@ -10,4 +10,4 @@ bot.connect('localhost', 'peon', '', auth=False)
 
 bot.player.enable_auto_action('eat')
 bot.player.enable_auto_action('defend')
-bot.player.enable_auto_action('hunt')
+#bot.player.enable_auto_action('hunt')

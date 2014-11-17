@@ -3,7 +3,6 @@ from math import floor
 import smpmap
 import astar
 from types import (MobTypes, ItemTypes)
-from sys import maxint
 
 
 class World(smpmap.World):
@@ -56,8 +55,25 @@ class World(smpmap.World):
                 yield (x, y, z)
 
     def is_moveable(self, x0, y0, z0, x, y, z):
+        # check y movement
+        if any([
+            y > y0 and not self.is_safe_non_solid_block(x0, y + 1, z0),
+            y0 > y and not self.is_safe_non_solid_block(x, y0 + 1, z),
+        ]):
+            return False
+
+        # check horizontal x z movement
         if x0 == x or z0 == z:
             return self.is_standable(x, y, z)
+
+        # check diagonal y movement
+        if any([
+            not self.is_safe_non_solid_block(x, max(y0, y) + 1, z0),
+            not self.is_safe_non_solid_block(x0, max(y0, y) + 1, z),
+        ]):
+            return False
+
+        # check diagonal x z movement
         return all([
             self.is_safe_non_solid_block(x0, y, z),
             self.is_safe_non_solid_block(x, y, z0),
@@ -67,6 +83,7 @@ class World(smpmap.World):
     def is_standable(self, x, y, z):
         return all([
             self.is_breathable_block(x, y + 1, z),
+            self.is_safe_non_solid_block(x, y + 1, z),
             self.is_safe_non_solid_block(x, y, z),
             self.is_climbable_block(x, y - 1, z),
         ])
@@ -77,18 +94,20 @@ class World(smpmap.World):
             not self.is_solid_block(x, y, z),
         ])
 
-    def find_path(self, x0, y0, z0, x, y, z, limit=maxint, debug=None):
+    def find_path(self, x0, y0, z0, x, y, z, space=0, timeout=10, debug=None):
 
         def iter_moveable_adjacent(pos):
             return self.iter_moveable_adjacent(*pos)
 
+        #if timeout is None:
+            #timeout = max(1, euclidean((x0, y0, z0), (x, y, z)) // 10)
         return astar.astar(
-            (floor(x0), floor(y0), floor(z0)),      # start_pos
-            iter_moveable_adjacent,                 # neighbors
-            lambda p: p == (x, y, z),               # at_goal
-            0,                                      # start_g
-            lambda p1, p2: euclidean(p1, p2),       # cost
-            lambda p: euclidean(p, (x, y, z)),      # heuristic
-            limit,                                  # limit
-            debug                                   # debug
+            (floor(x0), floor(y0), floor(z0)),              # start_pos
+            iter_moveable_adjacent,                         # neighbors
+            lambda p: euclidean(p, (x, y, z)) <= space,     # at_goal
+            0,                                              # start_g
+            lambda p1, p2: euclidean(p1, p2),               # cost
+            lambda p: euclidean(p, (x, y, z)),              # heuristic
+            timeout,                                        # timeout
+            debug                                           # debug
         )

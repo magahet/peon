@@ -1,4 +1,5 @@
 from types import MobTypes
+import numpy as np
 
 
 class Entity(object):
@@ -25,6 +26,15 @@ class Entity(object):
     @property
     def position(self):
         return (self.x, self.y, self.z)
+
+    def get_position(self, dx=0, dy=0, dz=0, floor=False):
+        if self.x is None:
+            return (None, None, None)
+        position = np.add((self.x, self.y, self.z), (dx, dy, dz))
+        if floor:
+            return tuple([int(i) for i in np.floor(position)])
+        else:
+            return tuple(position)
 
     def move(self, dx, dy, dz):
         self.x += dx
