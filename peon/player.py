@@ -167,7 +167,7 @@ class Player(object):
     def inventory(self):
         return self.windows.get(0)
 
-    def navigate_to(self, x, y, z, speed=10, space=0, timeout=None):
+    def navigate_to(self, x, y, z, speed=10, space=0, timeout=10):
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
         log.debug('navigating from %s to %s.', str((x0, y0, z0)), str((x, y, z)))

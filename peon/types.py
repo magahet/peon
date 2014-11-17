@@ -161,3 +161,43 @@ class InventoryTypes(object):
         for _range, description in cls.types.get(_type, []):
             if slot_num in _range:
                 return description
+
+
+class ObjectTypes(object):
+    types = (
+        (1, 'Boat'),
+        (2, 'Item Stack'),
+        (10, 'Minecart'),
+        (50, 'Activated TNT'),
+        (51, 'EnderCrystal'),
+        (60, 'Arrow'),
+        (61, 'Snowball'),
+        (62, 'Egg'),
+        (63, 'FireBall'),
+        (64, 'FireCharge'),
+        (65, 'Thrown Enderpearl'),
+        (66, 'Wither Skull'),
+        (70, 'Falling Objects'),
+        (71, 'Item frames'),
+        (72, 'Eye of Ender'),
+        (73, 'Thrown Potion'),
+        (74, 'Falling Dragon Egg'),
+        (75, 'Thrown Exp Bottle'),
+        (76, 'Firework Rocket'),
+        (77, 'Leash Knot'),
+        (78, 'ArmorStand'),
+        (90, 'Fishing Float'),
+    )
+
+    @classmethod
+    def get_id(cls, name_query):
+        for _id, name in cls.types:
+            if name == name_query:
+                return _id
+
+    @classmethod
+    def get_name(cls, id_query):
+        for _id, name in cls.types:
+            if _id == id_query:
+                return name
+        return 'Unknown'

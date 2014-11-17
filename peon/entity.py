@@ -1,5 +1,51 @@
-from types import MobTypes
+from types import (MobTypes, ObjectTypes)
 import numpy as np
+
+
+class Object(object):
+    def __init__(self, eid, _type, x, y, z, pitch, yaw, data):
+        self.eid = eid
+        self._type = _type if isinstance(_type, int) else MobTypes.get_id(_type)
+        self.x = x
+        self.y = y
+        self.z = z
+        self.pitch = pitch
+        self.yaw = yaw
+        self.data = data
+        self.metadata = {}
+
+    def __repr__(self):
+        return 'Object(eid={}, _type={}, x={}, y={}, z={})'.format(
+            self.eid, ObjectTypes.get_name(self._type), self.x, self.y, self.z)
+
+    @property
+    def position(self):
+        return (self.x, self.y, self.z)
+
+    def get_position(self, dx=0, dy=0, dz=0, floor=False):
+        if self.x is None:
+            return (None, None, None)
+        position = np.add((self.x, self.y, self.z), (dx, dy, dz))
+        if floor:
+            return tuple([int(i) for i in np.floor(position)])
+        else:
+            return tuple(position)
+
+    def move(self, dx, dy, dz):
+        self.x += dx
+        self.y += dy
+        self.z += dz
+
+    def look(self, yaw, pitch):
+        self.yaw = yaw
+        self.pitch = pitch
+
+    def teleport(self, x, y, z, yaw, pitch):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.yaw = yaw
+        self.pitch = pitch
 
 
 class Entity(object):

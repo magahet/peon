@@ -10,7 +10,7 @@ import time
 import math
 from world import World
 from player import Player
-from entity import Entity
+from entity import (Entity, Object)
 from window import Window
 from utils import ThreadSafeCounter
 
@@ -52,6 +52,9 @@ class Client(object):
         }
         self.interesting = [
             #self.proto.PlayClientboundChunkData.id
+            #self.proto.PlayClientboundSpawnObject.id,
+            #self.proto.PlayClientboundEntityMetadata.id,
+            #self.proto.PlayClientboundEntityEquipment.id,
         ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
@@ -61,6 +64,7 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundSetCompression.id): self.on_play_set_compression,
             (fastmc.proto.PLAY, self.proto.PlayClientboundChatMesage.id): self.on_play_chat_message,
             (fastmc.proto.PLAY, self.proto.PlayClientboundHealthUpdate.id): self.on_play_health_update,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnObject.id): self.on_play_spawn_object,
             (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnMob.id): self.on_play_spawn_mob,
             (fastmc.proto.PLAY, self.proto.PlayClientboundEntityVelocity.id): self.on_play_entity_velocity,
             (fastmc.proto.PLAY, self.proto.PlayClientboundEntityRelativeMove.id): self.on_play_entity_relative_move,
@@ -325,6 +329,17 @@ class Client(object):
         self.player._food = pkt.food
         self.player._food_saturation = pkt.food_saturation
 
+    def on_play_spawn_object(self, pkt):
+        self.world.objects[pkt.eid] = Object(
+            pkt.eid,
+            pkt.type,
+            pkt.x,
+            pkt.y,
+            pkt.z,
+            pkt.pitch,
+            pkt.yaw,
+            pkt.data)
+
     def on_play_spawn_mob(self, pkt):
         self.world.entities[pkt.eid] = Entity(
             pkt.eid,
@@ -341,43 +356,51 @@ class Client(object):
             pkt.metadata)
 
     def on_play_entity_velocity(self, pkt):
-        if pkt.eid not in self.world.entities:
-            return
-        self.world.entities[pkt.eid].velocity_x = pkt.velocity_x
-        self.world.entities[pkt.eid].velocity_y = pkt.velocity_y
-        self.world.entities[pkt.eid].velocity_z = pkt.velocity_z
+        if pkt.eid in self.world.entities:
+            self.world.entities[pkt.eid].velocity_x = pkt.velocity_x
+            self.world.entities[pkt.eid].velocity_y = pkt.velocity_y
+            self.world.entities[pkt.eid].velocity_z = pkt.velocity_z
 
     def on_play_entity_relative_move(self, pkt):
-        if pkt.eid not in self.world.entities:
-            return
-        self.world.entities[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
+        if pkt.eid in self.world.entities:
+            self.world.entities[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
+        elif pkt.eid in self.world.objects:
+            self.world.objects[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
 
     def on_play_entity_look(self, pkt):
-        if pkt.eid not in self.world.entities:
-            return
-        self.world.entities[pkt.eid].look(pkt.yaw, pkt.pitch)
+        if pkt.eid in self.world.entities:
+            self.world.entities[pkt.eid].look(pkt.yaw, pkt.pitch)
+        elif pkt.eid in self.world.objects:
+            self.world.objects[pkt.eid].look(pkt.yaw, pkt.pitch)
 
     def on_play_entity_look_and_relative_move(self, pkt):
-        if pkt.eid not in self.world.entities:
-            return
-        self.world.entities[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
-        self.world.entities[pkt.eid].look(pkt.yaw, pkt.pitch)
+        if pkt.eid in self.world.entities:
+            self.world.entities[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
+            self.world.entities[pkt.eid].look(pkt.yaw, pkt.pitch)
+        elif pkt.eid in self.world.objects:
+            self.world.objects[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
+            self.world.objects[pkt.eid].look(pkt.yaw, pkt.pitch)
 
     def on_play_entity_teleport(self, pkt):
-        if pkt.eid not in self.world.entities:
-            return
-        self.world.entities[pkt.eid].teleport(pkt.x, pkt.y, pkt.z, pkt.yaw,
-                                              pkt.pitch)
+        if pkt.eid in self.world.entities:
+            self.world.entities[pkt.eid].teleport(pkt.x, pkt.y, pkt.z, pkt.yaw,
+                                                  pkt.pitch)
+        elif pkt.eid in self.world.objects:
+            self.world.objects[pkt.eid].teleport(pkt.x, pkt.y, pkt.z, pkt.yaw,
+                                                 pkt.pitch)
 
     def on_play_entity_metadata(self, pkt):
-        if pkt.eid not in self.world.entities:
-            return
-        self.world.entities[pkt.eid].metadata.update(pkt.metadata)
+        if pkt.eid in self.world.entities:
+            self.world.entities[pkt.eid].metadata.update(pkt.metadata)
+        elif pkt.eid in self.world.objects:
+            self.world.objects[pkt.eid].metadata.update(pkt.metadata)
 
     def on_play_destroy_entities(self, pkt):
         for eid in pkt.eids:
             if eid in self.world.entities:
                 del self.world.entities[eid]
+            elif eid in self.world.objects:
+                del self.world.objects[eid]
 
     def on_play_set_experience(self, pkt):
         self.player._xp_bar = pkt.bar

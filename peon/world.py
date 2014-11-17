@@ -2,13 +2,15 @@ from scipy.spatial.distance import euclidean
 from math import floor
 import smpmap
 import astar
-from types import (MobTypes, ItemTypes)
+from types import (MobTypes, ItemTypes, ObjectTypes)
+from window import Slot
 
 
 class World(smpmap.World):
     def __init__(self):
         self.columns = {}
         self.entities = {}
+        self.objects = {}
         self.dimmension = 0
 
     def iter_entities(self, types=None):
@@ -19,6 +21,24 @@ class World(smpmap.World):
         for entity in self.entities.values():
             if types is None or entity._type in types:
                 yield entity
+
+    def iter_objects(self, types=None, items=None):
+        if isinstance(types, list):
+            types = [t if isinstance(t, int)
+                     else ObjectTypes.get_id(t)
+                     for t in types]
+        if isinstance(items, list):
+            items = [i if isinstance(i, basestring)
+                     else ItemTypes.get_name(*i)
+                     for i in items]
+        for obj in self.objects.values():
+            if types is None or obj._type in types:
+                if ObjectTypes.get_name(obj._type) == 'Item Stack':
+                    slot = Slot(obj.metadata.get(10, (None, None))[1])
+                    if items is None or slot.name in items:
+                        yield obj
+                else:
+                    yield obj
 
     def is_solid_block(self, x, y, z):
         _type = self.get_id(x, y, z)
@@ -99,8 +119,6 @@ class World(smpmap.World):
         def iter_moveable_adjacent(pos):
             return self.iter_moveable_adjacent(*pos)
 
-        #if timeout is None:
-            #timeout = max(1, euclidean((x0, y0, z0), (x, y, z)) // 10)
         return astar.astar(
             (floor(x0), floor(y0), floor(z0)),              # start_pos
             iter_moveable_adjacent,                         # neighbors
