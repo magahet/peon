@@ -55,6 +55,7 @@ class Client(object):
             #self.proto.PlayClientboundSpawnObject.id,
             #self.proto.PlayClientboundEntityMetadata.id,
             #self.proto.PlayClientboundEntityEquipment.id,
+            self.proto.PlayClientboundPlayerPositionAndLook.id,
         ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,

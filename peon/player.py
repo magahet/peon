@@ -38,15 +38,18 @@ class Player(object):
         self.world = world
         self.on_ground = True
         self._is_moving = threading.Event()
-        self._move_lock = threading.Lock()
+        self._position_update_lock = threading.Lock()
+        self._movement_lock = threading.Lock()
         self.move_corrected_by_server = threading.Event()
         self._action_lock = threading.Lock()
         self._auto_actions = {
             'defend': threading.Event(),
             'eat': threading.Event(),
             'hunt': threading.Event(),
+            'gather': threading.Event(),
         }
         self.auto_defend_mob_types = types.HOSTILE_MOBS
+        self.auto_gather_items = set([])
         self._auto_eat = threading.Event()
         self._auto_eat_level = 18
         self.auto_hunt_settings = {}
@@ -56,6 +59,7 @@ class Player(object):
             'auto_defend': self._do_auto_defend,
             'auto_eat': self._do_auto_eat,
             'auto_hunt': self._do_auto_hunt,
+            'auto_gather': self._do_auto_hunt,
         }
         self._active_threads = set(self._thread_funcs.keys())
         self.start_threads()
@@ -136,6 +140,15 @@ class Player(object):
             self.hunt(**self.auto_hunt_settings)
             time.sleep(1)
 
+    def _do_auto_gather(self):
+        auto_gather = self._auto_actions.get('gather')
+        self._wait_for(
+            lambda: None not in (self.inventory, self._food, self._health))
+        while True:
+            auto_gather.wait()
+            self.gather(self.auto_gather_items)
+            time.sleep(1)
+
     def _send(self, packet_id, **kwargs):
         self._send_queue.put((packet_id, kwargs))
 
@@ -170,7 +183,7 @@ class Player(object):
     def navigate_to(self, x, y, z, speed=10, space=0, timeout=10):
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
-        log.debug('navigating from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
+        log.info('navigating from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
         if (x0, y0, z0) == (x, y, z):
             return True
         path = self.world.find_path(x0, y0, z0, x, y, z, space=space, timeout=timeout)
@@ -214,22 +227,28 @@ class Player(object):
         return True
 
     def move(self, dx=0, dy=0, dz=0):
-        with self._move_lock:
+        with self._position_update_lock:
             self.x += dx
             self.y += dy
             self.z += dz
 
     def teleport(self, x, y, z, yaw, pitch):
-        self._move_lock.acquire()
+        self._position_update_lock.acquire()
         self.x = x
         self.y = y
         self.z = z
         self.yaw = yaw
         self.pitch = pitch
-        self._move_lock.release()
+        self._position_update_lock.release()
 
     def iter_entities_in_range(self, types=None, reach=4):
         for entity in self.world.iter_entities(types=types):
+            if euclidean((self.x, self.y, self.z),
+                         (entity.x, entity.y, entity.z)) <= reach:
+                yield entity
+
+    def iter_objects_in_range(self, types=None, items=None, reach=10):
+        for entity in self.world.iter_objects(types=types, items=items):
             if euclidean((self.x, self.y, self.z),
                          (entity.x, entity.y, entity.z)) <= reach:
                 yield entity
@@ -325,25 +344,43 @@ class Player(object):
         if not self.navigate_to(*home, timeout=30):
             log.warn('failed nav to home')
             return False
+        x0, y0, z0 = home
         self.enable_auto_action('defend')
         if mob_types is None:
             mob_types = types.HOSTILE_MOBS
         for entity in self.iter_entities_in_range(mob_types, reach=_range):
             log.info("hunting entity: %s", str(entity))
-            x0, y0, z0 = self.get_position(floor=True)
             x, y, z = entity.get_position(floor=True)
-            path = self.world.find_path(x0, y0, z0, x, y, z, space=space, timeout=30)
+            path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
+                                        timeout=10)
             if path:
                 break
         else:
             return False
-        self.follow_path(path)
-        self.attack_entity(entity)
-        self.navigate_to(*path[-1])
-        path.reverse()
-        path.append(home)
-        self.follow_path(path)
-        return self.navigate_to(*home, timeout=30)
+        with self._movement_lock:
+            self.follow_path(path)
+            self.attack_entity(entity)
+            self.navigate_to(*path[-1])
+            path.reverse()
+            path.append(home)
+            return self.follow_path(path)
+
+    def gather(self, items, _range=50):
+        x0, y0, z0 = self.get_position(floor=True)
+        for _object in self.iter_objects_in_range(items=items, reach=_range):
+            log.info("gathering object: %s", str(_object))
+            x, y, z = _object.get_position(floor=True)
+            path = self.world.find_path(x0, y0, z0, x, y, z, space=1,
+                                        timeout=30)
+            if path:
+                break
+        else:
+            return False
+        with self._movement_lock:
+            self.follow_path(path)
+            path.reverse()
+            path.append((x0, y0, z0))
+            return self.follow_path(path)
 
     def attack_entity(self, entity, space=3, timeout=6):
         on_kill_list = entity._type in self.auto_defend_mob_types
