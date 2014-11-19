@@ -74,30 +74,28 @@ class World(smpmap.World):
             if self.is_moveable(x0, y0, z0, x, y, z):
                 yield (x, y, z)
 
-    def is_moveable(self, x0, y0, z0, x, y, z):
-        # check y movement
-        if any([
-            y > y0 and not self.is_safe_non_solid_block(x0, y + 1, z0),
-            y0 > y and not self.is_safe_non_solid_block(x, y0 + 1, z),
-        ]):
-            return False
+    def is_moveable(self, x0, y0, z0, x, y, z, with_floor=True):
+        # check target spot
+        if with_floor:
+            if not self.is_standable(x, y, z):
+                return False
+        else:
+            if not self.is_passable(x, y, z):
+                return False
 
-        # check horizontal x z movement
+        if y > y0:
+            return self.is_moveable(x0, y, z0, x, y, z)
+        elif y < y0:
+            return self.is_moveable(x0, y0, z0, x, y0, z, with_floor=False)
+
+        # check if horizontal x z movement
         if x0 == x or z0 == z:
-            return self.is_standable(x, y, z)
-
-        # check diagonal y movement
-        if any([
-            not self.is_safe_non_solid_block(x, max(y0, y) + 1, z0),
-            not self.is_safe_non_solid_block(x0, max(y0, y) + 1, z),
-        ]):
-            return False
+            return True
 
         # check diagonal x z movement
         return all([
             self.is_safe_non_solid_block(x0, y, z),
             self.is_safe_non_solid_block(x, y, z0),
-            self.is_standable(x, y, z),
         ])
 
     def is_standable(self, x, y, z):
@@ -108,10 +106,10 @@ class World(smpmap.World):
             self.is_climbable_block(x, y - 1, z),
         ])
 
-    def is_empty(self, x, y, z):
+    def is_passable(self, x, y, z):
         return all([
-            not self.is_solid_block(x, y + 1, z),
-            not self.is_solid_block(x, y, z),
+            self.is_safe_non_solid_block(x, y + 1, z),
+            self.is_safe_non_solid_block(x, y, z),
         ])
 
     def find_path(self, x0, y0, z0, x, y, z, space=0, timeout=10, debug=None):

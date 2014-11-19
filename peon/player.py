@@ -231,6 +231,7 @@ class Player(object):
             self.x += dx
             self.y += dy
             self.z += dz
+            log.info('moved to: %s', str(self.position))
 
     def teleport(self, x, y, z, yaw, pitch):
         self._position_update_lock.acquire()
