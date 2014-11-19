@@ -7,6 +7,7 @@ import threading
 import types
 import itertools
 import logging
+import sys
 
 
 log = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class Player(object):
             'auto_defend': self._do_auto_defend,
             'auto_eat': self._do_auto_eat,
             'auto_hunt': self._do_auto_hunt,
-            'auto_gather': self._do_auto_hunt,
+            'auto_gather': self._do_auto_gather,
         }
         self._active_threads = set(self._thread_funcs.keys())
         self.start_threads()
@@ -192,9 +193,11 @@ class Player(object):
         return self.follow_path(path)
 
     def follow_path(self, path, speed=10):
+        log.info('following path: %s', str(path))
         for x, y, z in path:
             if not self.move_to(x, y, z, speed=speed, center=True):
                 log.error("can't move to: %s", str((x, y, z)))
+                sys.exit(1)
                 return False
         return True
 
@@ -341,24 +344,24 @@ class Player(object):
         if not self._health or self._health <= 10:
             log.warn('health unknown or too low: %s', self._health)
             return False
-        home = self.get_position(floor=True) if home is None else home
-        if not self.navigate_to(*home, timeout=30):
-            log.warn('failed nav to home')
-            return False
-        x0, y0, z0 = home
         self.enable_auto_action('defend')
         if mob_types is None:
             mob_types = types.HOSTILE_MOBS
-        for entity in self.iter_entities_in_range(mob_types, reach=_range):
-            log.info("hunting entity: %s", str(entity))
-            x, y, z = entity.get_position(floor=True)
-            path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
-                                        timeout=10)
-            if path:
-                break
-        else:
-            return False
         with self._movement_lock:
+            home = self.get_position(floor=True) if home is None else home
+            if not self.navigate_to(*home, timeout=30):
+                log.warn('failed nav to home')
+                return False
+            x0, y0, z0 = home
+            for entity in self.iter_entities_in_range(mob_types, reach=_range):
+                log.info("hunting entity: %s", str(entity))
+                x, y, z = entity.get_position(floor=True)
+                path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
+                                            timeout=10)
+                if path:
+                    break
+            else:
+                return False
             self.follow_path(path)
             self.attack_entity(entity)
             self.navigate_to(*path[-1])
@@ -367,17 +370,17 @@ class Player(object):
             return self.follow_path(path)
 
     def gather(self, items, _range=50):
-        x0, y0, z0 = self.get_position(floor=True)
-        for _object in self.iter_objects_in_range(items=items, reach=_range):
-            log.info("gathering object: %s", str(_object))
-            x, y, z = _object.get_position(floor=True)
-            path = self.world.find_path(x0, y0, z0, x, y, z, space=1,
-                                        timeout=30)
-            if path:
-                break
-        else:
-            return False
         with self._movement_lock:
+            x0, y0, z0 = self.get_position(floor=True)
+            for _object in self.iter_objects_in_range(items=items, reach=_range):
+                log.info("gathering object: %s", str(_object))
+                x, y, z = _object.get_position(floor=True)
+                path = self.world.find_path(x0, y0, z0, x, y, z, space=1,
+                                            timeout=30)
+                if path:
+                    break
+            else:
+                return False
             self.follow_path(path)
             path.reverse()
             path.append((x0, y0, z0))
