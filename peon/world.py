@@ -84,7 +84,10 @@ class World(smpmap.World):
                 return False
 
         if y > y0:
-            return self.is_moveable(x0, y, z0, x, y, z)
+            return all([
+                self.is_passable(x0, y, z0),
+                self.is_moveable(x0, y, z0, x, y, z)
+            ])
         elif y < y0:
             return self.is_moveable(x0, y0, z0, x, y0, z, with_floor=False)
 
@@ -94,8 +97,8 @@ class World(smpmap.World):
 
         # check diagonal x z movement
         return all([
-            self.is_safe_non_solid_block(x0, y, z),
-            self.is_safe_non_solid_block(x, y, z0),
+            self.is_passable(x0, y, z),
+            self.is_passable(x, y, z0),
         ])
 
     def is_standable(self, x, y, z):
