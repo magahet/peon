@@ -184,7 +184,7 @@ class Player(object):
     def navigate_to(self, x, y, z, speed=10, space=0, timeout=10):
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
-        log.info('navigating from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
+        log.debug('navigating from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
         if (x0, y0, z0) == (x, y, z):
             return True
         path = self.world.find_path(x0, y0, z0, x, y, z, space=space, timeout=timeout)
@@ -193,7 +193,7 @@ class Player(object):
         return self.follow_path(path)
 
     def follow_path(self, path, speed=10):
-        log.info('following path: %s', str(path))
+        log.debug('following path: %s', str(path))
         for x, y, z in path:
             if not self.move_to(x, y, z, speed=speed, center=True):
                 log.error("can't move to: %s", str((x, y, z)))
@@ -234,7 +234,7 @@ class Player(object):
             self.x += dx
             self.y += dy
             self.z += dz
-            log.info('moved to: %s', str(self.position))
+            log.debug('moved to: %s', str(self.position))
 
     def teleport(self, x, y, z, yaw, pitch):
         self._position_update_lock.acquire()

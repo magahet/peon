@@ -14,7 +14,7 @@ class World(smpmap.World):
         self.dimmension = 0
 
     def iter_entities(self, types=None):
-        if isinstance(types, list):
+        if hasattr(types, '__iter__'):
             types = [t if isinstance(t, int)
                      else MobTypes.get_id(t)
                      for t in types]
@@ -23,11 +23,11 @@ class World(smpmap.World):
                 yield entity
 
     def iter_objects(self, types=None, items=None):
-        if isinstance(types, list):
+        if hasattr(types, '__iter__'):
             types = [t if isinstance(t, int)
                      else ObjectTypes.get_id(t)
                      for t in types]
-        if isinstance(items, list):
+        if hasattr(items, '__iter__'):
             items = [i if isinstance(i, basestring)
                      else ItemTypes.get_name(*i)
                      for i in items]
@@ -37,7 +37,7 @@ class World(smpmap.World):
                     slot = Slot(obj.metadata.get(10, (None, None))[1])
                     if items is None or slot.name in items:
                         yield obj
-                else:
+                elif items is None:
                     yield obj
 
     def is_solid_block(self, x, y, z):
