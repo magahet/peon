@@ -2,7 +2,7 @@ import os
 import json
 
 
-HOSTILE_MOBS = set(range(48, 65) + range(66, 69))
+HOSTILE_MOBS = set(range(48, 65) + range(66, 69) + [93])
 DANGER_BLOCKS = set([
     'Flowing Lava',
     'Still Lava'
@@ -31,6 +31,18 @@ FOOD = set([
     'Melon',
     'Cookie',
 ])
+ARMOR_MATERIAL = set([
+    'Diamond',
+    'Golden',
+    'Iron',
+    'Chain',
+])
+ARMOR = {
+    5: 'Helmet',
+    6: 'Chestplate',
+    7: 'Leggings',
+    8: 'Boots',
+}
 
 
 class MobTypes(object):

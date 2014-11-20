@@ -10,6 +10,7 @@ class World(smpmap.World):
     def __init__(self):
         self.columns = {}
         self.entities = {}
+        self.players = {}
         self.objects = {}
         self.dimmension = 0
 
@@ -60,6 +61,20 @@ class World(smpmap.World):
         for y in xrange(int(y), -1, -1):
             if self.is_solid_block(x, y, z):
                 return (x, y, z)
+
+    def get_player_position(self, player_name=None, eid=None, uuid=None):
+        player = None
+        if player_name is not None:
+            pass
+        elif eid is not None:
+            player = self.players.get(eid)
+        elif uuid is not None:
+            for eid, cur_player in self.players.iteritems():
+                if player.uuid == uuid:
+                    player = cur_player
+                    break
+        if player is not None:
+            return player.get_position(floor=True)
 
     @staticmethod
     def iter_adjacent(x, y, z):

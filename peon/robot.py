@@ -174,6 +174,7 @@ class Robot(Player):
         return self.food >= target
 
     def hunt(self, home=None, mob_types=None, space=3, speed=10, _range=50):
+        self.don_armor()
         if not self.health or self.health <= 10:
             log.warn('health unknown or too low: %s', self.health)
             return False
@@ -233,3 +234,26 @@ class Robot(Player):
             time.sleep(0.1)
         if not on_kill_list:
             self.auto_defend_mob_types.remove(entity._type)
+
+    def don_armor(self):
+        '''Put on best armor in inventory'''
+        for slot_num, armor in types.ARMOR.iteritems():
+            slot = self.inventory.slots[slot_num]
+            if slot is not None:
+                current_material, _, _ = slot.name.partition(' ')
+            else:
+                current_material = ''
+            for material in types.ARMOR_MATERIAL:
+                if current_material == material:
+                    break
+                armor_name = ' '.join([material, armor])
+                if armor_name in self.inventory:
+                    self.inventory.swap_slots(slot_num,
+                                              self.inventory.index(armor_name))
+
+    def move_to_player(self, player_name=None, eid=None, uuid=None):
+        player_position = self.world.get_player_position(
+            player_name=player_name, eid=eid, uuid=uuid)
+        if player_position is not None:
+            return self.navigate_to(*player_position)
+        return False

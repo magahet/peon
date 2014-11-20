@@ -10,7 +10,7 @@ import time
 import math
 from world import World
 from robot import Robot
-from entity import (Entity, Object)
+from entity import (Entity, Object, PlayerEntity)
 from window import Window
 from utils import ThreadSafeCounter
 
@@ -80,6 +80,7 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundBlockChange.id): self.on_play_block_change,
             (fastmc.proto.PLAY, self.proto.PlayClientboundMapChunkBulk.id): self.on_play_map_chunk_bulk,
             (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerPositionAndLook.id): self.on_play_player_position_and_look,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnPlayer.id): self.on_play_spawn_player,
             (fastmc.proto.PLAY, self.proto.PlayClientboundHeldItemChange.id): self.on_play_held_item_change,
             (fastmc.proto.PLAY, self.proto.PlayClientboundOpenWindow.id): self.on_play_open_window,
             (fastmc.proto.PLAY, self.proto.PlayClientboundCloseWindow.id): self.on_play_close_window,
@@ -446,6 +447,19 @@ class Client(object):
         self.bot.move_corrected_by_server.set()
         self.bot.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
 
+    def on_play_spawn_player(self, pkt):
+        self.world.players[pkt.eid] = PlayerEntity(
+            pkt.eid,
+            pkt.uuid,
+            pkt.x,
+            pkt.y,
+            pkt.z,
+            pkt.yaw,
+            pkt.pitch,
+            pkt.current_item,
+            pkt.metadata,
+        )
+
     def on_play_open_window(self, pkt):
         self.bot._open_window_id = pkt.window_id
         if pkt.window_id not in self.bot.windows:
@@ -465,12 +479,12 @@ class Client(object):
 
     def on_window_item(self, pkt):
         self.bot.windows[pkt.window_id] = Window(pkt.window_id,
-                                                    pkt.slots,
-                                                    self._action_num_counter,
-                                                    self._send_queue,
-                                                    self.proto,
-                                                    self._recv_condition
-                                                    )
+                                                 pkt.slots,
+                                                 self._action_num_counter,
+                                                 self._send_queue,
+                                                 self.proto,
+                                                 self._recv_condition
+                                                 )
 
     def on_confirm_transaction(self, pkt):
         if pkt.window_id in self.bot.windows:
