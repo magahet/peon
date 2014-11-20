@@ -6,6 +6,7 @@ from math import floor
 import threading
 import itertools
 import logging
+from fastmc.proto import Position
 
 
 log = logging.getLogger(__name__)
@@ -74,6 +75,10 @@ class Player(object):
     @property
     def inventory(self):
         return self.windows.get(0)
+
+    @property
+    def open_window(self):
+        return self.windows.get(self._open_window_id)
 
     def navigate_to(self, x, y, z, speed=10, space=0, timeout=10):
         x0, y0, z0 = self.get_position(floor=True)
@@ -187,3 +192,23 @@ class Player(object):
     def change_held_item(self, slot_num):
         self._send(self.proto.PlayServerboundHeldItemChange.id,
                    slot=slot_num)
+
+    def click_inventory_block(self, x, y, z):
+        if self._open_window_id != 0:
+            return False
+        self._send(self.proto.PlayServerboundBlockPlacement.id,
+                   location=Position(x, y, z),
+                   direction=0,
+                   held_item=None,
+                   cursor_x=0,
+                   cursor_y=0,
+                   cursor_z=0)
+        return (
+            self._wait_for(lambda: self._open_window_id != 0) and
+            self._wait_for(lambda: self._open_window_id in self.windows)
+        )
+
+    def close_window(self):
+        self._send(self.proto.PlayServerboundCloseWindow.id,
+                   window_id=self._open_window_id)
+        return self._wait_for(lambda: self._open_window_id == 0)

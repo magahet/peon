@@ -61,15 +61,18 @@ class Object(BaseEntity):
 class PlayerEntity(BaseEntity):
     '''Represents other players'''
 
-    def __init__(self, eid, uuid, x, y, z, yaw, pitch, current_item, metadata):
+    def __init__(self, eid, uuid, name, x, y, z, yaw, pitch, current_item,
+                 metadata):
         self.uuid = uuid
+        self.name = name
         self.current_item = current_item
         self.metadata = metadata
+        self.name = None
         super(PlayerEntity, self).__init__(eid, x, y, z, pitch, yaw)
 
     def __repr__(self):
-        return 'Entity(eid={}, xyz={})'.format(self.eid,
-                                               self.get_position(floor=True))
+        return 'PlayerEntity(eid={}, name={}, xyz={})'.format(
+            self.eid, self.name, self.get_position(floor=True))
 
 
 class Entity(BaseEntity):

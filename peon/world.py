@@ -11,6 +11,7 @@ class World(smpmap.World):
         self.columns = {}
         self.entities = {}
         self.players = {}
+        self.player_data = {}
         self.objects = {}
         self.dimmension = 0
 

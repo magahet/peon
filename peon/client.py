@@ -55,38 +55,41 @@ class Client(object):
             #self.proto.PlayClientboundSpawnObject.id,
             #self.proto.PlayClientboundEntityMetadata.id,
             #self.proto.PlayClientboundEntityEquipment.id,
-            self.proto.PlayClientboundPlayerPositionAndLook.id,
+            #self.proto.PlayClientboundPlayerPositionAndLook.id,
+            #self.proto.PlayClientboundChatMesage.id,
+            #self.proto.PlayClientboundPlayerListItem.id,
         ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
             (fastmc.proto.LOGIN, self.proto.LoginClientboundLoginSuccess.id): self.on_login_login_success,
             (fastmc.proto.LOGIN, self.proto.LoginClientboundSetCompression.id): self.on_login_set_compression,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundKeepAlive.id): self.on_play_keepalive,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundSetCompression.id): self.on_play_set_compression,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundChatMesage.id): self.on_play_chat_message,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundHealthUpdate.id): self.on_play_health_update,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnObject.id): self.on_play_spawn_object,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnMob.id): self.on_play_spawn_mob,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityVelocity.id): self.on_play_entity_velocity,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityRelativeMove.id): self.on_play_entity_relative_move,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityLook.id): self.on_play_entity_look,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityLookAndRelativeMove.id): self.on_play_entity_look_and_relative_move,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityTeleport.id): self.on_play_entity_teleport,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityMetadata.id): self.on_play_entity_metadata,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundDestroyEntities.id): self.on_play_destroy_entities,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundSetExperience.id): self.on_play_set_experience,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundChunkData.id): self.on_play_chunk_data,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundMultiBlockChange.id): self.on_play_multi_block_change,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundBlockChange.id): self.on_play_block_change,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundMapChunkBulk.id): self.on_play_map_chunk_bulk,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerPositionAndLook.id): self.on_play_player_position_and_look,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnPlayer.id): self.on_play_spawn_player,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundHeldItemChange.id): self.on_play_held_item_change,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundOpenWindow.id): self.on_play_open_window,
-            (fastmc.proto.PLAY, self.proto.PlayClientboundCloseWindow.id): self.on_play_close_window,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundKeepAlive.id): self.on_keepalive,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSetCompression.id): self.on_set_compression,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundChatMesage.id): self.on_chat_message,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundHealthUpdate.id): self.on_health_update,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnObject.id): self.on_spawn_object,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnMob.id): self.on_spawn_mob,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityVelocity.id): self.on_entity_velocity,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityRelativeMove.id): self.on_entity_relative_move,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityLook.id): self.on_entity_look,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityLookAndRelativeMove.id): self.on_entity_look_and_relative_move,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityTeleport.id): self.on_entity_teleport,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundEntityMetadata.id): self.on_entity_metadata,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundDestroyEntities.id): self.on_destroy_entities,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSetExperience.id): self.on_set_experience,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundChunkData.id): self.on_chunk_data,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundMultiBlockChange.id): self.on_multi_block_change,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundBlockChange.id): self.on_block_change,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundMapChunkBulk.id): self.on_map_chunk_bulk,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerPositionAndLook.id): self.on_player_position_and_look,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundSpawnPlayer.id): self.on_spawn_player,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundHeldItemChange.id): self.on_held_item_change,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundOpenWindow.id): self.on_open_window,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundCloseWindow.id): self.on_close_window,
             (fastmc.proto.PLAY, self.proto.PlayClientboundSetSlot.id): self.on_set_slot,
             (fastmc.proto.PLAY, self.proto.PlayClientboundWindowItem.id): self.on_window_item,
             (fastmc.proto.PLAY, self.proto.PlayClientboundConfirmTransaction.id): self.on_confirm_transaction,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerListItem.id): self.on_player_list_item,
         }
 
     def set_to_login_state(self, **kwargs):
@@ -295,17 +298,17 @@ class Client(object):
         self.reader.set_compression_threshold(pkt.threshold)
         self.writer.set_compression_threshold(pkt.threshold)
 
-    def on_play_keepalive(self, pkt):
+    def on_keepalive(self, pkt):
         self.send(self.proto.PlayServerboundKeepAlive.id,
                   keepalive_id=pkt.keepalive_id
                   )
         self.last_keepalive = time.time()
 
-    def on_play_set_compression(self, pkt):
+    def on_set_compression(self, pkt):
         log.debug('setting reader compression threshold: %d', pkt.threshold)
         self.reader.set_compression_threshold(pkt.threshold)
 
-    def on_play_chat_message(self, pkt):
+    def on_chat_message(self, pkt):
         def parse_chat_json(json):
             if json.get('translate') == 'chat.type.text':
                 message_list = []
@@ -326,12 +329,12 @@ class Client(object):
         if clean_message:
             log.info('chat: %s', clean_message)
 
-    def on_play_health_update(self, pkt):
+    def on_health_update(self, pkt):
         self.bot.health = pkt.health
         self.bot.food = pkt.food
         self.bot._food_saturation = pkt.food_saturation
 
-    def on_play_spawn_object(self, pkt):
+    def on_spawn_object(self, pkt):
         self.world.objects[pkt.eid] = Object(
             pkt.eid,
             pkt.type,
@@ -342,7 +345,7 @@ class Client(object):
             pkt.yaw,
             pkt.data)
 
-    def on_play_spawn_mob(self, pkt):
+    def on_spawn_mob(self, pkt):
         self.world.entities[pkt.eid] = Entity(
             pkt.eid,
             pkt.type,
@@ -357,59 +360,73 @@ class Client(object):
             pkt.velocity_z,
             pkt.metadata)
 
-    def on_play_entity_velocity(self, pkt):
+    def on_entity_velocity(self, pkt):
         if pkt.eid in self.world.entities:
             self.world.entities[pkt.eid].velocity_x = pkt.velocity_x
             self.world.entities[pkt.eid].velocity_y = pkt.velocity_y
             self.world.entities[pkt.eid].velocity_z = pkt.velocity_z
 
-    def on_play_entity_relative_move(self, pkt):
+    def on_entity_relative_move(self, pkt):
         if pkt.eid in self.world.entities:
             self.world.entities[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
         elif pkt.eid in self.world.objects:
             self.world.objects[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
+        elif pkt.eid in self.world.players:
+            self.world.players[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
 
-    def on_play_entity_look(self, pkt):
+    def on_entity_look(self, pkt):
         if pkt.eid in self.world.entities:
             self.world.entities[pkt.eid].look(pkt.yaw, pkt.pitch)
         elif pkt.eid in self.world.objects:
             self.world.objects[pkt.eid].look(pkt.yaw, pkt.pitch)
+        elif pkt.eid in self.world.players:
+            self.world.players[pkt.eid].look(pkt.yaw, pkt.pitch)
 
-    def on_play_entity_look_and_relative_move(self, pkt):
+    def on_entity_look_and_relative_move(self, pkt):
         if pkt.eid in self.world.entities:
             self.world.entities[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
             self.world.entities[pkt.eid].look(pkt.yaw, pkt.pitch)
         elif pkt.eid in self.world.objects:
             self.world.objects[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
             self.world.objects[pkt.eid].look(pkt.yaw, pkt.pitch)
+        elif pkt.eid in self.world.players:
+            self.world.players[pkt.eid].move(pkt.dx, pkt.dy, pkt.dz)
+            self.world.players[pkt.eid].look(pkt.yaw, pkt.pitch)
 
-    def on_play_entity_teleport(self, pkt):
+    def on_entity_teleport(self, pkt):
         if pkt.eid in self.world.entities:
             self.world.entities[pkt.eid].teleport(pkt.x, pkt.y, pkt.z, pkt.yaw,
                                                   pkt.pitch)
         elif pkt.eid in self.world.objects:
             self.world.objects[pkt.eid].teleport(pkt.x, pkt.y, pkt.z, pkt.yaw,
                                                  pkt.pitch)
+        elif pkt.eid in self.world.players:
+            self.world.players[pkt.eid].teleport(pkt.x, pkt.y, pkt.z, pkt.yaw,
+                                                 pkt.pitch)
 
-    def on_play_entity_metadata(self, pkt):
+    def on_entity_metadata(self, pkt):
         if pkt.eid in self.world.entities:
             self.world.entities[pkt.eid].metadata.update(pkt.metadata)
         elif pkt.eid in self.world.objects:
             self.world.objects[pkt.eid].metadata.update(pkt.metadata)
+        elif pkt.eid in self.world.players:
+            self.world.players[pkt.eid].metadata.update(pkt.metadata)
 
-    def on_play_destroy_entities(self, pkt):
+    def on_destroy_entities(self, pkt):
         for eid in pkt.eids:
             if eid in self.world.entities:
                 del self.world.entities[eid]
             elif eid in self.world.objects:
                 del self.world.objects[eid]
+            elif eid in self.world.players:
+                del self.world.players[eid]
 
-    def on_play_set_experience(self, pkt):
+    def on_set_experience(self, pkt):
         self.bot._xp_bar = pkt.bar
         self.bot._xp_total = pkt.total_exp
         self.bot.xp_level = pkt.level
 
-    def on_play_chunk_data(self, pkt):
+    def on_chunk_data(self, pkt):
         self.world.unpack_chunk_from_fastmc(
             pkt.chunk_x,
             pkt.chunk_z,
@@ -418,7 +435,7 @@ class Client(object):
             pkt.data
         )
 
-    def on_play_multi_block_change(self, pkt):
+    def on_multi_block_change(self, pkt):
         for change in pkt.changes:
             self.world.put(
                 change.x + pkt.chunk_x * 16,
@@ -428,7 +445,7 @@ class Client(object):
                 change.block_id
             )
 
-    def on_play_block_change(self, pkt):
+    def on_block_change(self, pkt):
         self.world.put(
             pkt.location.x,
             pkt.location.y,
@@ -437,20 +454,21 @@ class Client(object):
             pkt.block_id
         )
 
-    def on_play_map_chunk_bulk(self, pkt):
+    def on_map_chunk_bulk(self, pkt):
         self.world.unpack_from_fastmc(pkt.bulk)
 
-    def on_play_held_item_change(self, pkt):
+    def on_held_item_change(self, pkt):
         self.bot._held_slot_num = pkt.slot
 
-    def on_play_player_position_and_look(self, pkt):
+    def on_player_position_and_look(self, pkt):
         self.bot.move_corrected_by_server.set()
         self.bot.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
 
-    def on_play_spawn_player(self, pkt):
+    def on_spawn_player(self, pkt):
         self.world.players[pkt.eid] = PlayerEntity(
             pkt.eid,
             pkt.uuid,
+            self.world.player_data.get(pkt.uuid, {}).get('name'),
             pkt.x,
             pkt.y,
             pkt.z,
@@ -460,16 +478,17 @@ class Client(object):
             pkt.metadata,
         )
 
-    def on_play_open_window(self, pkt):
+    def on_open_window(self, pkt):
         self.bot._open_window_id = pkt.window_id
-        if pkt.window_id not in self.bot.windows:
-            time.sleep(1)
-        if pkt.window_id in self.bot.windows:
+        if self.wait_for(lambda: pkt.window_id in self.bot.windows):
             self.bot.windows[pkt.window_id].inventory_type = pkt.type
             self.bot.windows[pkt.window_id].window_title = pkt.title
 
-    def on_play_close_window(self, pkt):
+    def on_close_window(self, pkt):
         self.bot._open_window_id = 0
+        for _id in [i for i in self.bot.windows]:
+            if _id != 0:
+                del self.bot.windows[i]
 
     def on_set_slot(self, pkt):
         if pkt.window_id == -1 and pkt.slot == -1:
@@ -490,6 +509,16 @@ class Client(object):
         if pkt.window_id in self.bot.windows:
             window = self.bot.windows[pkt.window_id]
             window._confirmations[pkt.action_num] = pkt.accepted
+
+    def on_player_list_item(self, pkt):
+        if pkt.list_actions.action == 0:
+            for player_data in pkt.list_actions.players:
+                self.world.player_data.update({
+                    player_data.uuid: {'name': player_data.name}
+                })
+                for eid in self.world.players:
+                    if self.world.players[eid].uuid == player_data.uuid:
+                        self.world.players[eid].name = player_data.name
 
     def on_unhandled(self, pkt):
         pass
