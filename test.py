@@ -5,13 +5,14 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
-bot = peon.Client()
-bot.connect('localhost', 'peon', '', auth=False)
+client = peon.Client()
+client.connect('localhost', 'peon', '', auth=False)
+bot = client.bot
 
-bot.player.enable_auto_action('eat')
-bot.player.enable_auto_action('defend')
-bot.player.enable_auto_action('gather')
-bot.player.auto_gather_items.add('Wither Skeleton Skull')
-bot.player.auto_gather_items.add('Bone')
-bot.player.auto_hunt_settings = {'home': (-39, 64, -36), 'mob_types': ['Skeleton']}
-bot.player.enable_auto_action('hunt')
+bot.enable_auto_action('eat')
+bot.enable_auto_action('defend')
+bot.enable_auto_action('gather')
+#bot.auto_gather_items.add('Wither Skeleton Skull')
+#bot.auto_gather_items.add('Bone')
+#bot.auto_hunt_settings = {'home': (-39, 64, -36), 'mob_types': ['Skeleton']}
+#bot.enable_auto_action('hunt')

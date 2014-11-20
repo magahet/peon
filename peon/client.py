@@ -9,7 +9,7 @@ import os
 import time
 import math
 from world import World
-from player import Player
+from robot import Robot
 from entity import (Entity, Object)
 from window import Window
 from utils import ThreadSafeCounter
@@ -25,10 +25,10 @@ class Client(object):
         self._send_queue = Queue.Queue(10)
         self._recv_condition = threading.Condition()
         self.world = World()
-        self.player = Player(self.proto,
-                             self._send_queue,
-                             self._recv_condition,
-                             self.world)
+        self.bot = Robot(self.proto,
+                         self._send_queue,
+                         self._recv_condition,
+                         self.world)
         self._sock = None
         self._mc_sock = None
         self._sock_generation = 0
@@ -99,7 +99,7 @@ class Client(object):
         )
 
     def set_held_item(self, slot):
-        self.player._held_slot_num = slot
+        self.bot._held_slot_num = slot
 
     def connect(self, host, username, password, port=25565, auth=True):
         if auth:
@@ -187,28 +187,28 @@ class Client(object):
                 return alpha1
 
         try:
-            while self.player.x is None:
+            while self.bot.x is None:
                 time.sleep(0.01)
             my_generation = self._sock_generation
             while my_generation == self._sock_generation and self._mc_sock is not None:
-                first_position = self.player.position
+                first_position = self.bot.position
                 time.sleep(0.01)
-                if first_position == self.player.position:
+                if first_position == self.bot.position:
                     self.send(self.proto.PlayServerboundPlayerPosition.id,
-                              x=self.player.x,
-                              y=self.player.y,
-                              z=self.player.z,
-                              on_ground=self.player.on_ground)
+                              x=self.bot.x,
+                              y=self.bot.y,
+                              z=self.bot.z,
+                              on_ground=self.bot.on_ground)
                 else:
                     yaw = calc_yaw(first_position[0], first_position[1],
-                                   self.player.x, self.player.z)
+                                   self.bot.x, self.bot.z)
                     self.send(self.proto.PlayServerboundPlayerPositionAndLook.id,
-                              x=self.player.x,
-                              y=self.player.y,
-                              z=self.player.z,
+                              x=self.bot.x,
+                              y=self.bot.y,
+                              z=self.bot.z,
                               yaw=yaw,
                               pitch=0,
-                              on_ground=self.player.on_ground)
+                              on_ground=self.bot.on_ground)
         finally:
             os.kill(self.parent_pid, 0)
 
@@ -326,9 +326,9 @@ class Client(object):
             log.info('chat: %s', clean_message)
 
     def on_play_health_update(self, pkt):
-        self.player._health = pkt.health
-        self.player._food = pkt.food
-        self.player._food_saturation = pkt.food_saturation
+        self.bot.health = pkt.health
+        self.bot.food = pkt.food
+        self.bot._food_saturation = pkt.food_saturation
 
     def on_play_spawn_object(self, pkt):
         self.world.objects[pkt.eid] = Object(
@@ -404,9 +404,9 @@ class Client(object):
                 del self.world.objects[eid]
 
     def on_play_set_experience(self, pkt):
-        self.player._xp_bar = pkt.bar
-        self.player._xp_level = pkt.level
-        self.player._xp_total = pkt.total_exp
+        self.bot._xp_bar = pkt.bar
+        self.bot._xp_total = pkt.total_exp
+        self.bot.xp_level = pkt.level
 
     def on_play_chunk_data(self, pkt):
         self.world.unpack_chunk_from_fastmc(
@@ -440,31 +440,31 @@ class Client(object):
         self.world.unpack_from_fastmc(pkt.bulk)
 
     def on_play_held_item_change(self, pkt):
-        self.player._held_slot_num = pkt.slot
+        self.bot._held_slot_num = pkt.slot
 
     def on_play_player_position_and_look(self, pkt):
-        self.player.move_corrected_by_server.set()
-        self.player.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
+        self.bot.move_corrected_by_server.set()
+        self.bot.teleport(pkt.x, pkt.y, pkt.z, pkt.yaw, pkt.pitch)
 
     def on_play_open_window(self, pkt):
-        self.player._open_window_id = pkt.window_id
-        if pkt.window_id not in self.player.windows:
+        self.bot._open_window_id = pkt.window_id
+        if pkt.window_id not in self.bot.windows:
             time.sleep(1)
-        if pkt.window_id in self.player.windows:
-            self.player.windows[pkt.window_id].inventory_type = pkt.type
-            self.player.windows[pkt.window_id].window_title = pkt.title
+        if pkt.window_id in self.bot.windows:
+            self.bot.windows[pkt.window_id].inventory_type = pkt.type
+            self.bot.windows[pkt.window_id].window_title = pkt.title
 
     def on_play_close_window(self, pkt):
-        self.player._open_window_id = 0
+        self.bot._open_window_id = 0
 
     def on_set_slot(self, pkt):
         if pkt.window_id == -1 and pkt.slot == -1:
             self._cursor_slot = pkt.slot
-        elif pkt.window_id in self.player.windows:
-            self.player.windows[pkt.window_id].set_slot(pkt.slot, pkt.item)
+        elif pkt.window_id in self.bot.windows:
+            self.bot.windows[pkt.window_id].set_slot(pkt.slot, pkt.item)
 
     def on_window_item(self, pkt):
-        self.player.windows[pkt.window_id] = Window(pkt.window_id,
+        self.bot.windows[pkt.window_id] = Window(pkt.window_id,
                                                     pkt.slots,
                                                     self._action_num_counter,
                                                     self._send_queue,
@@ -473,8 +473,8 @@ class Client(object):
                                                     )
 
     def on_confirm_transaction(self, pkt):
-        if pkt.window_id in self.player.windows:
-            window = self.player.windows[pkt.window_id]
+        if pkt.window_id in self.bot.windows:
+            window = self.bot.windows[pkt.window_id]
             window._confirmations[pkt.action_num] = pkt.accepted
 
     def on_unhandled(self, pkt):

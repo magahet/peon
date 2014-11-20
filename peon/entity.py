@@ -66,8 +66,8 @@ class Entity(object):
         self.metadata = metadata
 
     def __repr__(self):
-        return 'Entity(eid={}, _type={}, x={}, y={}, z={})'.format(
-            self.eid, MobTypes.get_name(self._type), self.x, self.y, self.z)
+        return 'Entity(eid={}, _type={}, xyz={})'.format(
+            self.eid, MobTypes.get_name(self._type), self.get_position(floor=True))
 
     @property
     def position(self):
