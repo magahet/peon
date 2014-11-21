@@ -136,6 +136,8 @@ class Player(object):
             l = x - x0
             w = z - z0
             c = math.sqrt(l * l + w * w)
+            if c == 0:
+                return 0
             alpha1 = -math.asin(l / c) / math.pi * 180
             alpha2 = math.acos(w / c) / math.pi * 180
             if alpha2 > 90:

@@ -1,9 +1,11 @@
 import threading
 import time
 import logging
+from contextlib import contextmanager
 from player import Player
 import types
 from fastmc.proto import Position
+from utils import LocksWrapper
 
 
 log = logging.getLogger(__name__)
@@ -13,47 +15,42 @@ class Robot(Player):
 
     def __init__(self, proto, send_queue, recv_condition, world):
         super(Robot, self).__init__(proto, send_queue, recv_condition, world)
-        self.auto_defend_mob_types = types.HOSTILE_MOBS
-        self.auto_gather_items = set([])
-        self.auto_hunt_settings = {}
         self._enabled_auto_actions = ('fall', 'eat', 'defend')
         self._auto_eat_level = 18
         self._auto_actions = {}
         self._locks = {
             'movement': threading.Lock(),
-            'action': threading.Lock(),
+            'inventory': threading.Lock(),
         }
         self._threads = {}
-        self._thread_functions = (
-            {
-                'name': 'falling',
+        self._thread_functions = {
+            'fall': {
                 'function': self.fall,
-                'lock': 'movement',
+                'locks': ('movement'),
             },
-            {
-                'name': 'defend',
+            'defend': {
                 'function': self.defend,
-                'lock': 'action',
+                'locks': ('inventory'),
+                'kwargs': {
+                    'mob_types': types.HOSTILE_MOBS,
+                }
             },
-            {
-                'name': 'eat',
+            'eat': {
                 'function': self.eat,
-                'lock': 'action',
+                'locks': ('inventory'),
                 'interval': 10,
             },
-            {
-                'name': 'hunt',
+            'hunt': {
                 'function': self.hunt,
-                'lock': 'movement',
+                'locks': ('movement'),
                 'interval': 5,
             },
-            {
-                'name': 'gather',
+            'gather': {
                 'function': self.gather,
-                'lock': 'movement',
+                'locks': ('movement'),
                 'interval': 5,
             },
-        )
+        }
         self.start_threads()
 
     def __repr__(self):
@@ -69,37 +66,46 @@ class Robot(Player):
     def auto_actions(self):
         return [n for n, e in self._auto_actions.iteritems() if e.is_set()]
 
+    def set_auto_settings(self, *args, **kwargs):
+        name = args[0]
+        if name not in self._thread_functions:
+            return False
+        self._thread_functions[name]['args'] = tuple(args[1:])
+        self._thread_functions[name]['kwargs'] = kwargs
+
+    def get_auto_settings(self, name):
+        settings = self._thread_functions.get(name, {})
+        return (settings.get('args', ()), settings.get('kwargs', {}))
+
     def start_threads(self):
-        for settings in self._thread_funcs.iteritems():
-            name = settings.get('name', '')
+        for name in self._thread_functions:
             if name not in self._auto_actions:
                 self._auto_actions[name] = threading.Event()
             if name in self._enabled_auto_actions:
                 self.enable_auto_action(name)
-            thread = threading.Thread(
-                target=self._do_auto_action,
-                name=name,
-                kwargs=settings)
+            thread = threading.Thread(target=self._do_auto_action, name=name,
+                                      args=(name,))
             thread.daemon = True
             thread.start()
             self._threads[name] = thread
 
-    def _do_auto_action(self, name='', function=None, lock=None, interval=0.1,
-                        args=None, kwargs=None):
+    def _do_auto_action(self, name):
         auto_event = self._auto_actions.get(name)
-        args = () if args is None else args
-        kwargs = {} if kwargs is None else kwargs
         self._wait_for(
             lambda: None not in (self.inventory, self.food, self.health))
+        settings = self._thread_functions.get(name, {})
+        function = settings.get('function')
+        locks = settings.get('locks', ())
+        lock = LocksWrapper([self._locks.get(l) for l in locks])
+        interval = settings.get('interval', 0.1)
         while True:
             auto_event.wait()
-            if lock is None:
+            with lock:
+                args, kwargs = self.get_auto_settings(name)
+                if name == 'hunt':
+                    print settings
                 function(*args, **kwargs)
                 time.sleep(interval)
-            else:
-                with lock:
-                    function(*args, **kwargs)
-                    time.sleep(interval)
 
     def fall(self):
         if self._is_moving.is_set():
@@ -152,8 +158,21 @@ class Robot(Player):
         auto_action.clear()
         return True
 
+    @property
+    def auto_defend_mob_types(self):
+        args, kwargs = self.get_auto_settings('defend')
+        return kwargs.get('mob_types', set([]))
+
     def set_auto_defend_mob_types(self, mob_types):
-        self.auto_defend_mob_types = mob_types
+        self.set_auto_settings('defend', mob_types=mob_types)
+
+    @contextmanager
+    def add_mob_types(self, mob_types):
+        original_set = self.auto_defend_mob_types.copy()
+        self.set_auto_settings('defend',
+                               mob_types=original_set.union(mob_types))
+        yield
+        self.set_auto_settings('defend', mob_types=original_set)
 
     def eat(self, target=20):
         if self.food >= target:
@@ -188,8 +207,7 @@ class Robot(Player):
             log.warn('health unknown or too low: %s', self.health)
             return False
         self.enable_auto_action('defend')
-        if mob_types is None:
-            mob_types = types.HOSTILE_MOBS
+        mob_types = () if mob_types is None else mob_types
         home = self.get_position(floor=True) if home is None else home
         if not self.navigate_to(*home, timeout=30):
             log.warn('failed nav to home')
@@ -204,12 +222,13 @@ class Robot(Player):
                 break
         else:
             return False
-        self.follow_path(path)
-        self.attack_entity(entity)
-        self.navigate_to(*path[-1])
-        path.reverse()
-        path.append(home)
-        return self.follow_path(path)
+        with self.add_mob_types(mob_types):
+            self.follow_path(path)
+            self.attack_entity(entity)
+            self.navigate_to(*path[-1])
+            path.reverse()
+            path.append(home)
+            return self.follow_path(path)
 
     def gather(self, items, _range=50):
         x0, y0, z0 = self.get_position(floor=True)
@@ -228,19 +247,15 @@ class Robot(Player):
         return self.follow_path(path)
 
     def attack_entity(self, entity, space=3, timeout=6):
-        on_kill_list = entity._type in self.auto_defend_mob_types
-        if not on_kill_list:
-            self.auto_defend_mob_types.add(entity._type)
         start = time.time()
-        while self.health > 10 and entity.eid in self.world.entities:
-            x, y, z = entity.get_position(floor=True)
-            if not self.navigate_to(x, y, z, space=space, timeout=2):
-                break
-            elif time.time() - start > timeout:
-                break
-            time.sleep(0.1)
-        if not on_kill_list:
-            self.auto_defend_mob_types.remove(entity._type)
+        with self.add_mob_types((entity._type,)):
+            while self.health > 10 and entity.eid in self.world.entities:
+                x, y, z = entity.get_position(floor=True)
+                if not self.navigate_to(x, y, z, space=space, timeout=2):
+                    break
+                elif time.time() - start > timeout:
+                    break
+                time.sleep(0.1)
 
     def don_armor(self):
         '''Put on best armor in inventory'''
@@ -262,7 +277,7 @@ class Robot(Player):
         player_position = self.world.get_player_position(
             player_name=player_name, eid=eid, uuid=uuid)
         if player_position is not None:
-            return self.navigate_to(*player_position, space=2)
+            return self.navigate_to(*player_position, space=3)
         return False
 
     def store_items(self, items, chest_position=None):

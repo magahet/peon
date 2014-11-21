@@ -16,3 +16,16 @@ class ThreadSafeCounter:
         with self.lock:
             self.i += self.step
             return self.i
+
+
+class LocksWrapper(object):
+    def __init__(self, locks):
+        self.locks = [l for l in locks if l is not None]
+
+    def __enter__(self, *args, **kwargs):
+        for lock in self.locks:
+            self.lock.acquire()
+
+    def __exit__(self, *args, **kwargs):
+        for lock in self.locks:
+            self.lock.release()

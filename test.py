@@ -9,8 +9,8 @@ client = peon.Client()
 client.connect('localhost', 'peon', '', auth=False)
 bot = client.bot
 
-bot.enable_auto_action('eat')
-bot.enable_auto_action('defend')
+#bot.enable_auto_action('eat')
+#bot.enable_auto_action('defend')
 #bot.enable_auto_action('gather')
 #bot.auto_gather_items.add('Wither Skeleton Skull')
 #bot.auto_gather_items.add('Bone')
