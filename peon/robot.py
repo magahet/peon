@@ -257,3 +257,32 @@ class Robot(Player):
         if player_position is not None:
             return self.navigate_to(*player_position, space=2)
         return False
+
+    def store_items(self, items, chest_position=None):
+        items_to_store = [i for i in items if i in self.inventory]
+        if not items_to_store:
+            return True
+        with self._movement_lock:
+            if chest_position is None:
+                return False
+            if not self.navigate_to(*chest_position, space=3):
+                log.error('Could not navigate to chest: %s', chest_position)
+                return False
+            if not self.click_inventory_block(*chest_position):
+                log.error('Could not open chest: %s', chest_position)
+                return False
+            if None not in self.open_window.custom_inventory:
+                log.error('Chest is full: %s', chest_position)
+                self.close_window()
+                return False
+            for item in items_to_store:
+                while (item in self.open_window.player_inventory and
+                       None in self.open_window.custom_inventory):
+                    log.info('Storing item: %s', item)
+                    num = self.open_window.player_inventory.window_index(item)
+                    log.info('Item slot: %s', num)
+                    if not self.open_window.click(num, mode=1):
+                        self.close_window()
+                        return False
+            self.close_window()
+        return True

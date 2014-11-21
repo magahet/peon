@@ -5,13 +5,16 @@ from textwrap import dedent
 
 
 class Window(object):
-    def __init__(self, window_id, slots, action_num_counter, send_queue,
-                 proto, recv_condition):
+    def __init__(self, window_id, action_num_counter, send_queue,
+                 proto, recv_condition, slots=None, _type=None, title=None):
         self._id = window_id
-        self.slots = SlotList(slots)
-        self.count = len(slots)
-        self.inventory_type = None
-        self.window_title = None
+        self.slots = SlotList([])
+        if slots is not None:
+            for slot in slots:
+                slot = Slot(slot) if slot is not None else None
+                self.slots.append(slot)
+        self._type = None
+        self.title = None
         self.cursor_slot = None
         self._action_num_counter = action_num_counter
         self._send_queue = send_queue
@@ -26,7 +29,7 @@ class Window(object):
         slot_strings = []
         for index, slot in enumerate(self.slots):
             description = InventoryTypes.get_slot_description(
-                self.inventory_type, index)
+                self._type, index)
             slot_strings.append(
                 '    {},  # {} {}'.format(str(slot),
                                           index,
@@ -43,19 +46,40 @@ class Window(object):
     def index(self, _type):
         return self.slots.index(_type)
 
+    def window_index(self, _type):
+        return self.slots.window_index(_type)
+
     def set_slot(self, index, slot):
         if slot is None:
             self.slots[index] = None
         else:
             self.slots[index] = Slot(slot)
 
+    def set_slots(self, slots):
+        self.slots = SlotList([])
+        for slot in slots:
+            slot = Slot(slot) if slot is not None else None
+            self.slots.append(slot)
+
+    @property
+    def custom_inventory(self):
+        if len(self.slots) > 35:
+            return SlotList(self.slots[:-36])
+
+    @property
+    def player_inventory(self):
+        if len(self.slots) > 35:
+            return SlotList(self.slots[-36:], start=len(self.slots) - 36)
+
     @property
     def main_inventory(self):
-        return SlotList(self.slots[-36:-9])
+        if len(self.slots) > 35:
+            return SlotList(self.slots[-36:-9], start=len(self.slots) - 36)
 
     @property
     def held(self):
-        return SlotList(self.slots[-9:])
+        if len(self.slots) > 9:
+            return SlotList(self.slots[-9:], start=len(self.slots) - 9)
 
     def click(self, slot_num, button=0, mode=0):
         action_num = self._action_num_counter.next()
@@ -105,11 +129,15 @@ class Window(object):
 
 
 class SlotList(list):
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
+        self.start = kwargs.get('start', 0)
         list.__init__(self, *args)
 
     def __contains__(self, _type):
-        return self._get_name(_type) in [s.name for s in self if s is not None]
+        return (
+            (_type is None and None in [s for s in self]) or
+            self._get_name(_type) in [s.name for s in self if s is not None]
+        )
 
     @staticmethod
     def _get_name(_type):
@@ -126,6 +154,10 @@ class SlotList(list):
         for index, slot in enumerate(self):
             if slot is not None and slot.name == name:
                 return index
+
+    def window_index(self, _type):
+        relative_index = self.index(_type)
+        return relative_index + self.start
 
 
 class Slot(object):

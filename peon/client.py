@@ -59,7 +59,8 @@ class Client(object):
             #self.proto.PlayClientboundPlayerListItem.id,
             self.proto.PlayClientboundOpenWindow.id,
             self.proto.PlayClientboundCloseWindow.id,
-            self.proto.PlayClientboundWindowItem.id,
+            #self.proto.PlayClientboundWindowItem.id,
+            #self.proto.PlayClientboundSetSlot.id,
         ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
@@ -460,9 +461,18 @@ class Client(object):
 
     def on_open_window(self, pkt):
         self.bot._open_window_id = pkt.window_id
-        if self.wait_for(lambda: pkt.window_id in self.bot.windows):
-            self.bot.windows[pkt.window_id].inventory_type = pkt.type
-            self.bot.windows[pkt.window_id].window_title = pkt.title
+        if pkt.window_id not in self.bot.windows:
+            self.bot.windows[pkt.window_id] = Window(pkt.window_id,
+                                                     self._action_num_counter,
+                                                     self._send_queue,
+                                                     self.proto,
+                                                     self._recv_condition,
+                                                     _type=pkt.type,
+                                                     title=pkt.title
+                                                     )
+        else:
+            self.bot.windows[pkt.window_id]._type = pkt.type
+            self.bot.windows[pkt.window_id].title = pkt.title
 
     def on_close_window(self, pkt):
         self.bot._open_window_id = 0
@@ -477,13 +487,16 @@ class Client(object):
             self.bot.windows[pkt.window_id].set_slot(pkt.slot, pkt.item)
 
     def on_window_item(self, pkt):
-        self.bot.windows[pkt.window_id] = Window(pkt.window_id,
-                                                 pkt.slots,
-                                                 self._action_num_counter,
-                                                 self._send_queue,
-                                                 self.proto,
-                                                 self._recv_condition
-                                                 )
+        if pkt.window_id not in self.bot.windows:
+            self.bot.windows[pkt.window_id] = Window(pkt.window_id,
+                                                     self._action_num_counter,
+                                                     self._send_queue,
+                                                     self.proto,
+                                                     self._recv_condition,
+                                                     slots=pkt.slots,
+                                                     )
+        else:
+            self.bot.windows[pkt.window_id].set_slots(pkt.slots)
 
     def on_confirm_transaction(self, pkt):
         if pkt.window_id in self.bot.windows:

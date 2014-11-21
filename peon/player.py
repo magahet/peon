@@ -43,10 +43,12 @@ class Player(object):
         self.move_corrected_by_server = threading.Event()
 
     def _wait_for(self, what, timeout=10):
+        if what():
+            return True
         start = time.time()
         with self._recv_condition:
             while not what() and time.time() - start < timeout:
-                self._recv_condition.wait(timeout=1)
+                self._recv_condition.wait(timeout=0.1)
         return what()
 
     def _send(self, packet_id, **kwargs):
@@ -219,7 +221,7 @@ class Player(object):
                    cursor_z=0)
         return (
             self._wait_for(lambda: self._open_window_id != 0) and
-            self._wait_for(lambda: self._open_window_id in self.windows)
+            self._wait_for(lambda: len(self.open_window.slots) > 0)
         )
 
     def close_window(self):
