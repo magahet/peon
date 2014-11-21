@@ -7,7 +7,6 @@ import threading
 import Queue
 import os
 import time
-import math
 from world import World
 from robot import Robot
 from entity import (Entity, Object, PlayerEntity)
@@ -58,6 +57,9 @@ class Client(object):
             #self.proto.PlayClientboundPlayerPositionAndLook.id,
             #self.proto.PlayClientboundChatMesage.id,
             #self.proto.PlayClientboundPlayerListItem.id,
+            self.proto.PlayClientboundOpenWindow.id,
+            self.proto.PlayClientboundCloseWindow.id,
+            self.proto.PlayClientboundWindowItem.id,
         ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
@@ -178,41 +180,19 @@ class Client(object):
             os.kill(self.parent_pid, 0)
 
     def _do_send_position(self):
-
-        def calc_yaw(x0, z0, x, z):
-            l = x - x0
-            w = z - z0
-            c = math.sqrt(l * l + w * w)
-            alpha1 = -math.asin(l / c) / math.pi * 180
-            alpha2 = math.acos(w / c) / math.pi * 180
-            if alpha2 > 90:
-                return 180 - alpha1
-            else:
-                return alpha1
-
         try:
             while self.bot.x is None:
                 time.sleep(0.01)
             my_generation = self._sock_generation
             while my_generation == self._sock_generation and self._mc_sock is not None:
-                first_position = self.bot.position
+                self.send(self.proto.PlayServerboundPlayerPositionAndLook.id,
+                          x=self.bot.x,
+                          y=self.bot.y,
+                          z=self.bot.z,
+                          yaw=self.bot.yaw,
+                          pitch=0,
+                          on_ground=self.bot.on_ground)
                 time.sleep(0.01)
-                if first_position == self.bot.position:
-                    self.send(self.proto.PlayServerboundPlayerPosition.id,
-                              x=self.bot.x,
-                              y=self.bot.y,
-                              z=self.bot.z,
-                              on_ground=self.bot.on_ground)
-                else:
-                    yaw = calc_yaw(first_position[0], first_position[1],
-                                   self.bot.x, self.bot.z)
-                    self.send(self.proto.PlayServerboundPlayerPositionAndLook.id,
-                              x=self.bot.x,
-                              y=self.bot.y,
-                              z=self.bot.z,
-                              yaw=yaw,
-                              pitch=0,
-                              on_ground=self.bot.on_ground)
         finally:
             os.kill(self.parent_pid, 0)
 
@@ -486,9 +466,9 @@ class Client(object):
 
     def on_close_window(self, pkt):
         self.bot._open_window_id = 0
-        for _id in [i for i in self.bot.windows]:
+        for _id in self.bot.windows.keys():
             if _id != 0:
-                del self.bot.windows[i]
+                del self.bot.windows[_id]
 
     def on_set_slot(self, pkt):
         if pkt.window_id == -1 and pkt.slot == -1:

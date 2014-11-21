@@ -255,5 +255,5 @@ class Robot(Player):
         player_position = self.world.get_player_position(
             player_name=player_name, eid=eid, uuid=uuid)
         if player_position is not None:
-            return self.navigate_to(*player_position)
+            return self.navigate_to(*player_position, space=2)
         return False

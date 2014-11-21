@@ -2,6 +2,7 @@ import time
 from scipy.spatial.distance import euclidean
 from fastmc.proto import Slot
 import numpy as np
+import math
 from math import floor
 import threading
 import itertools
@@ -128,7 +129,20 @@ class Player(object):
         return True
 
     def move(self, dx=0, dy=0, dz=0):
+
+        def calc_yaw(x0, z0, x, z):
+            l = x - x0
+            w = z - z0
+            c = math.sqrt(l * l + w * w)
+            alpha1 = -math.asin(l / c) / math.pi * 180
+            alpha2 = math.acos(w / c) / math.pi * 180
+            if alpha2 > 90:
+                return 180 - alpha1
+            else:
+                return alpha1
+
         with self._position_update_lock:
+            self.yaw = calc_yaw(self.x, self.z, self.x + dx, self.z + dz)
             self.x += dx
             self.y += dy
             self.z += dz
@@ -211,4 +225,7 @@ class Player(object):
     def close_window(self):
         self._send(self.proto.PlayServerboundCloseWindow.id,
                    window_id=self._open_window_id)
-        return self._wait_for(lambda: self._open_window_id == 0)
+        for _id in self.windows.keys():
+            if _id != 0:
+                del self.windows[_id]
+        self._open_window_id = 0

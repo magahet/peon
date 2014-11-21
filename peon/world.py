@@ -66,11 +66,15 @@ class World(smpmap.World):
     def get_player_position(self, player_name=None, eid=None, uuid=None):
         player = None
         if player_name is not None:
-            pass
+            for uuid, data in self.player_data.items():
+                if data.get('name', '') == player_name:
+                    for eid, cur_player in self.players.items():
+                        if cur_player.uuid == uuid:
+                            return cur_player.get_position(floor=True)
         elif eid is not None:
             player = self.players.get(eid)
         elif uuid is not None:
-            for eid, cur_player in self.players.iteritems():
+            for eid, cur_player in self.players.items():
                 if player.uuid == uuid:
                     player = cur_player
                     break
