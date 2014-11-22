@@ -23,14 +23,14 @@ python setup.py install
 git clone https://github.com/magahet/peon.git
 cd peon
 ```
-   
 
 ## Starting peon
 ```
 ipython
 import peon
-bot = peon.Client()
-bot.connect('myminecraftserver.org', 'peon', 'mypassword', auth=False)
+client = peon.Client()
+client.connect('myminecraftserver.org', 'peon', 'mypassword', auth=False)
+bot = client.bot
 ```
  
 Authentication flag determines if bot will authenticate with central minecraft servers. If you're playing on an offline mode server, this can be set to False.
@@ -38,7 +38,7 @@ Authentication flag determines if bot will authenticate with central minecraft s
 ## Some available attributes
 ```
 # inventory
-bot.player.inventory
+bot.inventory
 
 # world
 bot.world
@@ -46,16 +46,59 @@ bot.world
 # entities
 bot.world.entities
 
+# other players
+bot.world.players
+
+# objects (items, projectiles, etc)
+bot.world.players
+
 # method to get nearby entities
 [e for e in bot.player.iter_entities_in_range(_type='Sheep', reach=4)]
 ```
 
+## Auto Actions
 
-## Examples of slightly more complex actions
+Peon performs the following actions automatically and without blocking the main process.
 
-Take a look at afk-bot.py and shear-bot.py. These each utilize peon for some simple, but helpful tasks.
+### Fall
 
+If he's not actively moving and not on the ground, peon will auto update his position downward.
+
+### Eat
+
+If his hunger reaches a set threshold, he will look for food in his inventory and eat it.
+
+### Defend
+
+If hostile mobs enter a 4m radius, he will grab a sword from his inventory (if available) and kill the mob.
+
+### Hunt
+
+He will search the area for certain mob types, navigate to, and kill them.
+
+### Gather
+
+He will search for objects of a given type and go collect them.
+
+
+## Using Auto Actions
+
+Each auto action can be enabled/disabled and can run concurrently. Peon will used action and inventory locks to ensure he doesn't try to run in two directions at the same time.
+
+Here's an example. Read through peon/robot.py for more info.
+
+```
+bot.enable_auto_action('hunt')
+bot.set_auto_action_settings('hunt', mob_types=['Sheep'])
+```
 
 # TODO
 
-So, so much. It would be great to get all the previous peon functionality going again. However, we all have real lives and there are only so many hours in a day.
+So, so much. It would be great to get all the previous peon functionality going again. However, we all have real lives and there are only so many hours in a day. Here are some big items I'm working to get going again:
+
+- enchanting
+- clearing land
+- exploring/searching for world features or biomes
+- farming
+- trading
+- mining
