@@ -297,8 +297,38 @@ class Robot(Player):
             return self.navigate_to(*player_position, space=3)
         return False
 
-    def store_items(self, items, chest_position=None):
-        items_to_store = [i for i in items if i in self.inventory]
+    def find_items(self, items, invert=False):
+        if invert:
+            return [s.name for s in
+                    self.inventory.player_inventory if
+                    s is not None and s.name not in items]
+        else:
+            return [i for i in items if i in
+                    self.inventory.player_inventory]
+        return []
+
+    def drop(self, items, position=None, invert=False):
+        items_to_drop = self.find_items(items, invert=invert)
+        if not items_to_drop:
+            log.debug('No items to drop')
+            return True
+        if position is not None and not self.navigate_to(*position, space=3):
+            log.error('Could not navigate to position: %s', position)
+            return False
+        log.info('Dropping items: %s', str(items_to_drop))
+        for item in items_to_drop:
+            while item in self.inventory.player_inventory:
+                num = self.inventory.player_inventory.window_index(item)
+                log.debug('Item slot: %s', num)
+                if not self.inventory.click(num, mode=4, button=1):
+                    return False
+
+    def store_items(self, items, chest_position=None, invert=False):
+        '''Put items from inventory into a chest at the specified location.
+        The invert option will change the behavior so that everything except the
+        items listed will be stored.'''
+
+        items_to_store = self.find_items(items, invert=invert)
         if not items_to_store:
             log.debug('No items to store')
             return True
@@ -315,8 +345,8 @@ class Robot(Player):
             log.error('Chest is full: %s', chest_position)
             self.close_window()
             return False
+        log.info('Storing items: %s', str(items_to_store))
         for item in items_to_store:
-            log.info('Storing items')
             while (item in self.open_window.player_inventory and
                     None in self.open_window.custom_inventory):
                 num = self.open_window.player_inventory.window_index(item)
