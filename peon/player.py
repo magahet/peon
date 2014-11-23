@@ -87,7 +87,7 @@ class Player(object):
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
         log.debug('navigating from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
-        if (x0, y0, z0) == (x, y, z):
+        if euclidean((x0, y0, z0), (x, y, z)) <= space:
             return True
         path = self.world.find_path(x0, y0, z0, x, y, z, space=space, timeout=timeout)
         if not path:

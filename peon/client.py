@@ -57,8 +57,8 @@ class Client(object):
             #self.proto.PlayClientboundPlayerPositionAndLook.id,
             #self.proto.PlayClientboundChatMesage.id,
             #self.proto.PlayClientboundPlayerListItem.id,
-            self.proto.PlayClientboundOpenWindow.id,
-            self.proto.PlayClientboundCloseWindow.id,
+            #self.proto.PlayClientboundOpenWindow.id,
+            #self.proto.PlayClientboundCloseWindow.id,
             #self.proto.PlayClientboundWindowItem.id,
             #self.proto.PlayClientboundSetSlot.id,
         ]

@@ -23,6 +23,7 @@ class Window(object):
         self._confirmations = {}
         self._click_handlers = {
             (0, 0): self._left_click,
+            (1, 0): self._shift_left_click,
         }
 
     def __repr__(self):
@@ -106,6 +107,10 @@ class Window(object):
         slot = self.slots[slot_num]
         self.slots[slot_num] = self.cursor_slot
         self.cursor_slot = slot
+        return True
+
+    def _shift_left_click(self, slot_num):
+        # TODO validate what happens to clicked items base on current inventory
         return True
 
     def swap_slots(self, slot_num_a, slot_num_b):

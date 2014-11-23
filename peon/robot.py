@@ -1,6 +1,8 @@
 import threading
 import time
 import logging
+import os
+import signal
 from contextlib import contextmanager
 from player import Player
 import types
@@ -25,6 +27,10 @@ class Robot(Player):
         }
         self._threads = {}
         self._thread_functions = {
+            'escape': {
+                'function': self.escape,
+                'interval': 2,
+            },
             'fall': {
                 'function': self.fall,
                 'locks': ('movement',),
@@ -218,9 +224,6 @@ class Robot(Player):
 
     def hunt(self, home=None, mob_types=None, space=3, speed=10, _range=50):
         self.don_armor()
-        if not self.health or self.health <= 10:
-            log.warn('health unknown or too low: %s', self.health)
-            return False
         self.enable_auto_action('defend')
         mob_types = () if mob_types is None else mob_types
         home = self.get_position(floor=True) if home is None else home
@@ -323,3 +326,10 @@ class Robot(Player):
                     return False
         self.close_window()
         return True
+
+    def escape(self, min_health=10):
+        if self.health is not None and self.health < min_health:
+            log.warn('health too low, escaping: %s', self.health)
+            os.kill(os.getpid(), signal.SIGTERM)
+            time.sleep(1)
+            os.kill(os.getpid(), signal.SIGKILL)

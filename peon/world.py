@@ -136,6 +136,7 @@ class World(smpmap.World):
         ])
 
     def find_path(self, x0, y0, z0, x, y, z, space=0, timeout=10, debug=None):
+        # TODO pre-check the destination for a spot to stand
 
         def iter_moveable_adjacent(pos):
             return self.iter_moveable_adjacent(*pos)
