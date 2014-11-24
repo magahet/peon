@@ -56,11 +56,19 @@ class Robot(Player):
                 'function': self.gather,
                 'locks': ('movement',),
                 'interval': 5,
+                'args': ([],),
             },
             'store': {
                 'function': self.store_items,
                 'locks': ('movement', 'inventory'),
                 'interval': 60,
+                'args': ([],),
+            },
+            'drop': {
+                'function': self.drop,
+                'locks': ('movement', 'inventory'),
+                'interval': 60,
+                'args': ([],),
             },
         }
         self.start_threads()
@@ -312,16 +320,21 @@ class Robot(Player):
         if not items_to_drop:
             log.debug('No items to drop')
             return True
-        if position is not None and not self.navigate_to(*position, space=3):
+        if position is not None and not self.navigate_to(*position):
             log.error('Could not navigate to position: %s', position)
             return False
         log.info('Dropping items: %s', str(items_to_drop))
         for item in items_to_drop:
-            while item in self.inventory.player_inventory:
+            tries = 0
+            while item in self.inventory.player_inventory and tries < 5:
                 num = self.inventory.player_inventory.window_index(item)
                 log.debug('Item slot: %s', num)
-                if not self.inventory.click(num, mode=4, button=1):
+                if not self.inventory.click(num, button=1, mode=4):
                     return False
+                    self.close_window()
+                tries += 1
+        self.close_window()
+        return True
 
     def store_items(self, items, chest_position=None, invert=False):
         '''Put items from inventory into a chest at the specified location.

@@ -1,7 +1,11 @@
 from types import (ItemTypes, InventoryTypes)
 import time
+import logging
 import fastmc.proto
 from textwrap import dedent
+
+
+log = logging.getLogger(__name__)
 
 
 class Window(object):
@@ -24,6 +28,7 @@ class Window(object):
         self._click_handlers = {
             (0, 0): self._left_click,
             (1, 0): self._shift_left_click,
+            (4, 1): self._control_q,
         }
 
     def __repr__(self):
@@ -94,11 +99,10 @@ class Window(object):
                    action_num=action_num,
                    mode=mode,
                    clicked_item=slot)
-
-        if not self._wait_for(lambda: action_num in self._confirmations.keys(),
+        log.debug('Sent click window: %s', str(slot))
+        if not self._wait_for(lambda: action_num in self._confirmations,
                               timeout=5):
-            return False
-        if not self._confirmations.get(action_num):
+            log.error('Did not get confirmation')
             return False
         if (mode, button) in self._click_handlers:
             return self._click_handlers[(mode, button)](slot_num)
@@ -111,6 +115,9 @@ class Window(object):
 
     def _shift_left_click(self, slot_num):
         # TODO validate what happens to clicked items base on current inventory
+        return True
+
+    def _control_q(self, slot_num):
         return True
 
     def swap_slots(self, slot_num_a, slot_num_b):

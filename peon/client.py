@@ -36,7 +36,7 @@ class Client(object):
         self.in_buf = fastmc.proto.ReadBuffer()
         self.parent_pid = os.getppid()
         self.last_keepalive = time.time()
-        self._action_num_counter = ThreadSafeCounter(1)
+        self._action_num_counter = ThreadSafeCounter(0)
         self._threads = {}
         self._thread_funcs = {
             'reader': self._do_read_thread,
@@ -499,6 +499,11 @@ class Client(object):
             self.bot.windows[pkt.window_id].set_slots(pkt.slots)
 
     def on_confirm_transaction(self, pkt):
+        if not pkt.accepted:
+            self.send(self.proto.PlayServerboundConfirmTransaction.id,
+                      window_id=pkt.window_id,
+                      action_num=pkt.action_num,
+                      accepted=pkt.accepted)
         if pkt.window_id in self.bot.windows:
             window = self.bot.windows[pkt.window_id]
             window._confirmations[pkt.action_num] = pkt.accepted
