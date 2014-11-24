@@ -98,7 +98,8 @@ class Player(object):
         log.debug('following path: %s', str(path))
         for x, y, z in path:
             if not self.move_to(x, y, z, speed=speed, center=True):
-                log.error("can't move to: %s", str((x, y, z)))
+                log.error("can't move from: %s to: %s", str(self.position),
+                          str((x, y, z)))
                 return False
         return True
 
