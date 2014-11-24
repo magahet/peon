@@ -119,6 +119,10 @@ class World(smpmap.World):
         return all([
             self.is_passable(x0, y, z),
             self.is_passable(x, y, z0),
+            any([
+                self.is_safe_non_solid_block(x, y - 1, z0),
+                self.is_climbable_block(x, y - 1, z0),
+                ]),
         ])
 
     def is_standable(self, x, y, z):
