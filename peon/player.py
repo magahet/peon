@@ -98,8 +98,6 @@ class Player(object):
         log.debug('following path: %s', str(path))
         for x, y, z in path:
             if not self.move_to(x, y, z, speed=speed, center=True):
-                log.error("can't move from: %s to: %s", str(self.position),
-                          str((x, y, z)))
                 return False
         return True
 
@@ -119,15 +117,18 @@ class Player(object):
         self._is_moving.set()
         self.move_corrected_by_server.clear()
         while euclidean((x, y, z), self.get_position()) > 0.1:
-            if self.move_corrected_by_server.is_set():
-                self.move_corrected_by_server.clear()
-                self._is_moving.clear()
-                return False
             dx = x - self.x
             dy = y - self.y
             dz = z - self.z
-            self.move(abs_min(dx, delta), abs_min(dy, delta), abs_min(dz, delta))
+            target = (abs_min(dx, delta), abs_min(dy, delta), abs_min(dz, delta))
+            self.move(*target)
             time.sleep(dt)
+            if self.move_corrected_by_server.is_set():
+                self.move_corrected_by_server.clear()
+                self._is_moving.clear()
+                log.error("can't move from: %s to: %s", str(self.position),
+                          str(target))
+                return False
         self._is_moving.clear()
         return True
 

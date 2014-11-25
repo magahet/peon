@@ -155,3 +155,14 @@ class World(smpmap.World):
             timeout,                                        # timeout
             debug                                           # debug
         )
+
+'''
+class Position(object):
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
+
+    def __repr__(self, x, y, z):
+        return 'Position(x={}, y={}, z={})'.format(
+'''
