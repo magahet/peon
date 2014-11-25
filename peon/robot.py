@@ -360,8 +360,10 @@ class Robot(Player):
             return False
         log.info('Storing items: %s', str(items_to_store))
         for item in items_to_store:
-            while (item in self.open_window.player_inventory and
-                    None in self.open_window.custom_inventory):
+            while (self.open_window is not None and
+                   self.open_window.player_inventory is not None and
+                   item in self.open_window.player_inventory and
+                   None in self.open_window.custom_inventory):
                 num = self.open_window.player_inventory.window_index(item)
                 log.debug('Item slot: %s', num)
                 if not self.open_window.click(num, mode=1):
