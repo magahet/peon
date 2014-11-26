@@ -43,6 +43,14 @@ ARMOR = {
     7: 'Leggings',
     8: 'Boots',
 }
+HARVESTABLE_BLOCKS = set([
+    ('Wheat', 7),
+    ('Carrot Crops', 7),
+    ('Potato Crops', 7),
+    ('Beetroot Crops', 7),
+    ('Melon', 0),
+    ('Pumpkin', 0),
+])
 
 
 class MobTypes(object):
@@ -136,8 +144,19 @@ class ItemTypes(object):
         return cls.blocks_by_id.get(id_query)
 
     @classmethod
+    def get_block_id(cls, name_query):
+        return cls.blocks_by_name.get(name_query)
+
+    @classmethod
     def is_solid(cls, block_id):
         return block_id in cls.solid_types
+
+    @classmethod
+    def is_harvestable(cls, block_id, meta):
+        name = cls.get_block_name(block_id)
+        if name in ('Pumpkin', 'Melon'):
+            return True
+        return (name, meta) in HARVESTABLE_BLOCKS
 
     @classmethod
     def is_safe_non_solid(cls, block_id):

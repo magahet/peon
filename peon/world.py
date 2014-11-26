@@ -44,19 +44,24 @@ class World(smpmap.World):
 
     def is_solid_block(self, x, y, z):
         _type = self.get_id(x, y, z)
-        return None if _type is None else ItemTypes.is_solid(_type)
+        return False if _type is None else ItemTypes.is_solid(_type)
 
     def is_climbable_block(self, x, y, z):
         _type = self.get_id(x, y, z)
-        return None if _type is None else ItemTypes.is_climbable(_type)
+        return False if _type is None else ItemTypes.is_climbable(_type)
 
     def is_breathable_block(self, x, y, z):
         _type = self.get_id(x, y, z)
-        return None if _type is None else ItemTypes.is_breathable(_type)
+        return False if _type is None else ItemTypes.is_breathable(_type)
 
     def is_safe_non_solid_block(self, x, y, z):
         _type = self.get_id(x, y, z)
-        return None if _type is None else ItemTypes.is_safe_non_solid(_type)
+        return False if _type is None else ItemTypes.is_safe_non_solid(_type)
+
+    def is_harvestable_block(self, x, y, z):
+        _type = self.get_id(x, y, z)
+        meta = self.get_meta(x, y, z)
+        return False if _type is None else ItemTypes.is_harvestable(_type, meta)
 
     def get_next_highest_solid_block(self, x, y, z):
         for y in xrange(int(y), -1, -1):
@@ -100,10 +105,14 @@ class World(smpmap.World):
         closed = set([])
         while _open:
             current = _open.pop(0)
-            closed.add(current)
             yield current
-            _open.extend([p for p in self.iter_moveable_adjacent(*current)
-                          if p not in closed and euclidean((x, y, z), p) <= _range])
+            closed.add(current)
+            for neighbor in self.iter_moveable_adjacent(*current):
+                if neighbor in closed or neighbor in _open:
+                    continue
+                distance = euclidean((x, y, z), neighbor)
+                if distance <= _range:
+                    _open.append(neighbor)
 
     def get_name(self, x, y, z):
         return ItemTypes.get_block_name(self.get_id(x, y, z))

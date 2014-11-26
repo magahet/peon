@@ -3,7 +3,7 @@ import time
 import logging
 import os
 import signal
-import itertools
+#import itertools
 from contextlib import contextmanager
 from player import Player
 import types
@@ -34,48 +34,47 @@ class Robot(Player):
             },
             'fall': {
                 'function': self.fall,
-                'locks': ('movement',),
+                'locks': ['movement'],
             },
             'defend': {
                 'function': self.defend,
-                'locks': ('inventory',),
+                'locks': ['inventory'],
                 'kwargs': {
                     'mob_types': types.HOSTILE_MOBS,
                 }
             },
             'eat': {
                 'function': self.eat,
-                'locks': ('inventory',),
+                'locks': ['inventory'],
                 'interval': 30,
             },
             'hunt': {
                 'function': self.hunt,
-                'locks': ('movement',),
+                'locks': ['movement'],
                 'interval': 2,
             },
             'gather': {
                 'function': self.gather,
-                'locks': ('movement',),
+                'locks': ['movement'],
                 'interval': 5,
-                'args': ([],),
+                'args': [[]],
             },
             'store': {
                 'function': self.store_items,
-                'locks': ('movement', 'inventory'),
+                'locks': ['movement', 'inventory'],
                 'interval': 60,
-                'args': ([],),
+                'args': [[]],
             },
             'drop': {
                 'function': self.drop,
-                'locks': ('movement', 'inventory'),
+                'locks': ['movement', 'inventory'],
                 'interval': 60,
-                'args': ([],),
+                'args': [[]],
             },
-            'farm': {
-                'function': self.farm,
-                'locks': ('movement', 'inventory'),
+            'harvest': {
+                'function': self.harvest,
+                'locks': ['movement'],
                 'interval': 60,
-                'args': ([],),
             },
         }
         self.start_threads()
@@ -268,8 +267,7 @@ class Robot(Player):
         for _object in self.iter_objects_in_range(items=items, reach=_range):
             log.info("gathering object: %s", str(_object))
             x, y, z = _object.get_position(floor=True)
-            path = self.world.find_path(x0, y0, z0, x, y, z, space=1,
-                                        timeout=30)
+            path = self.world.find_path(x0, y0, z0, x, y, z, space=1)
             if path:
                 break
         else:
@@ -387,6 +385,8 @@ class Robot(Player):
             os.kill(os.getpid(), signal.SIGKILL)
 
     def farm(self, items, home=None, _range=10):
+        return
+        '''
         #TODO finish this method
         home = self.get_position(floor=True) if home is None else home
         items_to_plant = self.find_items(items)
@@ -402,15 +402,41 @@ class Robot(Player):
             while (self.equip_item(items_cycle.next()) and
                    tries < len(items_to_plant)):
                 tries += 1
-            if self.held_item.name not in items_to_plant:
-                return
-            self.navigate_to(*position)
             x, y, z = position
-            self._send(self.proto.PlayServerboundBlockPlacement.id,
-                       location=Position(x, y - 1, z),
-                       direction=0,
-                       held_item=self.held_item,
-                       cursor_x=0,
-                       cursor_y=0,
-                       cursor_z=0)
+            is_farmland = self.world.get_name(x, y - 1, z) == 'Farmland'
+            is_empty = self.world.get_name(x, y, z) == 'Air'
+            if is_farmland and is_empty:
+                self.navigate_to(*position, space=2)
+                self._send(self.proto.PlayServerboundBlockPlacement.id,
+                           location=Position(x, y - 1, z),
+                           direction=1,
+                           held_item=self.held_item,
+                           cursor_x=0,
+                           cursor_y=0,
+                           cursor_z=0)
         return True
+        '''
+
+    def harvest(self, home=None, _range=10):
+
+        def try_to_harvest(spot):
+            if self.world.is_harvestable_block(*spot):
+                self.navigate_to(*spot, space=1, timeout=2)
+                self.break_block(*spot)
+                time.sleep(0.5)
+
+        home = self.get_position(floor=True) if home is None else home
+        checked = set([])
+        for position in self.world.iter_reachable(*home, _range=_range):
+            if position in checked:
+                continue
+            checked.add(position)
+            if self.world.get_name(*position) in ('Pumpkin Stem', 'Melon Stem'):
+                for neighbor in self.world.iter_adjacent(*position):
+                    if neighbor in checked:
+                        continue
+                    checked.add(neighbor)
+                    try_to_harvest(neighbor)
+            else:
+                try_to_harvest(position)
+        self.navigate_to(*home)

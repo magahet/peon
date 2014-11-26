@@ -1,0 +1,7 @@
+- name: gather
+  args: 
+      - ['Wheat', 'Carrot', 'Potato', 'Pumpkin', 'Melon']
+  _range: 20
+    
+- name: harvest
+  _range: 20

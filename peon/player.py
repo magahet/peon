@@ -197,7 +197,7 @@ class Player(object):
             self.change_held_item(self.inventory.held.index(item))
         elif item in self.inventory:
             held_slot = self._held_slot_cycle.next()
-            inventory_held_slot = self.inventory.count - 1 - held_slot
+            inventory_held_slot = len(self.inventory.slots) - 1 - held_slot
             if not self.inventory.swap_slots(inventory_held_slot,
                                              self.inventory.index(item)):
                 return False
@@ -235,3 +235,18 @@ class Player(object):
             if _id != 0:
                 del self.windows[_id]
         self._open_window_id = 0
+
+    def break_block(self, x, y, z):
+        block_name = self.world.get_name(x, y, z)
+        if block_name == 'Air':
+            return True
+        self._send(self.proto.PlayServerboundPlayerDigging.id,
+                   status=0,
+                   location=Position(x, y, z),
+                   face=1)
+        self._send(self.proto.PlayServerboundPlayerDigging.id,
+                   status=2,
+                   location=Position(x, y, z),
+                   face=1)
+        return self._wait_for(
+            lambda: self.world.get_name(x, y, z) != block_name, timeout=5)
