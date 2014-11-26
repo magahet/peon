@@ -94,6 +94,20 @@ class World(smpmap.World):
             if self.is_moveable(x0, y0, z0, x, y, z):
                 yield (x, y, z)
 
+    def iter_reachable(self, x, y, z, _range=10):
+        '''iter positions that are reachable within a given range'''
+        _open = [(x, y, z)]
+        closed = set([])
+        while _open:
+            current = _open.pop(0)
+            closed.add(current)
+            yield current
+            _open.extend([p for p in self.iter_moveable_adjacent(*current)
+                          if p not in closed and euclidean((x, y, z), p) <= _range])
+
+    def get_name(self, x, y, z):
+        return ItemTypes.get_block_name(self.get_id(x, y, z))
+
     def is_moveable(self, x0, y0, z0, x, y, z, with_floor=True):
         # check target spot
         if with_floor:
@@ -156,13 +170,30 @@ class World(smpmap.World):
             debug                                           # debug
         )
 
+
 '''
-class Position(object):
-    def __init__(self, x, y, z):
-        self.x = x
-        self.y = y
-        self.z = z
+class Block(object):
+    def __init__(self, x, y, z, _type, meta):
+        self.x = int(floor(x))
+        self.y = int(floor(y))
+        self.z = int(floor(z))
+        self._type = _type
+        self.meta = meta
 
     def __repr__(self, x, y, z):
-        return 'Position(x={}, y={}, z={})'.format(
+        return "Block(x={}, y={}, z={}, _type='{}', meta='{}')".format(
+            self.x, self.y, self.z, self._type, str(self.meta))
+
+    @property
+    def position(self):
+        return (self.x, self.y, self.z)
+
+    @property
+    def name(self):
+        return ItemTypes.get_block_name(self._id)
+        self.get_id(self.x, self.y, self.z)
+
+    @property
+    def _id(self):
+        self.get_id(self.x, self.y, self.z)
 '''

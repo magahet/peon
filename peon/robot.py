@@ -3,6 +3,7 @@ import time
 import logging
 import os
 import signal
+import itertools
 from contextlib import contextmanager
 from player import Player
 import types
@@ -66,6 +67,12 @@ class Robot(Player):
             },
             'drop': {
                 'function': self.drop,
+                'locks': ('movement', 'inventory'),
+                'interval': 60,
+                'args': ([],),
+            },
+            'farm': {
+                'function': self.farm,
                 'locks': ('movement', 'inventory'),
                 'interval': 60,
                 'args': ([],),
@@ -378,3 +385,32 @@ class Robot(Player):
             os.kill(os.getpid(), signal.SIGTERM)
             time.sleep(1)
             os.kill(os.getpid(), signal.SIGKILL)
+
+    def farm(self, items, home=None, _range=10):
+        #TODO finish this method
+        home = self.get_position(floor=True) if home is None else home
+        items_to_plant = self.find_items(items)
+        if not items_to_plant:
+            log.debug('Nothing to plant')
+            return True
+        if not self.navigate_to(*home):
+            log.error('Could not navigate to home: %s', home)
+            return False
+        items_cycle = itertools.cycle(items_to_plant)
+        for position in self.world.iter_reachable(*home, _range=_range):
+            tries = 0
+            while (self.equip_item(items_cycle.next()) and
+                   tries < len(items_to_plant)):
+                tries += 1
+            if self.held_item.name not in items_to_plant:
+                return
+            self.navigate_to(*position)
+            x, y, z = position
+            self._send(self.proto.PlayServerboundBlockPlacement.id,
+                       location=Position(x, y - 1, z),
+                       direction=0,
+                       held_item=self.held_item,
+                       cursor_x=0,
+                       cursor_y=0,
+                       cursor_z=0)
+        return True

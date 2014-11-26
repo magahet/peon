@@ -132,6 +132,10 @@ class ItemTypes(object):
                                    cls.types_by_id.get((id_query, None)))
 
     @classmethod
+    def get_block_name(cls, id_query):
+        return cls.blocks_by_id.get(id_query)
+
+    @classmethod
     def is_solid(cls, block_id):
         return block_id in cls.solid_types
 
