@@ -1,0 +1,9 @@
+[world1]
+server: someserver.tld
+username: user@blah.tld
+password: somepassword
+
+[localhost]
+server: localhost
+username: mydude
+auth_enabled: false
