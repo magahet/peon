@@ -40,7 +40,7 @@ if __name__ == '__main__':
     logger.setLevel(logging.INFO)
     parser = argparse.ArgumentParser(
         description='Minecraft bot with many automated actions.')
-    parser.add_argument('actionsfile',
+    parser.add_argument('--actions-config', '-a', dest='actions_config',
                         help='yaml file specifying actions and settings')
     parser.add_argument('--server-settings', '-s', default='settings.cfg',
                         dest='settings_path', help='sever settings file path')
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     config = ConfigParser.RawConfigParser(
         {
             'port': 25565,
-            'auth_enabled': True,
+            'auth_enabled': 'true',
             'username': '',
             'password': '',
         },
@@ -65,7 +65,10 @@ if __name__ == '__main__':
     username = config.get(args.world, 'username')
     password = config.get(args.world, 'password')
     logger.info('logging into [%s:%d] as [%s]', server, port, username)
-    with open(args.actionsfile) as _file:
-        actions = yaml.load(_file)
+    if args.actions_config:
+        with open(args.actions_config) as _file:
+            actions = yaml.load(_file)
+    else:
+        actions = []
     client, bot = start_auto_bot(server, username, password, actions, port,
                                  auth_enabled, chat=args.chat)

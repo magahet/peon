@@ -2,6 +2,7 @@ from scipy.spatial.distance import euclidean
 from math import floor
 import smpmap
 import astar
+import utils
 from types import (MobTypes, ItemTypes, ObjectTypes)
 from window import Slot
 
@@ -113,6 +114,15 @@ class World(smpmap.World):
                 distance = euclidean((x, y, z), neighbor)
                 if distance <= _range:
                     _open.append(neighbor)
+
+    def iter_block_types(self, _types, start, _range=None, max_height=70):
+        x0, _, z0 = start
+        for x, z in utils.iter_spiral(x0, z0):
+            for y in xrange(max_height, 0, -1):
+                if self.get_id(x, y, z) in _types:
+                    yield x, y, z
+            if _range is not None and euclidean((x0, z0), (x, z)) > _range:
+                break
 
     def get_name(self, x, y, z):
         return ItemTypes.get_block_name(self.get_id(x, y, z))

@@ -33,3 +33,13 @@ class LocksWrapper(object):
     def __exit__(self, *args, **kwargs):
         for lock in self.locks.itervalues():
             lock.release()
+
+
+def iter_spiral(x=0, y=0):
+    dx = 0
+    dy = -1
+    while True:
+        yield (x, y)
+        if x == y or (x < 0 and x == -y) or (x > 0 and x == 1 - y):
+            dx, dy = -dy, dx
+        x, y = x + dx, y + dy
