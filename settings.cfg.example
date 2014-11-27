@@ -1,4 +1,4 @@
-[world1]
+[main]
 server: someserver.tld
 username: user@blah.tld
 password: somepassword

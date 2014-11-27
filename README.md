@@ -24,73 +24,65 @@ git clone https://github.com/magahet/peon.git
 cd peon
 ```
 
-## Starting peon
+## Setup server settings
 ```
-ipython
-import peon
-client = peon.Client()
-client.connect('myminecraftserver.org', 'peon', 'mypassword', auth=False)
-bot = client.bot
+cp settings.cfg.example settings.cfg
 ```
- 
-Authentication flag determines if bot will authenticate with central minecraft servers. If you're playing on an offline mode server, this can be set to False.
 
-## Some available attributes
+Edit settings.cfg with your servername, username, and password.
+
+## Run autobot
+
 ```
-# inventory
-bot.inventory
-
-# world
-bot.world
-
-# entities
-bot.world.entities
-
-# other players
-bot.world.players
-
-# objects (items, projectiles, etc)
-bot.world.players
-
-# method to get nearby entities
-[e for e in bot.player.iter_entities_in_range(_type='Sheep', reach=4)]
+./autobot -c example/test.yaml
 ```
+
+This will log peon in and enable a few sample automated processes. Peon will harvest mature crops within 20m of himself and will gather those crops. He will also defend himself from hostile mobs and eat any available food in his inventory when hungry.
 
 ## Auto Actions
 
-Peon performs the following actions automatically and without blocking the main process.
+Peon is able to perform a number actions automatically, without blocking the main process. Using autobot.py, you can enable these actions and configure their settings with a configuration yaml file. Examples are available in the examples directory. 
+
+The following are some of the actions available. To see the full list look at peon/robots.py. The configuration yaml should be made up of a list of dictionaries describing each action. The name must match the set of actions defined in robots.py. Arguments are those defined by each auto action function and remaining keys are passed to the function as keyword arguments. Look at each function to see the full set of options.
+
 
 ### Fall
 
-If he's not actively moving and not on the ground, peon will auto update his position downward.
+If he's not actively moving and not on the ground, peon will auto update his position downward. Fall is automatically enabled.
+
 
 ### Eat
 
-If his hunger reaches a set threshold, he will look for food in his inventory and eat it.
+If his hunger reaches a set threshold, he will look for food in his inventory and eat it. Eat is automatically enabled.
+
 
 ### Defend
 
-If hostile mobs enter a 4m radius, he will grab a sword from his inventory (if available) and kill the mob.
+If hostile mobs enter a 4m radius, he will grab a sword from his inventory, if available, and kill the mob. Peon defends against hostile mobs by default. Defend is automatically enabled.
+
 
 ### Hunt
 
 He will search the area for certain mob types, navigate to, and kill them.
 
+Example config:
+
+- name: hunt
+  mob_types: ['Sheep', 'Zombie']   # list of mobs to hunt
+  _range: 20                       # how far from home to hunt
+
+
 ### Gather
 
 He will search for objects of a given type and go collect them.
 
+Example config:
 
-## Using Auto Actions
+- name: gather
+  args:                     # gather takes one argument, a list of items to gather
+    - ['Stone', 'Sand']     # list of items to gather
+  _range: 20                # how far from home to search
 
-Each auto action can be enabled/disabled and can run concurrently. Peon will used action and inventory locks to ensure he doesn't try to run in two directions at the same time.
-
-Here's an example. Read through peon/robot.py for more info.
-
-```
-bot.enable_auto_action('hunt')
-bot.set_auto_action_settings('hunt', mob_types=['Sheep'])
-```
 
 # TODO
 
