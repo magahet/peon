@@ -2,7 +2,6 @@ from scipy.spatial.distance import euclidean
 from math import floor
 import smpmap
 import astar
-import utils
 from types import (MobTypes, ItemTypes, ObjectTypes)
 from window import Slot
 
@@ -47,6 +46,10 @@ class World(smpmap.World):
         _type = self.get_id(x, y, z)
         return False if _type is None else ItemTypes.is_solid(_type)
 
+    def is_unbreakable_block(self, x, y, z):
+        _type = self.get_id(x, y, z)
+        return False if _type is None else ItemTypes.is_unbreakable(_type)
+
     def is_climbable_block(self, x, y, z):
         _type = self.get_id(x, y, z)
         return False if _type is None else ItemTypes.is_climbable(_type)
@@ -58,6 +61,14 @@ class World(smpmap.World):
     def is_safe_non_solid_block(self, x, y, z):
         _type = self.get_id(x, y, z)
         return False if _type is None else ItemTypes.is_safe_non_solid(_type)
+
+    def is_liquid_block(self, x, y, z):
+        _type = self.get_id(x, y, z)
+        return False if _type is None else ItemTypes.is_liquid(_type)
+
+    def is_falling_block(self, x, y, z):
+        _type = self.get_id(x, y, z)
+        return False if _type is None else ItemTypes.is_falling(_type)
 
     def is_harvestable_block(self, x, y, z):
         _type = self.get_id(x, y, z)
@@ -92,12 +103,18 @@ class World(smpmap.World):
         for dx in xrange(-1, 2):
             for dy in xrange(-1, 2):
                 for dz in xrange(-1, 2):
-                    if dx != 0 or dz != 0:
-                        yield (x + dx, y + dy, z + dz)
+                    if (dx, dy, dz) == (0, 0, 0):
+                        continue
+                    yield (x + dx, y + dy, z + dz)
 
     def iter_moveable_adjacent(self, x0, y0, z0):
         for x, y, z in self.iter_adjacent(x0, y0, z0):
             if self.is_moveable(x0, y0, z0, x, y, z):
+                yield (x, y, z)
+
+    def iter_diggable_adjacent(self, x0, y0, z0):
+        for x, y, z in self.iter_adjacent(x0, y0, z0):
+            if self.is_diggable(x0, y0, z0, x, y, z):
                 yield (x, y, z)
 
     def iter_reachable(self, x, y, z, _range=10):
@@ -115,14 +132,25 @@ class World(smpmap.World):
                 if distance <= _range:
                     _open.append(neighbor)
 
-    def iter_block_types(self, _types, start, _range=None, max_height=70):
-        x0, _, z0 = start
-        for x, z in utils.iter_spiral(x0, z0):
-            for y in xrange(max_height, 0, -1):
-                if self.get_id(x, y, z) in _types:
-                    yield x, y, z
-            if _range is not None and euclidean((x0, z0), (x, z)) > _range:
-                break
+    def iter_block_types(self, x, y, z, block_types, _range=None):
+        '''iter blocks of a certain types'''
+        block_types = [i if isinstance(i, int)
+                       else ItemTypes.get_block_id(i)
+                       for i in block_types]
+        _open = [(x, y, z)]
+        closed = set([])
+        while _open:
+            current = _open.pop(0)
+            if self.get_id(*current) in block_types:
+                yield current
+            closed.add(current)
+            for neighbor in self.iter_adjacent(*current):
+                if neighbor in closed or neighbor in _open:
+                    continue
+                if self.get_id(*neighbor) == 0:  # Air block
+                    continue
+                if _range is None or euclidean((x, y, z), neighbor) <= _range:
+                    _open.append(neighbor)
 
     def get_name(self, x, y, z):
         return ItemTypes.get_block_name(self.get_id(x, y, z))
@@ -156,7 +184,81 @@ class World(smpmap.World):
                 self.is_safe_non_solid_block(x, y - 1, z0),
                 self.is_climbable_block(x, y - 1, z0),
                 ]),
+            any([
+                self.is_safe_non_solid_block(x0, y - 1, z),
+                self.is_climbable_block(x0, y - 1, z),
+                ]),
         ])
+
+    def is_diggable(self, x0, y0, z0, x, y, z, with_floor=True):
+        # if moveable, no need to dig
+        if self.is_moveable(x0, y0, z0, x, y, z, with_floor=with_floor):
+            return True
+
+        # don't dig straight up or down
+        if (x0, z0) == (x, z):
+            return False
+
+        # check target spot
+        if not all([
+            self.is_safe_to_break(x, y, z),
+            self.is_safe_to_break(x, y + 1, z)
+        ]):
+            return False
+
+        if with_floor and not self.is_climbable_block(x, y - 1, z):
+            return False
+
+        if y > y0:
+            return all([
+                self.is_safe_to_break(x0, y, z0),
+                self.is_safe_to_break(x0, y + 1, z0),
+                self.is_diggable(x0, y, z0, x, y, z)
+            ])
+        elif y < y0:
+            return self.is_diggable(x0, y0, z0, x, y0, z, with_floor=False)
+
+        # check if horizontal x z movement
+        if x0 == x or z0 == z:
+            return True
+
+        # check diagonal x z movement
+        return all([
+            self.is_safe_to_break(x0, y, z),
+            self.is_safe_to_break(x0, y + 1, z),
+            self.is_safe_to_break(x, y, z0),
+            self.is_safe_to_break(x, y + 1, z0),
+            any([
+                self.is_safe_non_solid_block(x, y - 1, z0),
+                self.is_climbable_block(x, y - 1, z0),
+                ]),
+            any([
+                self.is_safe_non_solid_block(x0, y - 1, z),
+                self.is_climbable_block(x0, y - 1, z),
+                ]),
+        ])
+
+    def get_blocks_to_break(self, x0, y0, z0, x, y, z):
+        positions = (
+            (x, y0, z0),
+            (x0, y, z0),
+            (x0, y0, z),
+            (x, y, z0),
+            (x, y0, z),
+            (x0, y, z),
+            (x, y, z),
+        )
+        return set([p for p in positions if self.is_solid_block(*p)])
+
+    def is_safe_to_break(self, x, y, z):
+        if self.is_unbreakable_block(x, y, z):
+            return False
+        if self.is_falling_block(x, y + 1, z):
+            return False
+        for x, y, z in self.iter_adjacent(x, y, z):
+            if self.is_liquid_block(x, y, z):
+                return False
+        return True
 
     def is_standable(self, x, y, z):
         return all([
@@ -172,18 +274,34 @@ class World(smpmap.World):
             self.is_safe_non_solid_block(x, y, z),
         ])
 
-    def find_path(self, x0, y0, z0, x, y, z, space=0, timeout=10, debug=None):
+    def find_path(self, x0, y0, z0, x, y, z, space=0, timeout=10,
+                  digging=False, debug=None):
         # TODO pre-check the destination for a spot to stand
 
         def iter_moveable_adjacent(pos):
             return self.iter_moveable_adjacent(*pos)
 
+        def iter_diggable_adjacent(pos):
+            return self.iter_diggable_adjacent(*pos)
+
+        def block_breaking_cost(p1, p2, weight=7):
+            x0, y0, z0 = p1
+            x, y, z = p2
+            return 1 + len(self.get_blocks_to_break(x0, y0, z0, x, y, z)) * 7
+
+        if digging:
+            neighbor_function = iter_diggable_adjacent
+            cost_function = block_breaking_cost
+        else:
+            neighbor_function = iter_moveable_adjacent
+            cost_function = lambda p1, p2: euclidean(p1, p2)
+
         return astar.astar(
             (floor(x0), floor(y0), floor(z0)),              # start_pos
-            iter_moveable_adjacent,                         # neighbors
+            neighbor_function,                              # neighbors
             lambda p: euclidean(p, (x, y, z)) <= space,     # at_goal
             0,                                              # start_g
-            lambda p1, p2: euclidean(p1, p2),               # cost
+            cost_function,                                  # cost
             lambda p: euclidean(p, (x, y, z)),              # heuristic
             timeout,                                        # timeout
             debug                                           # debug

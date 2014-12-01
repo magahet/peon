@@ -8,11 +8,19 @@ DANGER_BLOCKS = set([
     'Still Lava'
     'Fire'
 ])
+UNBREAKABLE_BLOCKS = set([
+    'Bedrock',
+])
 LIQUID_BLOCKS = set([
     'Flowing Water',
     'Still Water',
     'Flowing Lava',
     'Still Lava',
+])
+FALLING_BLOCKS = set([
+    'Sand',
+    'Red Sand',
+    'Gravel',
 ])
 FOOD = set([
     'Cooked Porkchop',
@@ -150,6 +158,21 @@ class ItemTypes(object):
     @classmethod
     def is_solid(cls, block_id):
         return block_id in cls.solid_types
+
+    @classmethod
+    def is_unbreakable(cls, block_id):
+        name = cls.get_block_name(block_id)
+        return name in UNBREAKABLE_BLOCKS
+
+    @classmethod
+    def is_liquid(cls, block_id):
+        name = cls.get_block_name(block_id)
+        return name in LIQUID_BLOCKS
+
+    @classmethod
+    def is_falling(cls, block_id):
+        name = cls.get_block_name(block_id)
+        return name in FALLING_BLOCKS
 
     @classmethod
     def is_harvestable(cls, block_id, meta):
