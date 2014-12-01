@@ -1,0 +1,10 @@
+- name: mine
+  _range: 70
+  block_types:
+    - Diamond Ore
+- name: store
+  args: [['Diamond Pickaxe', 'Diamond Sword', 'Diamond Shovel', 'Cooked Chicken']]
+  chest_position: [-32, 64, -25]
+  invert: True
+  dig: True
+  disabled: True

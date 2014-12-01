@@ -86,17 +86,45 @@ class Player(object):
     def navigate_to(self, x, y, z, speed=10, space=0, timeout=10):
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
-        log.debug('navigating from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
+        log.info('navigating from %s to %s.', str((x0, y0, z0)),
+                 str((x, y, z)))
         if euclidean((x0, y0, z0), (x, y, z)) <= space:
             return True
-        path = self.world.find_path(x0, y0, z0, x, y, z, space=space, timeout=timeout)
+        path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
+                                    timeout=timeout)
+        log.info('path: %s', str(path))
         if not path:
             return False
         return self.follow_path(path)
 
-    def follow_path(self, path, speed=10):
+    def dig_to(self, x, y, z, speed=10, space=0, timeout=10):
+        x0, y0, z0 = self.get_position(floor=True)
+        x, y, z = floor(x), floor(y), floor(z)
+        log.debug('digging from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
+        if euclidean((x0, y0, z0), (x, y, z)) <= space:
+            return True
+        path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
+                                    timeout=timeout, digging=True)
+        log.info('path: %s', str(path))
+        if not path:
+            return False
+        return self.follow_path(path, digging=True)
+
+    def follow_path(self, path, speed=10, digging=False):
         log.debug('following path: %s', str(path))
-        for x, y, z in path:
+        x0, y0, z0 = self.get_position(floor=True)
+        for num, (x, y, z) in enumerate(path):
+            if digging:
+                if num > 0:
+                    x0, y0, z0 = path[num - 1]
+                break_set = self.world.get_blocks_to_break(
+                    x0, y0, z0, x, y, z)
+                if not self.break_all_blocks(break_set):
+                    return False
+            if num > 0:
+                x0, y0, z0 = path[num - 1]
+            if not self.world.is_moveable(x0, y0, z0, x, y, z):
+                return False
             if not self.move_to(x, y, z, speed=speed, center=True):
                 return False
         return True
@@ -237,9 +265,27 @@ class Player(object):
         self._open_window_id = 0
 
     def break_block(self, x, y, z):
+        x, y, z = int(x), int(y), int(z)  # TODO figure out why this is needed
+        log.info('breaking block: (%d, %d, %d)', x, y, z)
         block_name = self.world.get_name(x, y, z)
         if block_name == 'Air':
             return True
+        if self.world.is_falling_block(x, y, z):
+            self.equip_any_item_from_list([
+                'Diamond Shovel',
+                'Golden Shovel',
+                'Iron Shovel',
+                'Stone Shovel',
+                'Wooden Shovel',
+            ])
+        else:
+            self.equip_any_item_from_list([
+                'Diamond Pickaxe',
+                'Golden Pickaxe',
+                'Iron Pickaxe',
+                'Stone Pickaxe',
+                'Wooden Pickaxe',
+            ])
         self._send(self.proto.PlayServerboundPlayerDigging.id,
                    status=0,
                    location=Position(x, y, z),
@@ -250,3 +296,12 @@ class Player(object):
                    face=1)
         return self._wait_for(
             lambda: self.world.get_name(x, y, z) != block_name, timeout=5)
+
+    def break_all_blocks(self, blocks):
+        tries = 0
+        while blocks and tries < 5:
+            tries += 1
+            blocks = [b for b in blocks if self.world.is_solid_block(*b)]
+            for block in blocks:
+                self.break_block(*block)
+        return not bool(blocks)

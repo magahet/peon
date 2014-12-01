@@ -70,5 +70,6 @@ if __name__ == '__main__':
             actions = yaml.load(_file)
     else:
         actions = []
+    logger.info('actions: %s', str(actions))
     client, bot = start_auto_bot(server, username, password, actions, port,
                                  auth_enabled, chat=args.chat)

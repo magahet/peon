@@ -9,6 +9,7 @@ from player import Player
 import types
 from fastmc.proto import Position
 from utils import LocksWrapper
+from scipy.spatial.distance import euclidean
 
 
 log = logging.getLogger(__name__)
@@ -76,9 +77,15 @@ class Robot(Player):
                 'locks': ['movement'],
                 'interval': 60,
             },
+            'mine': {
+                'function': self.mine,
+                'locks': ['movement', 'inventory'],
+                'interval': 1,
+            },
         }
         self.start_threads()
         self.state = ''
+        self.unmineable = set([])
 
     def __repr__(self):
         template = ('Bot(xyz={}, health={}, food={}, xp={}, '
@@ -341,7 +348,7 @@ class Robot(Player):
         self.close_window()
         return True
 
-    def store_items(self, items, chest_position=None, invert=False):
+    def store_items(self, items, chest_position=None, invert=False, dig=False):
         '''Put items from inventory into a chest at the specified location.
         The invert option will change the behavior so that everything except the
         items listed will be stored.'''
@@ -353,8 +360,11 @@ class Robot(Player):
         if chest_position is None:
             # TODO search for nearby chest
             return False
-        if not self.navigate_to(*chest_position, space=3):
+        if not dig and not self.navigate_to(*chest_position, space=2):
             log.error('Could not navigate to chest: %s', chest_position)
+            return False
+        elif dig and not self.dig_to(*chest_position, space=2):
+            log.error('Could not dig to chest: %s', chest_position)
             return False
         if not self.click_inventory_block(*chest_position):
             log.error('Could not open chest: %s', chest_position)
@@ -440,3 +450,27 @@ class Robot(Player):
             else:
                 try_to_harvest(position)
         self.navigate_to(*home)
+
+    def mine(self, block_types=None, home=None, _range=50, num=1):
+        if None not in self.inventory.player_inventory:
+            return False
+        x, y, z = self.get_position(floor=True) if home is None else home
+        block_types = types.ORE if block_types is None else block_types
+        block_iter = self.world.iter_block_types(x, y, z, block_types,
+                                                 _range=_range)
+        for count, (x, y, z) in enumerate(block_iter):
+            if (x, y, z) in self.unmineable:
+                continue
+            print x, y, z
+            if not self.dig_to(x, y, z,
+                               timeout=int(euclidean(self.position,
+                                                     (x, y, z)) ** 2)):
+                self.unmineable.add((x, y, z))
+                continue
+            if count >= num - 1:
+                break
+        else:
+            # No blocks could be reached
+            return False
+        time.sleep(0.5)
+        return True

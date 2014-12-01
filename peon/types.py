@@ -22,6 +22,16 @@ FALLING_BLOCKS = set([
     'Red Sand',
     'Gravel',
 ])
+ORE = set([
+    'Coal Ore',
+    'Iron Ore',
+    'Redstone Ore',
+    'Lapis Lazuli Ore',
+    'Gold Ore',
+    'Diamond Ore',
+    'Emerald Ore',
+    'Nether Quartz Ore',
+])
 FOOD = set([
     'Cooked Porkchop',
     'Steak',
