@@ -99,13 +99,20 @@ class World(smpmap.World):
             return player.get_position(floor=True)
 
     @staticmethod
-    def iter_adjacent(x, y, z):
+    def iter_adjacent(x, y, z, center=False):
         for dx in xrange(-1, 2):
             for dy in xrange(-1, 2):
                 for dz in xrange(-1, 2):
-                    if (dx, dy, dz) == (0, 0, 0):
+                    if not center and (dx, dy, dz) == (0, 0, 0):
                         continue
                     yield (x + dx, y + dy, z + dz)
+
+    def iter_adjacent_2d(x, z, center=False):
+        for dx in xrange(-1, 2):
+            for dz in xrange(-1, 2):
+                if not center and (dx, dz) == (0, 0):
+                    continue
+                yield (x + dx, z + dz)
 
     def iter_moveable_adjacent(self, x0, y0, z0):
         for x, y, z in self.iter_adjacent(x0, y0, z0):
@@ -151,6 +158,23 @@ class World(smpmap.World):
                     continue
                 if _range is None or euclidean((x, y, z), neighbor) <= _range:
                     _open.append(neighbor)
+
+    def iter_block_types_surrounding_chunks(self, x, y, z, _type):
+        if isinstance(_type, basestring):
+            _type = ItemTypes.get_block_id(_type) << 4  # pre bit shifted
+        for (cx, cz) in self.iter_adjacent_2d(x // 16, z // 16, center=True):
+            column = self.columns.get((cx, cz))
+            if column is None:
+                continue
+            for y_index, chunk in enumerate(column.chunks):
+                if chunk is None:
+                    continue
+                for index, data in enumerate(chunk['block_data'].data):
+                    if _type == data:
+                        dy, r = divmod(index, 16)
+                        dz, dx = divmod(r, 16)
+                        x, y, z = dx + cx * 16, dy + y_index, dz + cz * 16
+                        yield (x, y, z)
 
     def get_name(self, x, y, z):
         return ItemTypes.get_block_name(self.get_id(x, y, z))
