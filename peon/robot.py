@@ -456,18 +456,20 @@ class Robot(Player):
             return False
         x, y, z = self.get_position(floor=True) if home is None else home
         block_types = types.ORE if block_types is None else block_types
-        block_iter = self.world.iter_block_types(x, y, z, block_types,
-                                                 _range=_range)
-        for count, (x, y, z) in enumerate(block_iter):
+        block_iter = self.world.iter_nearest_from_block_types(
+            x, y, z, block_types)
+        for (x, y, z) in block_iter:
             if (x, y, z) in self.unmineable:
                 continue
-            print x, y, z
+            log.info('Found %s at: %s', self.world.get_name(x, y, z),
+                     str((x, y, z)))
             if not self.dig_to(x, y, z,
                                timeout=int(euclidean(self.position,
                                                      (x, y, z)) ** 2)):
                 self.unmineable.add((x, y, z))
                 continue
-            if count >= num - 1:
+            num -= 1
+            if num <= 0:
                 break
         else:
             # No blocks could be reached

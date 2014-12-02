@@ -11,6 +11,7 @@ from fastmc.proto import Position
 
 
 log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 class Player(object):

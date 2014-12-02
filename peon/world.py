@@ -1,9 +1,16 @@
 from scipy.spatial.distance import euclidean
+import scipy.spatial as ss
+import numpy as np
 from math import floor
 import smpmap
 import astar
 from types import (MobTypes, ItemTypes, ObjectTypes)
 from window import Slot
+import logging
+
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 class World(smpmap.World):
@@ -99,14 +106,17 @@ class World(smpmap.World):
             return player.get_position(floor=True)
 
     @staticmethod
-    def iter_adjacent(x, y, z, center=False):
+    def iter_adjacent(x, y, z, center=False, diagonal=True):
         for dx in xrange(-1, 2):
             for dy in xrange(-1, 2):
                 for dz in xrange(-1, 2):
                     if not center and (dx, dy, dz) == (0, 0, 0):
                         continue
+                    if not diagonal and (dx, dy, dz).count(0) < 2:
+                        continue
                     yield (x + dx, y + dy, z + dz)
 
+    @staticmethod
     def iter_adjacent_2d(x, z, center=False):
         for dx in xrange(-1, 2):
             for dz in xrange(-1, 2):
@@ -159,10 +169,21 @@ class World(smpmap.World):
                 if _range is None or euclidean((x, y, z), neighbor) <= _range:
                     _open.append(neighbor)
 
-    def iter_block_types_surrounding_chunks(self, x, y, z, _type):
-        if isinstance(_type, basestring):
-            _type = ItemTypes.get_block_id(_type) << 4  # pre bit shifted
-        for (cx, cz) in self.iter_adjacent_2d(x // 16, z // 16, center=True):
+    def iter_nearest_from_block_types(self, x, y, z, block_types):
+        points = np.array(
+            [p for p in
+             self.iter_block_types_in_surrounding_chunks(x, y, z, block_types)])
+        tree = ss.KDTree(points)
+        result = tree.query((x, y, z), k=None)
+        indexies = result[1]
+        for num in xrange(len(indexies)):
+            yield points[indexies[num]]
+
+    def iter_block_types_in_surrounding_chunks(self, x, y, z, block_types):
+        ids = [ItemTypes.get_block_id(_type) << 4 for
+               _type in block_types]
+        cx, cz = x // 16, z // 16
+        for (cx, cz) in self.iter_adjacent_2d(cx, cz, center=True):
             column = self.columns.get((cx, cz))
             if column is None:
                 continue
@@ -170,10 +191,12 @@ class World(smpmap.World):
                 if chunk is None:
                     continue
                 for index, data in enumerate(chunk['block_data'].data):
-                    if _type == data:
-                        dy, r = divmod(index, 16)
+                    if data in ids:
+                        log.info('c_index: %d, y_index: %d, (cx, cz): %s',
+                                 index, y_index, str((cx, cz)))
+                        dy, r = divmod(index, 16 * 16)
                         dz, dx = divmod(r, 16)
-                        x, y, z = dx + cx * 16, dy + y_index, dz + cz * 16
+                        x, y, z = dx + cx * 16, dy + y_index * 16, dz + cz * 16
                         yield (x, y, z)
 
     def get_name(self, x, y, z):
@@ -295,7 +318,7 @@ class World(smpmap.World):
             return False
         if self.is_falling_block(x, y + 1, z):
             return False
-        for x, y, z in self.iter_adjacent(x, y, z):
+        for x, y, z in self.iter_adjacent(x, y, z, diagonal=False):
             if self.is_liquid_block(x, y, z):
                 return False
         return True
