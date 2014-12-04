@@ -16,30 +16,32 @@ log.addHandler(logging.NullHandler())
 
 class World(smpmap.World):
 
-    adjacent_sets = {
-        1: (
+    adjacent_sets = (
+        (1, (
             np.array([-1, 0, 0]),
             np.array([1, 0, 0]),
             np.array([0, -1, 0]),
             np.array([0, 1, 0]),
             np.array([0, 0, -1]),
             np.array([0, 0, 1]),
-        ),
-        2: (
+        )),
+        (1.5, (
             np.array([-1, -1, 0]),
             np.array([1, -1, 0]),
             np.array([-1, 1, 0]),
             np.array([1, 1, 0]),
-            np.array([-1, 0, -1]),
-            np.array([1, 0, -1]),
-            np.array([-1, 0, 1]),
-            np.array([1, 0, 1]),
             np.array([0, -1, -1]),
             np.array([0, 1, -1]),
             np.array([0, -1, 1]),
             np.array([0, 1, 1]),
-        ),
-        3: (
+        )),
+        (2, (
+            np.array([-1, 0, -1]),
+            np.array([1, 0, -1]),
+            np.array([-1, 0, 1]),
+            np.array([1, 0, 1]),
+        )),
+        (3, (
             np.array([-1, -1, -1]),
             np.array([1, -1, -1]),
             np.array([-1, 1, -1]),
@@ -48,8 +50,8 @@ class World(smpmap.World):
             np.array([1, -1, 1]),
             np.array([-1, 1, 1]),
             np.array([1, 1, 1]),
-        ),
-    }
+        )),
+    )
 
     def __init__(self):
         self.columns = {}
@@ -147,9 +149,11 @@ class World(smpmap.World):
         point = np.array([x, y, z])
         if center:
             yield (x, y, z)
-        for degree in xrange(1, degrees + 1):
-            for dt in cls.adjacent_sets.get(degree, []):
+        for degree, dt_set in cls.adjacent_sets:
+            for dt in dt_set:
                 yield tuple(point + dt)
+            if degrees >= degree:
+                break
 
     @staticmethod
     def iter_adjacent_2d(x, z, center=False):
@@ -165,7 +169,7 @@ class World(smpmap.World):
                 yield (x, y, z)
 
     def iter_diggable_adjacent(self, x0, y0, z0):
-        for x, y, z in self.iter_adjacent(x0, y0, z0, degrees=2):
+        for x, y, z in self.iter_adjacent(x0, y0, z0, degrees=1.5):
             if self.is_diggable(x0, y0, z0, x, y, z):
                 yield (x, y, z)
 
@@ -379,7 +383,7 @@ class World(smpmap.World):
             return self.iter_adjacent(*pos)
 
         def iter_diggable_adjacent(pos):
-            return self.iter_adjacent(*pos)
+            return self.iter_adjacent(*pos, degrees=1.5)
 
         def is_diggable(current, neighbor):
             x0, y0, z0 = current
@@ -405,13 +409,13 @@ class World(smpmap.World):
                 return []
             neighbor_function = iter_diggable_adjacent
             #cost_function = block_breaking_cost
-            cost_function = cityblock
+            cost_function = euclidean
             validation_function = is_diggable
         else:
             if not self.is_standable(x, y, z):
                 return []
             neighbor_function = iter_moveable_adjacent
-            cost_function = lambda p1, p2: euclidean(p1, p2)
+            cost_function = euclidean
             validation_function = is_moveable
 
         start = time.time()

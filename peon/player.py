@@ -266,6 +266,11 @@ class Player(object):
         self._open_window_id = 0
 
     def break_block(self, x, y, z):
+
+        def is_changed():
+            name = self.world.get_name(x, y, z)
+            return name != block_name or name == 'Air'
+
         x, y, z = int(x), int(y), int(z)  # TODO figure out why this is needed
         log.info('breaking block: (%d, %d, %d)', x, y, z)
         block_name = self.world.get_name(x, y, z)
@@ -295,8 +300,10 @@ class Player(object):
                    status=2,
                    location=Position(x, y, z),
                    face=1)
-        return self._wait_for(
-            lambda: self.world.get_name(x, y, z) != block_name, timeout=5)
+        result = self._wait_for(is_changed, timeout=5)
+        if not result:
+            log.info('could not break block: %s', str((x, y, z)))
+        return result
 
     def break_all_blocks(self, blocks):
         tries = 0
