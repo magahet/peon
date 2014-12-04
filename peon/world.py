@@ -1,4 +1,4 @@
-from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import (euclidean, cityblock)
 import scipy.spatial as ss
 import numpy as np
 from math import floor
@@ -7,6 +7,7 @@ import astar
 from types import (MobTypes, ItemTypes, ObjectTypes)
 from window import Slot
 import logging
+import time
 
 
 log = logging.getLogger(__name__)
@@ -14,6 +15,42 @@ log.addHandler(logging.NullHandler())
 
 
 class World(smpmap.World):
+
+    adjacent_sets = {
+        1: (
+            np.array([-1, 0, 0]),
+            np.array([1, 0, 0]),
+            np.array([0, -1, 0]),
+            np.array([0, 1, 0]),
+            np.array([0, 0, -1]),
+            np.array([0, 0, 1]),
+        ),
+        2: (
+            np.array([-1, -1, 0]),
+            np.array([1, -1, 0]),
+            np.array([-1, 1, 0]),
+            np.array([1, 1, 0]),
+            np.array([-1, 0, -1]),
+            np.array([1, 0, -1]),
+            np.array([-1, 0, 1]),
+            np.array([1, 0, 1]),
+            np.array([0, -1, -1]),
+            np.array([0, 1, -1]),
+            np.array([0, -1, 1]),
+            np.array([0, 1, 1]),
+        ),
+        3: (
+            np.array([-1, -1, -1]),
+            np.array([1, -1, -1]),
+            np.array([-1, 1, -1]),
+            np.array([1, 1, -1]),
+            np.array([-1, -1, 1]),
+            np.array([1, -1, 1]),
+            np.array([-1, 1, 1]),
+            np.array([1, 1, 1]),
+        ),
+    }
+
     def __init__(self):
         self.columns = {}
         self.entities = {}
@@ -105,16 +142,14 @@ class World(smpmap.World):
         if player is not None:
             return player.get_position(floor=True)
 
-    @staticmethod
-    def iter_adjacent(x, y, z, center=False, diagonal=True):
-        for dx in xrange(-1, 2):
-            for dy in xrange(-1, 2):
-                for dz in xrange(-1, 2):
-                    if not center and (dx, dy, dz) == (0, 0, 0):
-                        continue
-                    if not diagonal and (dx, dy, dz).count(0) < 2:
-                        continue
-                    yield (x + dx, y + dy, z + dz)
+    @classmethod
+    def iter_adjacent(cls, x, y, z, center=False, degrees=3):
+        point = np.array([x, y, z])
+        if center:
+            yield (x, y, z)
+        for degree in xrange(1, degrees + 1):
+            for dt in cls.adjacent_sets.get(degree, []):
+                yield tuple(point + dt)
 
     @staticmethod
     def iter_adjacent_2d(x, z, center=False):
@@ -130,7 +165,7 @@ class World(smpmap.World):
                 yield (x, y, z)
 
     def iter_diggable_adjacent(self, x0, y0, z0):
-        for x, y, z in self.iter_adjacent(x0, y0, z0):
+        for x, y, z in self.iter_adjacent(x0, y0, z0, degrees=2):
             if self.is_diggable(x0, y0, z0, x, y, z):
                 yield (x, y, z)
 
@@ -192,8 +227,8 @@ class World(smpmap.World):
                     continue
                 for index, data in enumerate(chunk['block_data'].data):
                     if data in ids:
-                        log.info('c_index: %d, y_index: %d, (cx, cz): %s',
-                                 index, y_index, str((cx, cz)))
+                        log.debug('c_index: %d, y_index: %d, (cx, cz): %s',
+                                  index, y_index, str((cx, cz)))
                         dy, r = divmod(index, 16 * 16)
                         dz, dx = divmod(r, 16)
                         x, y, z = dx + cx * 16, dy + y_index * 16, dz + cz * 16
@@ -212,10 +247,10 @@ class World(smpmap.World):
                 return False
 
         if y > y0:
-            return all([
-                self.is_passable(x0, y, z0),
+            return (
+                self.is_passable(x0, y, z0) and
                 self.is_moveable(x0, y, z0, x, y, z)
-            ])
+            )
         elif y < y0:
             return self.is_moveable(x0, y0, z0, x, y0, z, with_floor=False)
 
@@ -224,18 +259,18 @@ class World(smpmap.World):
             return True
 
         # check diagonal x z movement
-        return all([
-            self.is_passable(x0, y, z),
-            self.is_passable(x, y, z0),
-            any([
-                self.is_safe_non_solid_block(x, y - 1, z0),
-                self.is_climbable_block(x, y - 1, z0),
-                ]),
-            any([
-                self.is_safe_non_solid_block(x0, y - 1, z),
-                self.is_climbable_block(x0, y - 1, z),
-                ]),
-        ])
+        return (
+            self.is_passable(x0, y, z) and
+            self.is_passable(x, y, z0) and
+            (
+                self.is_safe_non_solid_block(x, y - 1, z0) or
+                self.is_climbable_block(x, y - 1, z0)
+            ) and
+            (
+                self.is_safe_non_solid_block(x0, y - 1, z) or
+                self.is_climbable_block(x0, y - 1, z)
+            )
+        )
 
     def is_diggable(self, x0, y0, z0, x, y, z, with_floor=True):
         # if moveable, no need to dig
@@ -247,21 +282,21 @@ class World(smpmap.World):
             return False
 
         # check target spot
-        if not all([
-            self.is_safe_to_break(x, y, z),
+        if not (
+            self.is_safe_to_break(x, y, z) and
             self.is_safe_to_break(x, y + 1, z)
-        ]):
+        ):
             return False
 
         if with_floor and not self.is_climbable_block(x, y - 1, z):
             return False
 
         if y > y0:
-            return all([
-                self.is_safe_to_break(x0, y, z0),
-                self.is_safe_to_break(x0, y + 1, z0),
+            return (
+                self.is_safe_to_break(x0, y, z0) and
+                self.is_safe_to_break(x0, y + 1, z0) and
                 self.is_diggable(x0, y, z0, x, y, z)
-            ])
+            )
         elif y < y0:
             return self.is_diggable(x0, y0, z0, x, y0, z, with_floor=False)
 
@@ -270,20 +305,20 @@ class World(smpmap.World):
             return True
 
         # check diagonal x z movement
-        return all([
-            self.is_safe_to_break(x0, y, z),
-            self.is_safe_to_break(x0, y + 1, z),
-            self.is_safe_to_break(x, y, z0),
-            self.is_safe_to_break(x, y + 1, z0),
-            any([
-                self.is_safe_non_solid_block(x, y - 1, z0),
-                self.is_climbable_block(x, y - 1, z0),
-                ]),
-            any([
-                self.is_safe_non_solid_block(x0, y - 1, z),
-                self.is_climbable_block(x0, y - 1, z),
-                ]),
-        ])
+        return (
+            self.is_safe_to_break(x0, y, z) and
+            self.is_safe_to_break(x0, y + 1, z) and
+            self.is_safe_to_break(x, y, z0) and
+            self.is_safe_to_break(x, y + 1, z0) and
+            (
+                self.is_safe_non_solid_block(x, y - 1, z0) or
+                self.is_climbable_block(x, y - 1, z0)
+            ) and
+            (
+                self.is_safe_non_solid_block(x0, y - 1, z) or
+                self.is_climbable_block(x0, y - 1, z)
+            )
+        )
 
     def get_blocks_to_break(self, x0, y0, z0, x, y, z):
         if (x0, y0, z0) == (x, y, z):
@@ -318,33 +353,43 @@ class World(smpmap.World):
             return False
         if self.is_falling_block(x, y + 1, z):
             return False
-        for x, y, z in self.iter_adjacent(x, y, z, diagonal=False):
+        for x, y, z in self.iter_adjacent(x, y, z, degrees=1):
             if self.is_liquid_block(x, y, z):
                 return False
         return True
 
     def is_standable(self, x, y, z):
-        return all([
-            self.is_breathable_block(x, y + 1, z),
-            self.is_safe_non_solid_block(x, y + 1, z),
-            self.is_safe_non_solid_block(x, y, z),
-            self.is_climbable_block(x, y - 1, z),
-        ])
+        return (
+            self.is_breathable_block(x, y + 1, z) and
+            self.is_safe_non_solid_block(x, y + 1, z) and
+            self.is_safe_non_solid_block(x, y, z) and
+            self.is_climbable_block(x, y - 1, z)
+        )
 
     def is_passable(self, x, y, z):
-        return all([
-            self.is_safe_non_solid_block(x, y + 1, z),
-            self.is_safe_non_solid_block(x, y, z),
-        ])
+        return (
+            self.is_safe_non_solid_block(x, y + 1, z) and
+            self.is_safe_non_solid_block(x, y, z)
+        )
 
     def find_path(self, x0, y0, z0, x, y, z, space=0, timeout=10,
                   digging=False, debug=None):
 
         def iter_moveable_adjacent(pos):
-            return self.iter_moveable_adjacent(*pos)
+            return self.iter_adjacent(*pos)
 
         def iter_diggable_adjacent(pos):
-            return self.iter_diggable_adjacent(*pos)
+            return self.iter_adjacent(*pos)
+
+        def is_diggable(current, neighbor):
+            x0, y0, z0 = current
+            x, y, z = neighbor
+            return self.is_diggable(x0, y0, z0, x, y, z)
+
+        def is_moveable(current, neighbor):
+            x0, y0, z0 = current
+            x, y, z = neighbor
+            return self.is_moveable(x0, y0, z0, x, y, z)
 
         def block_breaking_cost(p1, p2, weight=7):
             x0, y0, z0 = p1
@@ -353,22 +398,27 @@ class World(smpmap.World):
 
         # TODO pre-check the destination for a spot to stand
         if digging:
-            if not all([
-                self.is_safe_to_break(x, y, z),
-                self.is_safe_to_break(x, y + 1, z),
-            ]):
+            if not (
+                self.is_safe_to_break(x, y, z) and
+                self.is_safe_to_break(x, y + 1, z)
+            ):
                 return []
             neighbor_function = iter_diggable_adjacent
-            cost_function = block_breaking_cost
+            #cost_function = block_breaking_cost
+            cost_function = cityblock
+            validation_function = is_diggable
         else:
             if not self.is_standable(x, y, z):
                 return []
             neighbor_function = iter_moveable_adjacent
             cost_function = lambda p1, p2: euclidean(p1, p2)
+            validation_function = is_moveable
 
-        return astar.astar(
+        start = time.time()
+        path = astar.astar(
             (floor(x0), floor(y0), floor(z0)),              # start_pos
             neighbor_function,                              # neighbors
+            validation_function,                            # neighbors
             lambda p: euclidean(p, (x, y, z)) <= space,     # at_goal
             0,                                              # start_g
             cost_function,                                  # cost
@@ -376,6 +426,10 @@ class World(smpmap.World):
             timeout,                                        # timeout
             debug                                           # debug
         )
+        if path is not None:
+            log.info('Path found in %d sec. %d long.',
+                     int(time.time() - start), len(path))
+        return path
 
 
 '''

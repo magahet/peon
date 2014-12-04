@@ -1,6 +1,11 @@
 from heapq import heappush, heappop
 from sys import maxint
 import time
+import logging
+
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 # Represent each node as a list, ordering the elements so that a heap of nodes
@@ -11,7 +16,7 @@ import time
 F, H, NUM, G, POS, OPEN, VALID, PARENT = xrange(8)
 
 
-def astar(start_pos, neighbors, goal, start_g, cost, heuristic, timeout=5,
+def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeout=5,
           debug=None):
 
     """Find the shortest path from start to goal.
@@ -76,6 +81,8 @@ def astar(start_pos, neighbors, goal, start_g, cost, heuristic, timeout=5,
             neighbor_g = current[G] + cost(current[POS], neighbor_pos)
             neighbor = nodes.get(neighbor_pos)
             if neighbor is None:
+                if not validate(current[POS], neighbor_pos):
+                    continue
 
                 # Limit the search.
                 #if len(nodes) >= limit:
@@ -137,4 +144,5 @@ def astar(start_pos, neighbors, goal, start_g, cost, heuristic, timeout=5,
         path.append(current[POS])
         current = nodes[current[PARENT]]
     path.reverse()
+    log.info('search rate: %d/sec', len(nodes) / (time.time() - start_time))
     return path

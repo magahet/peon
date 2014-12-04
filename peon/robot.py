@@ -9,7 +9,7 @@ from player import Player
 import types
 from fastmc.proto import Position
 from utils import LocksWrapper
-from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import cityblock
 
 
 log = logging.getLogger(__name__)
@@ -451,7 +451,7 @@ class Robot(Player):
                 try_to_harvest(position)
         self.navigate_to(*home)
 
-    def mine(self, block_types=None, home=None, _range=50, num=1):
+    def mine(self, block_types=None, home=None, num=1):
         if None not in self.inventory.player_inventory:
             return False
         x, y, z = self.get_position(floor=True) if home is None else home
@@ -463,9 +463,10 @@ class Robot(Player):
                 continue
             log.info('Found %s at: %s', self.world.get_name(x, y, z),
                      str((x, y, z)))
-            if not self.dig_to(x, y, z,
-                               timeout=int(euclidean(self.position,
-                                                     (x, y, z)) ** 2)):
+            timeout = (cityblock(self.get_position(floor=True),
+                                 (x, y, z)) / 2) ** 3 / 600
+            log.info('looking for path. timeout: %d', int(timeout))
+            if not self.dig_to(x, y, z, timeout=timeout):
                 self.unmineable.add((x, y, z))
                 continue
             num -= 1

@@ -1,5 +1,4 @@
 - name: mine
-  _range: 70
   block_types:
     - Diamond Ore
     - Gold Ore
