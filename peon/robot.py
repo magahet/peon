@@ -9,7 +9,6 @@ from player import Player
 import types
 from fastmc.proto import Position
 from utils import LocksWrapper
-from scipy.spatial.distance import cityblock
 
 
 log = logging.getLogger(__name__)
@@ -85,6 +84,7 @@ class Robot(Player):
         }
         self.start_threads()
         self.state = ''
+        self._last_health = 0
         self.unmineable = set([])
 
     def __repr__(self):
@@ -388,11 +388,16 @@ class Robot(Player):
         return True
 
     def escape(self, min_health=10):
-        if self.health is not None and self.health < min_health:
+        if self.health is None:
+            return
+        if self.health < min_health:
             log.warn('health too low, escaping: %s', self.health)
             os.kill(os.getpid(), signal.SIGTERM)
             time.sleep(1)
             os.kill(os.getpid(), signal.SIGKILL)
+        if self.health < self._last_health:
+            log.warn('health is dropping: %s', self.health)
+        self._last_health = self.health
 
     def farm(self, items, home=None, _range=10):
         return

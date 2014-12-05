@@ -1,4 +1,4 @@
-from scipy.spatial.distance import (euclidean, cityblock)
+from scipy.spatial.distance import euclidean
 import scipy.spatial as ss
 import numpy as np
 from math import floor
@@ -150,10 +150,9 @@ class World(smpmap.World):
         if center:
             yield (x, y, z)
         for degree, dt_set in cls.adjacent_sets:
-            for dt in dt_set:
-                yield tuple(point + dt)
-            if degrees >= degree:
-                break
+            if degree <= degrees:
+                for dt in dt_set:
+                    yield tuple(point + dt)
 
     @staticmethod
     def iter_adjacent_2d(x, z, center=False):
@@ -277,22 +276,24 @@ class World(smpmap.World):
         )
 
     def is_diggable(self, x0, y0, z0, x, y, z, with_floor=True):
+        # don't dig or move straight up or down
+        if (x0, z0) == (x, z):
+            return False
+
         # if moveable, no need to dig
         if self.is_moveable(x0, y0, z0, x, y, z, with_floor=with_floor):
             return True
-
-        # don't dig straight up or down
-        if (x0, z0) == (x, z):
-            return False
 
         # check target spot
         if not (
             self.is_safe_to_break(x, y, z) and
             self.is_safe_to_break(x, y + 1, z)
         ):
+            #log.info('not safe to break: %s', str((x, y, z)))
             return False
 
         if with_floor and not self.is_climbable_block(x, y - 1, z):
+            #log.info('not climbable: %s', str((x, y - 1, z)))
             return False
 
         if y > y0:
@@ -308,6 +309,7 @@ class World(smpmap.World):
         if x0 == x or z0 == z:
             return True
 
+        #log.info('checking diag. should not: %s', str((x0, y0, z0, x, y, z)))
         # check diagonal x z movement
         return (
             self.is_safe_to_break(x0, y, z) and
@@ -401,6 +403,7 @@ class World(smpmap.World):
             return 1 + len(self.get_blocks_to_break(x0, y0, z0, x, y, z)) * 0.5
 
         # TODO pre-check the destination for a spot to stand
+        log.info('looking for path from: %s to %s', str((x0, y0, z0)), str((x, y, z)))
         if digging:
             if not (
                 self.is_safe_to_break(x, y, z) and
@@ -422,7 +425,7 @@ class World(smpmap.World):
         path = astar.astar(
             (floor(x0), floor(y0), floor(z0)),              # start_pos
             neighbor_function,                              # neighbors
-            validation_function,                            # neighbors
+            validation_function,                            # validation
             lambda p: euclidean(p, (x, y, z)) <= space,     # at_goal
             0,                                              # start_g
             cost_function,                                  # cost

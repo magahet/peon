@@ -44,7 +44,7 @@ def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeou
 
     # Test for one step paths
     for pos in neighbors(start_pos):
-        if goal(pos):
+        if goal(pos) and validate(start_pos, pos):
             return [pos]
 
     # Create the start node.
@@ -88,6 +88,7 @@ def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeou
                 #if len(nodes) >= limit:
                     #continue
                 if time.time() - start_time > timeout:
+                    log.info('path finding timed out. search rate: %d/sec', len(nodes) / (time.time() - start_time))
                     return None
 
                 # We have found a new node.
@@ -143,6 +144,9 @@ def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeou
     while current[PARENT] is not None:
         path.append(current[POS])
         current = nodes[current[PARENT]]
+    if not path:
+        log.info('no valid path found. search rate: %d/sec', len(nodes) / (time.time() - start_time))
+        return None
     path.reverse()
-    log.info('search rate: %d/sec', len(nodes) / (time.time() - start_time))
+    log.info('path found. search rate: %d/sec', len(nodes) / (time.time() - start_time))
     return path

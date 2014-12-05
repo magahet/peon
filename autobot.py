@@ -15,7 +15,8 @@ def start_auto_bot(host, username, password, actions, port=25565, auth=True,
     client = peon.Client()
     client.connect(host, username, password, port, auth)
     bot = client.bot
-    time.sleep(2)
+    time.sleep(1)
+    print bot
     for settings in actions:
         name = settings.pop('name', '')
         args = settings.pop('args', ())

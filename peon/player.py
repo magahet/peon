@@ -121,12 +121,15 @@ class Player(object):
                 break_set = self.world.get_blocks_to_break(
                     x0, y0, z0, x, y, z)
                 if not self.break_all_blocks(break_set):
+                    log.info('could not break all the blocks: %s', str(break_set))
                     return False
             if num > 0:
                 x0, y0, z0 = path[num - 1]
             if not self.world.is_moveable(x0, y0, z0, x, y, z):
+                log.info('position is not moveable: %s', str((x0, y0, z0, x, y, z)))
                 return False
             if not self.move_to(x, y, z, speed=speed, center=True):
+                log.info('could not move to: %s', str((x, y, z)))
                 return False
         return True
 
