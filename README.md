@@ -1,11 +1,9 @@
 Peon
 ====
 
-Peon is a minecraft bot writen in python. It acts as a replacement for the minecraft client and allows for automation of tasks in the minecraft world.
+Peon is a minecraft bot written in python. It acts as a replacement for the minecraft client and allows for automation of tasks in the minecraft world. The bot can hunt, mine, gather, defend, eat, etc. He has efficient path finding both for movement and digging.
 
-This version of peon uses fastmc and works with Mincraft 1.8. It's functional for the most part, though many of the advanced features of the older peon haven't been implemented yet, such as enchanting, path finding, movement, and terraforming.
-
-What is implemented is much of the base player and world modeling, so the bot is aware of entities, blocks, his personal inventory, and health/hunger state.
+This version of peon uses fastmc and works with Mincraft 1.8.
 
 
 Small Tutorial
@@ -58,7 +56,7 @@ If his hunger reaches a set threshold, he will look for food in his inventory an
 
 ### Defend
 
-If hostile mobs enter a 4m radius, he will grab a sword from his inventory, if available, and kill the mob. Peon defends against hostile mobs by default. Defend is automatically enabled.
+If hostile mobs enter a 4m radius, he will grab a sword from his inventory, if available, and kill the mob. Peon defends against all hostile mobs by default. Defend is automatically enabled.
 
 
 ### Hunt
@@ -67,9 +65,11 @@ He will search the area for certain mob types, navigate to, and kill them.
 
 Example config:
 
+```
 - name: hunt
   mob_types: ['Sheep', 'Zombie']   # list of mobs to hunt
   _range: 20                       # how far from home to hunt
+```
 
 
 ### Gather
@@ -78,10 +78,27 @@ He will search for objects of a given type and go collect them.
 
 Example config:
 
+```
 - name: gather
   args:                     # gather takes one argument, a list of items to gather
     - ['Stone', 'Sand']     # list of items to gather
   _range: 20                # how far from home to search
+```
+
+
+### Mine
+
+Finds, digs to, and mines given block types. He has perfect knowledge of the world, so he digs straight to the resources. There's no searching involved.
+
+Example config:
+
+```
+- name: mine
+  block_types:
+    - Diamond Ore
+    - Gold Ore
+    - Iron Ore
+```
 
 
 # TODO
@@ -93,4 +110,3 @@ So, so much. It would be great to get all the previous peon functionality going 
 - exploring/searching for world features or biomes
 - farming
 - trading
-- mining
