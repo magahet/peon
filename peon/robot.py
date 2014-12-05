@@ -457,8 +457,8 @@ class Robot(Player):
         self.navigate_to(*home)
 
     def mine(self, block_types=None, home=None, num=1, timeout=10):
-        if None not in self.inventory.player_inventory:
-            return False
+        #if None not in self.inventory.player_inventory:
+            #return False
         x, y, z = self.get_position(floor=True) if home is None else home
         block_types = types.ORE if block_types is None else block_types
         block_iter = self.world.iter_nearest_from_block_types(

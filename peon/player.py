@@ -112,7 +112,7 @@ class Player(object):
         return self.follow_path(path, digging=True)
 
     def follow_path(self, path, speed=10, digging=False):
-        log.debug('following path: %s', str(path))
+        log.info('following path: %s', str(path))
         x0, y0, z0 = self.get_position(floor=True)
         for num, (x, y, z) in enumerate(path):
             if digging:
@@ -275,7 +275,7 @@ class Player(object):
             return name != block_name or name == 'Air'
 
         x, y, z = int(x), int(y), int(z)  # TODO figure out why this is needed
-        log.info('breaking block: (%d, %d, %d)', x, y, z)
+        log.debug('breaking block: (%d, %d, %d)', x, y, z)
         block_name = self.world.get_name(x, y, z)
         if block_name == 'Air':
             return True

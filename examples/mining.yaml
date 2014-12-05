@@ -1,7 +1,6 @@
 - name: mine
   block_types:
     - Diamond Ore
-  timeout: 300
 - name: store
   args: [['Diamond Pickaxe', 'Diamond Sword', 'Diamond Shovel', 'Cooked Chicken']]
   chest_position: [-32, 64, -25]
