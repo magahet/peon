@@ -52,6 +52,9 @@ class Window(object):
     def index(self, _type):
         return self.slots.index(_type)
 
+    def count(self, _type):
+        return self.slots.count(_type)
+
     def window_index(self, _type):
         return self.slots.window_index(_type)
 
@@ -166,6 +169,14 @@ class SlotList(list):
         for index, slot in enumerate(self):
             if slot is not None and slot.name == name:
                 return index
+
+    def count(self, _type):
+        name = self._get_name(_type)
+        count = 0
+        for index, slot in enumerate(self):
+            if slot is not None and slot.name == name:
+                count += slot.count
+        return count
 
     def window_index(self, _type):
         relative_index = self.index(_type)
