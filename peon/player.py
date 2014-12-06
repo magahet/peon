@@ -57,7 +57,7 @@ class Player(object):
 
     @property
     def position(self):
-        return (self.x, self.y, self.z)
+        return self.get_position(floor=True)
 
     def get_position(self, dx=0, dy=0, dz=0, floor=False):
         if self.x is None:

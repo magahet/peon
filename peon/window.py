@@ -19,6 +19,7 @@ class Window(object):
                 self.slots.append(slot)
         self._type = None
         self.title = None
+        self.properties = {}
         self.cursor_slot = None
         self._action_num_counter = action_num_counter
         self._send_queue = send_queue
@@ -70,6 +71,12 @@ class Window(object):
             slot = Slot(slot) if slot is not None else None
             self.slots.append(slot)
 
+    def get_property(self, _property):
+        return self.properties.get(_property)
+
+    def set_property(self, _property, value):
+        self.properties.update({_property: value})
+
     @property
     def custom_inventory(self):
         if len(self.slots) > 35:
@@ -110,6 +117,12 @@ class Window(object):
         if (mode, button) in self._click_handlers:
             return self._click_handlers[(mode, button)](slot_num)
 
+    def shift_click(self, slot_num):
+        return self.click(slot_num, mode=1)
+
+    def drop_click(self, slot_num):
+        return self.click(button=1, mode=4)
+
     def _left_click(self, slot_num):
         slot = self.slots[slot_num]
         self.slots[slot_num] = self.cursor_slot
@@ -141,6 +154,26 @@ class Window(object):
             while not what() and time.time() - start < timeout:
                 self._recv_condition.wait(timeout=1)
         return what()
+
+    def get_slot(self, slot_num):
+        if slot_num > len(self.slots):
+            return None
+        return self.slots[slot_num]
+
+    def get_slot_count(self, slot_num):
+        slot = self.get_slot(slot_num)
+        if slot is None:
+            return 0
+        return slot.count
+
+    def get_enchantables(self, _types):
+        slot_nums = []
+        for index, slot in enumerate(self.slots):
+            if slot is None or slot.name not in _types:
+                continue
+            if not slot.nbt:
+                slot_nums.append(index)
+        return slot_nums
 
 
 class SlotList(list):
