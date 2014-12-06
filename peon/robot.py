@@ -9,6 +9,7 @@ from player import Player
 import types
 from fastmc.proto import Position
 from utils import LocksWrapper
+from scipy.spatial.distance import euclidean
 
 
 log = logging.getLogger(__name__)
@@ -348,6 +349,46 @@ class Robot(Player):
         self.close_window()
         return True
 
+    #def get_items(self, items, chest_position=None, dig=False):
+        #'''Get items from chest at the specified location.'''
+
+        #if None not in self.inventory:
+            #log.error('Inventory is full')
+            #return False
+        #if chest_position is None:
+            ## TODO search for nearby chest
+            #return False
+        #if not dig and not self.navigate_to(*chest_position, space=2):
+            #log.error('Could not navigate to chest: %s', chest_position)
+            #return False
+        #elif dig and not self.dig_to(*chest_position, space=2):
+            #log.error('Could not dig to chest: %s', chest_position)
+            #return False
+        #if not self.click_inventory_block(*chest_position):
+            #log.error('Could not open chest: %s', chest_position)
+            #return False
+        #while None in self.open_window.player_inventory
+        #for item in items:
+            #for slot_num in self.open_window.custom_inventory.index(item):
+                #self.shift_click(self.open_window.window_index(slot_num)
+        #if None not in self.open_window.custom_inventory:
+            #log.error('Chest is full: %s', chest_position)
+            #self.close_window()
+            #return False
+        #log.info('Storing items: %s', str(items_to_store))
+        #for item in items_to_store:
+            #while (self.open_window is not None and
+                   #self.open_window.player_inventory is not None and
+                   #item in self.open_window.player_inventory and
+                   #None in self.open_window.custom_inventory):
+                #num = self.open_window.player_inventory.window_index(item)
+                #log.debug('Item slot: %s', num)
+                #if not self.open_window.click(num, mode=1):
+                    #self.close_window()
+                    #return False
+        #self.close_window()
+        #return True
+
     def store_items(self, items, chest_position=None, invert=False, dig=False):
         '''Put items from inventory into a chest at the specified location.
         The invert option will change the behavior so that everything except the
@@ -481,3 +522,55 @@ class Robot(Player):
             return False
         time.sleep(0.5)
         return True
+
+    def move_to_block_types(self, block_types):
+        x0, y0, z0 = self.position
+        for x, y, z in self.world.iter_nearest_from_block_types(x0, y0, z0, block_types):
+            if euclidean(self.position, (x, y, z)) <= 4:
+                return (x, y, z)
+            if self.navigate_to(x, y, z, space=3):
+                return (x, y, z)
+        log.info('could not get to a: %s', block_types)
+        return None
+
+    def enchant(self, types=None, min_level=2, min_xp=30):
+        if self.xp_level < min_xp:
+            log.debug('xp too low: %d', self.xp_level)
+            return False
+        if self.inventory.count('Lapis Lazuli') < 3:
+            log.info('not enough lapis')
+            return False
+        if not self.inventory.get_enchantables(types):
+            log.info('nothing to enchant')
+            return False
+        table = self.move_to_block_types(['Enchantment Table'])
+        if not table:
+            print 'table'
+            return False
+        if not self.click_inventory_block(*table):
+            print 'click'
+            return False
+        for slot_num in self.open_window.get_enchantables(types):
+            while self.open_window.get_slot_count(1) < 3:
+                self.open_window.shift_click(
+                    self.open_window.index('Lapis Lazuli'))
+            self.open_window.swap_slots(0, slot_num)
+            if not self._wait_for(lambda: bool(self.open_window.get_property(1))):
+                self.open_window.swap_slots(0, slot_num)
+                break
+            for level in xrange(2, min_level - 1, -1):
+                if self.open_window.get_property(level):
+                    break
+            else:
+                self.open_window.swap_slots(0, slot_num)
+                break
+            self._send(self.proto.PlayServerboundEnchantItem.id,
+                       window_id=self.open_window._id,
+                       enchantment=2
+                       )
+            self._wait_for(lambda: self.open_window.get_slot(0).nbt is not None)
+            self.open_window.swap_slots(0, slot_num)
+            if self.open_window.count('Lapis Lazuli') < 3:
+                break
+        self.open_window.shift_click(1)
+        self.close_window()

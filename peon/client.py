@@ -50,7 +50,8 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayServerboundHeldItemChange.id): self.set_held_item,
         }
         self.interesting = [
-            #self.proto.PlayClientboundChunkData.id
+            #self.proto.PlayClientboundWindowProperty.id,
+            #self.proto.PlayClientboundChunkData.id,
             #self.proto.PlayClientboundSpawnObject.id,
             #self.proto.PlayClientboundEntityMetadata.id,
             #self.proto.PlayClientboundEntityEquipment.id,
@@ -91,6 +92,7 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundCloseWindow.id): self.on_close_window,
             (fastmc.proto.PLAY, self.proto.PlayClientboundSetSlot.id): self.on_set_slot,
             (fastmc.proto.PLAY, self.proto.PlayClientboundWindowItem.id): self.on_window_item,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundWindowProperty.id): self.on_window_property,
             (fastmc.proto.PLAY, self.proto.PlayClientboundConfirmTransaction.id): self.on_confirm_transaction,
             (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerListItem.id): self.on_player_list_item,
         }
@@ -497,6 +499,17 @@ class Client(object):
                                                      )
         else:
             self.bot.windows[pkt.window_id].set_slots(pkt.slots)
+
+    def on_window_property(self, pkt):
+        if pkt.window_id not in self.bot.windows:
+            self.bot.windows[pkt.window_id] = Window(pkt.window_id,
+                                                     self._action_num_counter,
+                                                     self._send_queue,
+                                                     self.proto,
+                                                     self._recv_condition
+                                                     )
+        else:
+            self.bot.windows[pkt.window_id].set_property(pkt.property, pkt.value)
 
     def on_confirm_transaction(self, pkt):
         if not pkt.accepted:

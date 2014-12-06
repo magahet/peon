@@ -215,7 +215,7 @@ class World(smpmap.World):
         result = tree.query((x, y, z), k=None)
         indexies = result[1]
         for num in xrange(len(indexies)):
-            yield points[indexies[num]]
+            yield (int(i) for i in points[indexies[num]])
 
     def iter_block_types_in_surrounding_chunks(self, x, y, z, block_types):
         ids = [ItemTypes.get_block_id(_type) << 4 for
