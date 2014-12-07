@@ -1,4 +1,4 @@
-from types import (ItemTypes, InventoryTypes)
+from types import (ItemTypes, InventoryTypes, ENCHANT_ITEMS)
 import time
 import logging
 import fastmc.proto
@@ -166,10 +166,12 @@ class Window(object):
             return 0
         return slot.count
 
-    def get_enchantables(self, _types):
+    def get_enchantables(self, types=None):
+        if types is None:
+            types = ENCHANT_ITEMS
         slot_nums = []
         for index, slot in enumerate(self.slots):
-            if slot is None or slot.name not in _types:
+            if slot is None or slot.name not in types:
                 continue
             if not slot.nbt:
                 slot_nums.append(index)

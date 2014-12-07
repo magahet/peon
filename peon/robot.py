@@ -82,6 +82,14 @@ class Robot(Player):
                 'locks': ['movement', 'inventory'],
                 'interval': 1,
             },
+            'enchant': {
+                'function': self.enchant,
+                'locks': ['movement', 'inventory'],
+                'interval': 60,
+                'kwargs': {
+                    'types': types.ENCHANT_ITEMS
+                },
+            },
         }
         self.start_threads()
         self.state = ''
@@ -349,45 +357,31 @@ class Robot(Player):
         self.close_window()
         return True
 
-    #def get_items(self, items, chest_position=None, dig=False):
-        #'''Get items from chest at the specified location.'''
+    def get_items(self, items, chest_position=None, dig=False):
+        '''Get items from chest at the specified location.'''
 
-        #if None not in self.inventory:
-            #log.error('Inventory is full')
-            #return False
-        #if chest_position is None:
-            ## TODO search for nearby chest
-            #return False
-        #if not dig and not self.navigate_to(*chest_position, space=2):
-            #log.error('Could not navigate to chest: %s', chest_position)
-            #return False
-        #elif dig and not self.dig_to(*chest_position, space=2):
-            #log.error('Could not dig to chest: %s', chest_position)
-            #return False
-        #if not self.click_inventory_block(*chest_position):
-            #log.error('Could not open chest: %s', chest_position)
-            #return False
-        #while None in self.open_window.player_inventory
-        #for item in items:
-            #for slot_num in self.open_window.custom_inventory.index(item):
-                #self.shift_click(self.open_window.window_index(slot_num)
-        #if None not in self.open_window.custom_inventory:
-            #log.error('Chest is full: %s', chest_position)
-            #self.close_window()
-            #return False
-        #log.info('Storing items: %s', str(items_to_store))
-        #for item in items_to_store:
-            #while (self.open_window is not None and
-                   #self.open_window.player_inventory is not None and
-                   #item in self.open_window.player_inventory and
-                   #None in self.open_window.custom_inventory):
-                #num = self.open_window.player_inventory.window_index(item)
-                #log.debug('Item slot: %s', num)
-                #if not self.open_window.click(num, mode=1):
-                    #self.close_window()
-                    #return False
-        #self.close_window()
-        #return True
+        if None not in self.inventory:
+            log.error('Inventory is full')
+            return False
+        if chest_position is None:
+            # TODO search for nearby chest
+            return False
+        if not dig and not self.navigate_to(*chest_position, space=3):
+            log.error('Could not navigate to chest: %s', chest_position)
+            return False
+        elif dig and not self.dig_to(*chest_position, space=3):
+            log.error('Could not dig to chest: %s', chest_position)
+            return False
+        if not self.click_inventory_block(*chest_position):
+            log.error('Could not open chest: %s', chest_position)
+            return False
+        for item in items:
+            slot_num = self.open_window.custom_inventory.window_index(item)
+            if slot_num is None:
+                continue
+            self.open_window.shift_click(slot_num)
+        self.close_window()
+        return True
 
     def store_items(self, items, chest_position=None, invert=False, dig=False):
         '''Put items from inventory into a chest at the specified location.
@@ -401,10 +395,10 @@ class Robot(Player):
         if chest_position is None:
             # TODO search for nearby chest
             return False
-        if not dig and not self.navigate_to(*chest_position, space=2):
+        if not dig and not self.navigate_to(*chest_position, space=3):
             log.error('Could not navigate to chest: %s', chest_position)
             return False
-        elif dig and not self.dig_to(*chest_position, space=2):
+        elif dig and not self.dig_to(*chest_position, space=3):
             log.error('Could not dig to chest: %s', chest_position)
             return False
         if not self.click_inventory_block(*chest_position):

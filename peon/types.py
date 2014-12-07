@@ -61,6 +61,18 @@ ARMOR = {
     7: 'Leggings',
     8: 'Boots',
 }
+ENCHANT_ITEMS = set([
+    'Diamond Helmet',
+    'Diamond Chestplate',
+    'Diamond Leggings',
+    'Diamond Boots',
+    'Diamond Sword',
+    'Diamond Pickaxe',
+    'Diamond Shovel',
+    'Diamond Axe',
+    'Bow',
+    'Fishing Rod',
+])
 HARVESTABLE_BLOCKS = set([
     ('Wheat', 7),
     ('Carrot Crops', 7),
