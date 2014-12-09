@@ -105,8 +105,8 @@ Example config:
 
 So, so much. It would be great to get all the previous peon functionality going again. However, we all have real lives and there are only so many hours in a day. Here are some big items I'm working to get going again:
 
-- enchanting
 - clearing land
 - exploring/searching for world features or biomes
 - farming
 - trading
+- building
