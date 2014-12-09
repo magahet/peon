@@ -363,6 +363,17 @@ class Robot(Player):
         if None not in self.inventory:
             log.error('Inventory is full')
             return False
+        if not self.move_and_open(chest_position, dig):
+            return False
+        for item in items:
+            slot_num = self.open_window.custom_inventory.window_index(item)
+            if slot_num is None:
+                continue
+            self.open_window.shift_click(slot_num)
+        self.close_window()
+        return True
+
+    def move_and_open(self, chest_position, dig=False):
         if chest_position is None:
             # TODO search for nearby chest
             return False
@@ -375,12 +386,6 @@ class Robot(Player):
         if not self.click_inventory_block(*chest_position):
             log.error('Could not open chest: %s', chest_position)
             return False
-        for item in items:
-            slot_num = self.open_window.custom_inventory.window_index(item)
-            if slot_num is None:
-                continue
-            self.open_window.shift_click(slot_num)
-        self.close_window()
         return True
 
     def store_items(self, items, chest_position=None, invert=False, dig=False):
@@ -392,17 +397,7 @@ class Robot(Player):
         if not items_to_store:
             log.debug('No items to store')
             return True
-        if chest_position is None:
-            # TODO search for nearby chest
-            return False
-        if not dig and not self.navigate_to(*chest_position, space=3):
-            log.error('Could not navigate to chest: %s', chest_position)
-            return False
-        elif dig and not self.dig_to(*chest_position, space=3):
-            log.error('Could not dig to chest: %s', chest_position)
-            return False
-        if not self.click_inventory_block(*chest_position):
-            log.error('Could not open chest: %s', chest_position)
+        if not self.move_and_open(chest_position, dig):
             return False
         if None not in self.open_window.custom_inventory:
             log.error('Chest is full: %s', chest_position)
@@ -545,9 +540,15 @@ class Robot(Player):
             print 'click'
             return False
         for slot_num in self.open_window.get_enchantables(types):
+            if self.inventory.count('Lapis Lazuli') < 3:
+                log.info('not enough lapis')
+                break
+            slot = self.open_window.get_slot(slot_num)
+            if slot is None:
+                continue
             while self.open_window.get_slot_count(1) < 3:
-                self.open_window.shift_click(
-                    self.open_window.index('Lapis Lazuli'))
+                lapis_slot = self.open_window.index('Lapis Lazuli')
+                self.open_window.shift_click(lapis_slot)
             self.open_window.swap_slots(0, slot_num)
             if not self._wait_for(lambda: bool(self.open_window.get_property(1))):
                 self.open_window.swap_slots(0, slot_num)
@@ -558,6 +559,7 @@ class Robot(Player):
             else:
                 self.open_window.swap_slots(0, slot_num)
                 break
+            log.info('Enchanting %s', slot.name)
             self._send(self.proto.PlayServerboundEnchantItem.id,
                        window_id=self.open_window._id,
                        enchantment=2
@@ -566,5 +568,12 @@ class Robot(Player):
             self.open_window.swap_slots(0, slot_num)
             if self.open_window.count('Lapis Lazuli') < 3:
                 break
-        self.open_window.shift_click(1)
+            if self.xp_level < min_xp:
+                break
+        if self.open_window.get_slot_count(1) > 0:
+            item = self.open_window.get_slot(lapis_slot)
+            if item is None or item.name == 'Lapis Lazuli':
+                self.open_window.shift_click(1)
+            else:
+                self.open_window.swap_slots(1, lapis_slot)
         self.close_window()

@@ -177,6 +177,17 @@ class Window(object):
                 slot_nums.append(index)
         return slot_nums
 
+    def get_enchanted(self, types=None):
+        if types is None:
+            types = ENCHANT_ITEMS
+        slot_nums = []
+        for index, slot in enumerate(self.slots):
+            if slot is None or slot.name not in types:
+                continue
+            if slot.nbt:
+                slot_nums.append(index)
+        return slot_nums
+
 
 class SlotList(list):
     def __init__(self, *args, **kwargs):
