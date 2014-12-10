@@ -403,10 +403,10 @@ class Robot(Player):
         if chest_position is None:
             # TODO search for nearby chest
             return False
-        if not dig and not self.navigate_to(*chest_position, space=3):
+        if not dig and not self.navigate_to(*chest_position, space=4):
             log.error('Could not navigate to chest: %s', chest_position)
             return False
-        elif dig and not self.dig_to(*chest_position, space=3):
+        elif dig and not self.dig_to(*chest_position, space=4):
             log.error('Could not dig to chest: %s', chest_position)
             return False
         if not self.click_inventory_block(*chest_position):

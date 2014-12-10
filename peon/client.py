@@ -61,7 +61,7 @@ class Client(object):
             #self.proto.PlayClientboundOpenWindow.id,
             #self.proto.PlayClientboundCloseWindow.id,
             #self.proto.PlayClientboundWindowItem.id,
-            self.proto.PlayClientboundSetSlot.id,
+            #self.proto.PlayClientboundSetSlot.id,
             #self.proto.PlayClientboundConfirmTransaction.id,
         ]
         self._handlers = {

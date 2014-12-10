@@ -1,12 +1,12 @@
 - name: enchant
 
 - name: get_enchantables
-  chest_position: [-56, 7, -127]
+  chest_position: [-336, 36, 835]
 
 - name: get
   args:
     - ["Lapis Lazuli"]
-  chest_position: [-56, 7, -127]
+  chest_position: [-336, 36, 835]
 
 - name: store_enchanted
-  chest_position: [-60, 7, -127]
+  chest_position: [-333, 36, 835]
