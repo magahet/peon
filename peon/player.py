@@ -41,6 +41,8 @@ class Player(object):
         self.on_ground = True
         self._is_moving = threading.Event()
         self._position_update_lock = threading.Lock()
+        self._move_lock = threading.RLock()
+        self._inventory_lock = threading.RLock()
         self.move_corrected_by_server = threading.Event()
 
     def _wait_for(self, what, timeout=10):
@@ -87,16 +89,17 @@ class Player(object):
     def navigate_to(self, x, y, z, speed=10, space=0, timeout=10):
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
-        log.info('navigating from %s to %s.', str((x0, y0, z0)),
-                 str((x, y, z)))
         if euclidean((x0, y0, z0), (x, y, z)) <= space:
             return True
-        path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
-                                    timeout=timeout)
-        log.info('path: %s', str(path))
-        if not path:
-            return False
-        return self.follow_path(path)
+        log.info('navigating from %s to %s.', str((x0, y0, z0)),
+                 str((x, y, z)))
+        with self._move_lock:
+            path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
+                                        timeout=timeout)
+            log.info('path: %s', str(path))
+            if not path:
+                return False
+            return self.follow_path(path)
 
     def dig_to(self, x, y, z, speed=10, space=0, timeout=10):
         x0, y0, z0 = self.get_position(floor=True)
@@ -104,34 +107,38 @@ class Player(object):
         log.debug('digging from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
         if euclidean((x0, y0, z0), (x, y, z)) <= space:
             return True
-        path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
-                                    timeout=timeout, digging=True)
-        log.info('path: %s', str(path))
-        if not path:
-            return False
-        return self.follow_path(path, digging=True)
+        with self._move_lock:
+            path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
+                                        timeout=timeout, digging=True)
+            log.info('path: %s', str(path))
+            if not path:
+                return False
+            return self.follow_path(path, digging=True)
 
     def follow_path(self, path, speed=10, digging=False):
         log.info('following path: %s', str(path))
-        x0, y0, z0 = self.get_position(floor=True)
-        for num, (x, y, z) in enumerate(path):
-            if digging:
+        with self._move_lock:
+            x0, y0, z0 = self.get_position(floor=True)
+            for num, (x, y, z) in enumerate(path):
+                if digging:
+                    if num > 0:
+                        x0, y0, z0 = path[num - 1]
+                    break_set = self.world.get_blocks_to_break(
+                        x0, y0, z0, x, y, z)
+                    if not self.break_all_blocks(break_set):
+                        log.info('could not break all the blocks: %s',
+                                 str(break_set))
+                        return False
                 if num > 0:
                     x0, y0, z0 = path[num - 1]
-                break_set = self.world.get_blocks_to_break(
-                    x0, y0, z0, x, y, z)
-                if not self.break_all_blocks(break_set):
-                    log.info('could not break all the blocks: %s', str(break_set))
+                if not self.world.is_moveable(x0, y0, z0, x, y, z):
+                    log.info('position is not moveable: %s',
+                             str((x0, y0, z0, x, y, z)))
                     return False
-            if num > 0:
-                x0, y0, z0 = path[num - 1]
-            if not self.world.is_moveable(x0, y0, z0, x, y, z):
-                log.info('position is not moveable: %s', str((x0, y0, z0, x, y, z)))
-                return False
-            if not self.move_to(x, y, z, speed=speed, center=True):
-                log.info('could not move to: %s', str((x, y, z)))
-                return False
-        return True
+                if not self.move_to(x, y, z, speed=speed, center=True):
+                    log.info('could not move to: %s', str((x, y, z)))
+                    return False
+            return True
 
     def move_to(self, x, y, z, speed=10, center=False):
         def abs_min(n, delta):
@@ -148,19 +155,21 @@ class Player(object):
         delta = speed * dt
         self._is_moving.set()
         self.move_corrected_by_server.clear()
-        while euclidean((x, y, z), self.get_position()) > 0.1:
-            dx = x - self.x
-            dy = y - self.y
-            dz = z - self.z
-            target = (abs_min(dx, delta), abs_min(dy, delta), abs_min(dz, delta))
-            self.move(*target)
-            time.sleep(dt)
-            if self.move_corrected_by_server.is_set():
-                self.move_corrected_by_server.clear()
-                self._is_moving.clear()
-                log.error("can't move from: %s to: %s", str(self.position),
-                          str(target))
-                return False
+        with self._move_lock:
+            while euclidean((x, y, z), self.get_position()) > 0.1:
+                dx = x - self.x
+                dy = y - self.y
+                dz = z - self.z
+                target = (abs_min(
+                    dx, delta), abs_min(dy, delta), abs_min(dz, delta))
+                self.move(*target)
+                time.sleep(dt)
+                if self.move_corrected_by_server.is_set():
+                    self.move_corrected_by_server.clear()
+                    self._is_moving.clear()
+                    log.error("can't move from: %s to: %s", str(self.position),
+                              str(target))
+                    return False
         self._is_moving.clear()
         return True
 
@@ -187,13 +196,12 @@ class Player(object):
             log.debug('moved to: %s', str(self.position))
 
     def teleport(self, x, y, z, yaw, pitch):
-        self._position_update_lock.acquire()
-        self.x = x
-        self.y = y
-        self.z = z
-        self.yaw = yaw
-        self.pitch = pitch
-        self._position_update_lock.release()
+        with self._position_update_lock:
+            self.x = x
+            self.y = y
+            self.z = z
+            self.yaw = yaw
+            self.pitch = pitch
 
     def iter_entities_in_range(self, types=None, reach=4):
         for entity in self.world.iter_entities(types=types):
@@ -223,23 +231,25 @@ class Player(object):
         return False
 
     def equip_item(self, item):
-        if item == self.held_item:  # item already in hand
-            return True
-        elif item in self.inventory.held:  # item in held_items
-            self.change_held_item(self.inventory.held.index(item))
-        elif item in self.inventory:
-            held_slot = self._held_slot_cycle.next()
-            inventory_held_slot = len(self.inventory.slots) - 1 - held_slot
-            if not self.inventory.swap_slots(inventory_held_slot,
-                                             self.inventory.index(item)):
+        with self._inventory_lock:
+            if item == self.held_item:  # item already in hand
+                return True
+            elif item in self.inventory.held:  # item in held_items
+                self.change_held_item(self.inventory.held.index(item,
+                                                                relative=True))
+            elif item in self.inventory:
+                held_slot = self._held_slot_cycle.next()
+                inventory_held_slot = len(self.inventory.slots) - 1 - held_slot
+                if not self.inventory.swap_slots(inventory_held_slot,
+                                                 self.inventory.index(item)):
+                    return False
+                held_index = self.inventory.held.index(item, relative=True)
+                if held_index is None:
+                    return False
+                self.change_held_item(held_index)
+            else:
                 return False
-            held_index = self.inventory.held.index(item)
-            if held_index is None:
-                return False
-            self.change_held_item(held_index)
-        else:
-            return False
-        return self._wait_for(lambda: item == self.held_item)
+            return self._wait_for(lambda: item == self.held_item)
 
     def change_held_item(self, slot_num):
         self._send(self.proto.PlayServerboundHeldItemChange.id,

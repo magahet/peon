@@ -61,7 +61,8 @@ class Client(object):
             #self.proto.PlayClientboundOpenWindow.id,
             #self.proto.PlayClientboundCloseWindow.id,
             #self.proto.PlayClientboundWindowItem.id,
-            #self.proto.PlayClientboundSetSlot.id,
+            self.proto.PlayClientboundSetSlot.id,
+            #self.proto.PlayClientboundConfirmTransaction.id,
         ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
@@ -484,7 +485,7 @@ class Client(object):
 
     def on_set_slot(self, pkt):
         if pkt.window_id == -1 and pkt.slot == -1:
-            self._cursor_slot = pkt.slot
+            self.bot.windows[self.bot.open_window._id].set_cursor_slot(pkt.slot)
         elif pkt.window_id in self.bot.windows:
             self.bot.windows[pkt.window_id].set_slot(pkt.slot, pkt.item)
 

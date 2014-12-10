@@ -70,6 +70,7 @@ ENCHANT_ITEMS = set([
     'Diamond Pickaxe',
     'Diamond Shovel',
     'Diamond Axe',
+    'Diamond Hoe',
     'Bow',
     'Fishing Rod',
 ])
@@ -233,6 +234,12 @@ class InventoryTypes(object):
             (range(5, 9), "armor"),
             (range(9, 36), "main inventory"),
             (range(36, 45), "held items"),
+        ),
+        'minecraft:enchanting_table': (
+            ([0], "enchantment slot"),
+            ([1], "lapis slot"),
+            (range(2, 29), "main inventory"),
+            (range(29, 38), "held items"),
         ),
     }
 
