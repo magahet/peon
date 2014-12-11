@@ -1,4 +1,7 @@
 import threading
+import itertools
+import scipy.spatial as ss
+import numpy as np
 
 
 class ThreadSafeCounter:
@@ -43,3 +46,35 @@ def iter_spiral(x=0, y=0):
         if x == y or (x < 0 and x == -y) or (x > 0 and x == 1 - y):
             dx, dy = -dy, dx
         x, y = x + dx, y + dy
+
+
+class Cluster(object):
+    def __init__(self, cluster_points):
+        self.centroid = tuple(int(i) for i in
+                              np.mean(cluster_points, axis=0))
+        self.points = tuple(tuple(int(i) for i in c) for
+                            c in cluster_points)
+        self.size = len(cluster_points)
+
+    def __repr__(self):
+        return 'Cluster(centroid={}, size={})'.format(self.centroid, self.size)
+
+
+def get_clusters(points):
+    '''
+    points = [
+        [1, 0, 0],
+        [2, 0, 0],
+        [1, 0, 1],
+        [34, 0, 0],
+    ]
+    get_clusters(points)
+    '''
+
+    tree = ss.KDTree(np.array(points))
+    neighbors = [tree.query_ball_point(p, 32) for
+                 i, p in enumerate(points)]
+    clusters = set([tuple(set(a).intersection(b)) for
+                    a, b in itertools.combinations(neighbors, 2)])
+    return [Cluster(points[np.array(cluster)]) for
+            cluster in list(clusters) if len(cluster) >= 2]
