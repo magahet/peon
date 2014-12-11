@@ -104,10 +104,10 @@ class Window(object):
         action_num = self._action_num_counter.next()
         slot = self.slots[slot_num]
         cursor_slot = self.cursor_slot
-        log.info('Sending click window. slot_num: %d action_num: %d',
+        log.debug('Sending click window. slot_num: %d action_num: %d',
                  slot_num, action_num)
-        log.info('cursor: %s', str(self.cursor_slot))
-        log.info('slot: %s', str(slot))
+        log.debug('cursor: %s', str(self.cursor_slot))
+        log.debug('slot: %s', str(slot))
         fastmc_slot = None if slot is None else slot.as_fastmc()
         self._send(self._proto.PlayServerboundClickWindow.id,
                    window_id=self._id,
@@ -123,7 +123,7 @@ class Window(object):
         if not self._confirmations.get(action_num):
             log.error('Transaction rejected: %d', action_num)
             return False
-        log.info('Confirmation received for %d: %s', action_num,
+        log.debug('Confirmation received for %d: %s', action_num,
                  str(self._confirmations.get(action_num)))
         if (mode, button) in self._click_handlers:
             return self._click_handlers[(mode, button)](slot_num, cursor_slot,

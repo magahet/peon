@@ -59,6 +59,8 @@ class World(smpmap.World):
         self.players = {}
         self.player_data = {}
         self.objects = {}
+        self.interesting = {}
+        self.searched_chunks = set([])
         self.dimmension = 0
 
     def iter_entities(self, types=None):
@@ -218,13 +220,16 @@ class World(smpmap.World):
             yield (int(i) for i in points[indexies[num]])
 
     def iter_block_types_in_surrounding_chunks(self, x, y, z, block_types):
-        ids = [ItemTypes.get_block_id(_type) << 4 for
-               _type in block_types]
         cx, cz = x // 16, z // 16
         for (cx, cz) in self.iter_adjacent_2d(cx, cz, center=True):
-            column = self.columns.get((cx, cz))
-            if column is None:
-                continue
+            for position in self.iter_block_types_in_chunk(self, cx, cz, block_types):
+                yield position
+
+    def iter_block_types_in_chunk(self, cx, cz, block_types):
+        ids = [ItemTypes.get_block_id(_type) << 4 for
+               _type in block_types]
+        column = self.columns.get((cx, cz))
+        if column is not None:
             for y_index, chunk in enumerate(column.chunks):
                 if chunk is None:
                     continue

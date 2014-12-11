@@ -82,6 +82,10 @@ HARVESTABLE_BLOCKS = set([
     ('Melon', 0),
     ('Pumpkin', 0),
 ])
+EXOTIC_BLOCKS = set([
+    'Spawner',
+    'End Portal Frame',
+])
 
 
 class MobTypes(object):

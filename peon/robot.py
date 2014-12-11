@@ -18,7 +18,7 @@ class Robot(Player):
 
     def __init__(self, proto, send_queue, recv_condition, world):
         super(Robot, self).__init__(proto, send_queue, recv_condition, world)
-        self._pre_enabled_auto_actions = ('fall', 'eat', 'defend')
+        self._pre_enabled_auto_actions = ('fall', 'eat', 'defend', 'escape')
         self._auto_eat_level = 18
         self._enabled_auto_actions = {}
         self._active_auto_actions = {}
@@ -87,6 +87,13 @@ class Robot(Player):
                 'interval': 10,
                 'kwargs': {
                     'types': types.ENCHANT_ITEMS
+                },
+            },
+            'discover': {
+                'function': self.discover,
+                'interval': 60,
+                'kwargs': {
+                    'types': types.EXOTIC_BLOCKS
                 },
             },
         }
@@ -456,17 +463,22 @@ class Robot(Player):
             self.close_window()
             return True
 
-    def escape(self, min_health=10):
-        if self.health is None:
-            return
-        if self.health < min_health:
-            log.warn('health too low, escaping: %s', self.health)
-            os.kill(os.getpid(), signal.SIGTERM)
-            time.sleep(1)
-            os.kill(os.getpid(), signal.SIGKILL)
-        if self.health < self._last_health:
-            log.warn('health is dropping: %s', self.health)
-        self._last_health = self.health
+    def escape(self, min_health=10, max_entities=120):
+        if self.health is not None:
+            if self.health < min_health:
+                log.warn('health too low, escaping: %s', self.health)
+                os.kill(os.getpid(), signal.SIGTERM)
+                time.sleep(1)
+                os.kill(os.getpid(), signal.SIGKILL)
+            if self.health < self._last_health:
+                log.warn('health is dropping: %s', self.health)
+            self._last_health = self.health
+        if len(self.world.entities) > max_entities:
+                log.warn('Too many entities, escaping: %s',
+                         len(self.world.entities))
+                os.kill(os.getpid(), signal.SIGTERM)
+                time.sleep(1)
+                os.kill(os.getpid(), signal.SIGKILL)
 
     def farm(self, items, home=None, _range=10):
         return
@@ -626,3 +638,14 @@ class Robot(Player):
                 self.open_window.click(1)
                 self.open_window.click(lapis_slot)
             self.close_window()
+
+    def discover(self, types=None):
+        if types is None:
+            return
+        for (cx, cz) in set(self.world.columns.keys()).difference(self.world.searched_chunks):
+            for _type in types:
+                if _type not in self.world.interesting:
+                    self.world.interesting[_type] = set([])
+                for position in self.world.iter_block_types_in_chunk(cx, cz, [_type]):
+                    self.world.interesting[_type].add(position)
+            self.world.searched_chunks.add((cx, cz))

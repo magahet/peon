@@ -5,7 +5,7 @@
 
 - name: get
   args:
-    - ["Lapis Lazuli"]
+    - ["Lapis Lazuli", "Cooked Chicken"]
   chest_position: [-336, 36, 835]
 
 - name: store_enchanted
