@@ -56,11 +56,10 @@ class World(smpmap.World):
     def __init__(self):
         self.columns = {}
         self.entities = {}
+        self.block_entities = {}
         self.players = {}
         self.player_data = {}
         self.objects = {}
-        self.interesting = {}
-        self.searched_chunks = set([])
         self.dimmension = 0
 
     def iter_entities(self, types=None):
@@ -442,6 +441,17 @@ class World(smpmap.World):
             log.info('Path found in %d sec. %d long.',
                      int(time.time() - start), len(path))
         return path
+
+    def get_mob_spawner_clusters(self):
+        points = np.array([p for p, b in self.block_entities.iteritems() if
+                           b._type == 'MobSpawner'])
+        kd_tree = ss.KDTree(points)
+        if len(points) < 5:
+            return kd_tree.query_pairs(16)
+        else:
+            voronoi = ss.Voronoi(points)
+            return [(c, kd_tree.query_ball_point(c, 16)) for
+                    c in voronoi.vertices]
 
 
 '''

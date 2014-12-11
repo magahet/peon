@@ -1,4 +1,5 @@
 import threading
+from fastmc.proto import NbtTag
 
 
 class ThreadSafeCounter:
@@ -43,3 +44,14 @@ def iter_spiral(x=0, y=0):
         if x == y or (x < 0 and x == -y) or (x > 0 and x == 1 - y):
             dx, dy = -dy, dx
         x, y = x + dx, y + dy
+
+
+def unpack_nbt(tag):
+    if not isinstance(tag, NbtTag):
+        return None
+    if tag.tag_type == NbtTag.LIST:
+        return [unpack_nbt(i) for i in tag.values]
+    if tag.tag_type == NbtTag.COMPOUND:
+        return {k: unpack_nbt(t) for k, t in tag.value.iteritems()}
+    else:
+        return tag.value

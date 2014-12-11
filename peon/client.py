@@ -9,7 +9,7 @@ import os
 import time
 from world import World
 from robot import Robot
-from entity import (Entity, Object, PlayerEntity)
+from entity import (Entity, Object, PlayerEntity, BlockEntity)
 from window import Window
 from utils import ThreadSafeCounter
 
@@ -63,6 +63,7 @@ class Client(object):
             #self.proto.PlayClientboundWindowItem.id,
             #self.proto.PlayClientboundSetSlot.id,
             #self.proto.PlayClientboundConfirmTransaction.id,
+            #self.proto.PlayClientboundUpdateBlockEntity.id,
         ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
@@ -95,6 +96,7 @@ class Client(object):
             (fastmc.proto.PLAY, self.proto.PlayClientboundWindowItem.id): self.on_window_item,
             (fastmc.proto.PLAY, self.proto.PlayClientboundWindowProperty.id): self.on_window_property,
             (fastmc.proto.PLAY, self.proto.PlayClientboundConfirmTransaction.id): self.on_confirm_transaction,
+            (fastmc.proto.PLAY, self.proto.PlayClientboundUpdateBlockEntity.id): self.on_update_block_entity,
             (fastmc.proto.PLAY, self.proto.PlayClientboundPlayerListItem.id): self.on_player_list_item,
         }
 
@@ -177,7 +179,8 @@ class Client(object):
                 out_buf = fastmc.proto.WriteBuffer()
                 writer.write(out_buf, packet_id, **kwargs)
                 sock.send(out_buf)
-                hook = self._post_send_hooks.get((self.writer.state, packet_id))
+                hook = self._post_send_hooks.get(
+                    (self.writer.state, packet_id))
                 if hook:
                     hook(**kwargs)
         finally:
@@ -304,7 +307,8 @@ class Client(object):
                         sender = section.get('text')
                 return '<{}> {}'.format(sender, ' '.join(message_list))
             elif json.get('translate') in ['multiplayer.player.joined', 'multiplayer.player.left']:
-                event = json.get('translate', '').replace('multiplayer.player.', 'player ')
+                event = json.get(
+                    'translate', '').replace('multiplayer.player.', 'player ')
                 player = json.get('with', [{}])[0].get('text', 'UNKNOWN')
                 return '{}: {}'.format(event, player)
 
@@ -485,7 +489,8 @@ class Client(object):
 
     def on_set_slot(self, pkt):
         if pkt.window_id == -1 and pkt.slot == -1:
-            self.bot.windows[self.bot.open_window._id].set_cursor_slot(pkt.slot)
+            self.bot.windows[
+                self.bot.open_window._id].set_cursor_slot(pkt.slot)
         elif pkt.window_id in self.bot.windows:
             self.bot.windows[pkt.window_id].set_slot(pkt.slot, pkt.item)
 
@@ -510,7 +515,8 @@ class Client(object):
                                                      self._recv_condition
                                                      )
         else:
-            self.bot.windows[pkt.window_id].set_property(pkt.property, pkt.value)
+            self.bot.windows[pkt.window_id].set_property(
+                pkt.property, pkt.value)
 
     def on_confirm_transaction(self, pkt):
         if not pkt.accepted:
@@ -531,6 +537,12 @@ class Client(object):
                 for eid in self.world.players:
                     if self.world.players[eid].uuid == player_data.uuid:
                         self.world.players[eid].name = player_data.name
+
+    def on_update_block_entity(self, pkt):
+        self.bot.world.block_entities[tuple(pkt.location)] = BlockEntity(
+            tuple(pkt.location),
+            pkt.nbt
+        )
 
     def on_unhandled(self, pkt):
         pass

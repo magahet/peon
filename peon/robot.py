@@ -89,11 +89,11 @@ class Robot(Player):
                     'types': types.ENCHANT_ITEMS
                 },
             },
-            'discover': {
-                'function': self.discover,
-                'interval': 60,
+            'follow': {
+                'function': self.move_to_player,
+                'interval': 1,
                 'kwargs': {
-                    'types': types.EXOTIC_BLOCKS
+                    'player_name': '',
                 },
             },
         }
@@ -463,7 +463,7 @@ class Robot(Player):
             self.close_window()
             return True
 
-    def escape(self, min_health=10, max_entities=120):
+    def escape(self, min_health=10, max_entities=150):
         if self.health is not None:
             if self.health < min_health:
                 log.warn('health too low, escaping: %s', self.health)
@@ -638,14 +638,3 @@ class Robot(Player):
                 self.open_window.click(1)
                 self.open_window.click(lapis_slot)
             self.close_window()
-
-    def discover(self, types=None):
-        if types is None:
-            return
-        for (cx, cz) in set(self.world.columns.keys()).difference(self.world.searched_chunks):
-            for _type in types:
-                if _type not in self.world.interesting:
-                    self.world.interesting[_type] = set([])
-                for position in self.world.iter_block_types_in_chunk(cx, cz, [_type]):
-                    self.world.interesting[_type].add(position)
-            self.world.searched_chunks.add((cx, cz))

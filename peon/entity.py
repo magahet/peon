@@ -1,5 +1,6 @@
 from types import (MobTypes, ObjectTypes)
 import numpy as np
+import utils
 
 
 class BaseEntity(object):
@@ -91,3 +92,30 @@ class Entity(BaseEntity):
     def __repr__(self):
         return 'Entity(eid={}, _type={}, xyz={})'.format(
             self.eid, MobTypes.get_name(self._type), self.get_position(floor=True))
+
+
+class BlockEntity(object):
+    def __init__(self, location, data):
+        self.location = location
+        self.data = utils.unpack_nbt(data[1])
+        self._type = self.data.get('id')
+
+    def __repr__(self):
+        return 'BlockEntity(location={}, type={}, data={})'.format(
+            self.location, self._type, self.data)
+
+    def __contains__(self, other):
+        return other in self.data.keys()
+
+    def get(self, key):
+        return self.data.get(key)
+
+    def keys(self):
+        return self.data.keys()
+
+    def iteritems(self):
+        for key in self.data.keys():
+            yield (key, self.data.get(key))
+
+    def items(self):
+        return [t for t in self.iteritems]
