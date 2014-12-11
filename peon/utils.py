@@ -60,7 +60,7 @@ class Cluster(object):
         return 'Cluster(centroid={}, size={})'.format(self.centroid, self.size)
 
 
-def get_clusters(points):
+def get_clusters(points, radius):
     '''
     points = [
         [1, 0, 0],
@@ -72,7 +72,7 @@ def get_clusters(points):
     '''
 
     tree = ss.KDTree(np.array(points))
-    neighbors = [tree.query_ball_point(p, 32) for
+    neighbors = [tree.query_ball_point(p, radius * 2) for
                  i, p in enumerate(points)]
     clusters = set([tuple(set(a).intersection(b)) for
                     a, b in itertools.combinations(neighbors, 2)])

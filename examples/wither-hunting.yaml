@@ -1,10 +1,14 @@
 - name: store
-  args: [['Diamond Sword', 'Cooked Chicken']]
   chest_position: [94, 60, 97]
+  items:
+      - Diamond Sword
+      - Cooked Chicken
   invert: True
 
 - name: gather
-  args: [['Wither Skeleton Skull']]
+  items:
+      - Wither Skeleton Skull
+      - Gold Ingot
   _range: 75
     
 - name: hunt

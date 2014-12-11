@@ -1,7 +1,11 @@
 - name: gather
-  args: 
-      - ['Wheat', 'Carrot', 'Potato', 'Pumpkin', 'Melon']
   _range: 20
+  items:
+      - Wheat
+      - Carrot
+      - Potato
+      - Pumpkin
+      - Melon
     
 - name: harvest
   _range: 20
