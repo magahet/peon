@@ -34,9 +34,6 @@ class Robot(Player):
             },
             'defend': {
                 'function': self.defend,
-                'kwargs': {
-                    'mob_types': types.HOSTILE_MOBS,
-                }
             },
             'eat': {
                 'function': self.eat,
@@ -49,12 +46,10 @@ class Robot(Player):
             'gather': {
                 'function': self.gather,
                 'interval': 5,
-                'args': [[]],
             },
             'store': {
                 'function': self.store_items,
                 'interval': 60,
-                'args': [[]],
             },
             'store_enchanted': {
                 'function': self.store_enchanted_items,
@@ -63,7 +58,6 @@ class Robot(Player):
             'get': {
                 'function': self.get_items,
                 'interval': 60,
-                'args': [[]],
             },
             'get_enchantables': {
                 'function': self.get_enchantable_items,
@@ -72,7 +66,6 @@ class Robot(Player):
             'drop': {
                 'function': self.drop,
                 'interval': 60,
-                'args': [[]],
             },
             'harvest': {
                 'function': self.harvest,
@@ -85,16 +78,10 @@ class Robot(Player):
             'enchant': {
                 'function': self.enchant,
                 'interval': 10,
-                'kwargs': {
-                    'types': types.ENCHANT_ITEMS
-                },
             },
             'follow': {
                 'function': self.move_to_player,
                 'interval': 1,
-                'kwargs': {
-                    'player_name': '',
-                },
             },
         }
         self.start_threads()
@@ -179,9 +166,7 @@ class Robot(Player):
             x, y, z = next_pos
             self.on_ground = self.move_to(x, y + 1, z, speed=13)
 
-    def defend(self, mob_types=None):
-        if mob_types is None:
-            return True
+    def defend(self, mob_types=types.HOSTILE_MOBS):
         eids_in_range = [e.eid for e in self.iter_entities_in_range(mob_types)]
         if not eids_in_range:
             return False
@@ -286,7 +271,9 @@ class Robot(Player):
                 path.append(home)
                 return self.follow_path(path)
 
-    def gather(self, items, _range=50):
+    def gather(self, items=None, _range=50):
+        if items is None:
+            return False
         with self._mission_lock:
             x0, y0, z0 = self.get_position(floor=True)
             for _object in self.iter_objects_in_range(items=items, reach=_range):
@@ -333,6 +320,8 @@ class Robot(Player):
         self._inventory_lock.release()
 
     def move_to_player(self, player_name=None, eid=None, uuid=None):
+        if player_name is None:
+            return False
         player_position = self.world.get_player_position(
             player_name=player_name, eid=eid, uuid=uuid)
         if player_position is not None:
@@ -349,7 +338,9 @@ class Robot(Player):
                     self.inventory.player_inventory]
         return []
 
-    def drop(self, items, position=None, invert=False):
+    def drop(self, items=None, position=None, invert=False):
+        if items is None:
+            return False
         items_to_drop = self.find_items(items, invert=invert)
         if not items_to_drop:
             log.debug('No items to drop')
@@ -370,9 +361,11 @@ class Robot(Player):
         self.close_window()
         return True
 
-    def get_items(self, items, chest_position=None, dig=False):
+    def get_items(self, items=None, chest_position=None, dig=False):
         '''Get items from chest at the specified location.'''
 
+        if items is None:
+            return False
         with self._mission_lock:
             if None not in self.inventory:
                 log.error('Inventory is full')
@@ -421,11 +414,13 @@ class Robot(Player):
             return False
         return True
 
-    def store_items(self, items, chest_position=None, invert=False, dig=False):
+    def store_items(self, items=None, chest_position=None, invert=False, dig=False):
         '''Put items from inventory into a chest at the specified location.
         The invert option will change the behavior so that everything except the
         items listed will be stored.'''
 
+        if items is None:
+            return False
         items_to_store = self.find_items(items, invert=invert)
         if not items_to_store:
             log.debug('No items to store')
@@ -513,10 +508,10 @@ class Robot(Player):
         return True
         '''
 
-    def harvest(self, home=None, _range=10):
+    def harvest(self, home=None, types=types.HARVESTABLE_BLOCKS, _range=10):
 
         def try_to_harvest(spot):
-            if self.world.is_harvestable_block(*spot):
+            if self.world.get_name(*spot) in types:
                 self.navigate_to(*spot, space=1, timeout=2)
                 self.break_block(*spot)
                 time.sleep(0.5)
@@ -539,8 +534,9 @@ class Robot(Player):
             self.navigate_to(*home)
 
     def mine(self, block_types=None, home=None, num=1, timeout=10):
-        #if None not in self.inventory.player_inventory:
-            #return False
+        if None not in self.inventory.player_inventory:
+            log.warn('No room in inventory')
+            return False
         with self._mission_lock:
             x, y, z = self.get_position(floor=True) if home is None else home
             block_types = types.ORE if block_types is None else block_types
@@ -575,7 +571,7 @@ class Robot(Player):
         log.info('could not get to a: %s', block_types)
         return None
 
-    def enchant(self, types=None):
+    def enchant(self, types=types.ENCHANT_ITEMS):
         with self._mission_lock:
             if self.xp_level < 30:
                 log.debug('xp too low: %d', self.xp_level)
