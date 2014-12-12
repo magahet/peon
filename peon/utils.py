@@ -53,7 +53,7 @@ def unpack_nbt(tag):
     if not isinstance(tag, NbtTag):
         return None
     if tag.tag_type == NbtTag.LIST:
-        return [unpack_nbt(i) for i in tag.values]
+        return [unpack_nbt(i) for i in tag.value]
     if tag.tag_type == NbtTag.COMPOUND:
         return {k: unpack_nbt(t) for k, t in tag.value.iteritems()}
     else:

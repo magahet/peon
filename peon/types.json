@@ -3,7 +3,6 @@
     "blockID": 196, 
     "itemID": 430, 
     "name": "Acacia Door", 
-    "solid": true, 
     "obtaining": [
       {
         "outputAmount": 3, 
@@ -272,7 +271,6 @@
     "blockID": 194, 
     "itemID": 428, 
     "name": "Birch Door", 
-    "solid": true,
     "obtaining": [
       {
         "outputAmount": 3, 
@@ -522,7 +520,8 @@
       }
     }, 
     "itemID": 171, 
-    "name": "Carpet"
+    "name": "Carpet",
+    "solid": true
   }, 
   "carrot": {
     "itemID": 391, 
@@ -703,7 +702,6 @@
   "dark_oak_door": {
     "itemID": 431, 
     "name": "Dark Oak Door", 
-    "solid": true,
     "obtaining": [
       {
         "outputAmount": 3, 
@@ -1600,7 +1598,6 @@
     "blockID": 71, 
     "itemID": 330, 
     "name": "Iron Door", 
-    "solid": true,
     "obtaining": [
       {
         "outputAmount": 3, 
@@ -1683,7 +1680,6 @@
     "blockID": 195, 
     "itemID": 429, 
     "name": "Jungle Door", 
-    "solid": true,
     "obtaining": [
       {
         "outputAmount": 3, 
@@ -3168,7 +3164,6 @@
     "blockID": 193, 
     "itemID": 427, 
     "name": "Spruce Door", 
-    "solid": true,
     "obtaining": [
       {
         "outputAmount": 3, 
@@ -3831,7 +3826,6 @@
     "blockID": 64, 
     "itemID": 324, 
     "name": "Oak Door", 
-    "solid": true,
     "obtaining": [
       {
         "outputAmount": 3, 

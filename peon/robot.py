@@ -156,7 +156,10 @@ class Robot(Player):
             if None in pos:
                 return
             x, y, z = pos
-            standing = self.world.is_solid_block(x, y - 1, z)
+            standing = (
+                self.world.is_solid_block(x, y - 1, z) or
+                self.world.is_water_block(x, y - 1, z)
+            )
             if standing is None or standing:
                 return
             next_pos = self.world.get_next_highest_solid_block(x, y, z)
@@ -458,15 +461,15 @@ class Robot(Player):
             self.close_window()
             return True
 
-    def escape(self, min_health=10, max_entities=150):
+    def escape(self, min_health=10, max_entities=300):
         if self.health is not None:
-            if self.health < min_health:
-                log.warn('health too low, escaping: %s', self.health)
-                os.kill(os.getpid(), signal.SIGTERM)
-                time.sleep(1)
-                os.kill(os.getpid(), signal.SIGKILL)
             if self.health < self._last_health:
                 log.warn('health is dropping: %s', self.health)
+                if self.health < min_health:
+                    log.warn('health too low, escaping: %s', self.health)
+                    os.kill(os.getpid(), signal.SIGTERM)
+                    time.sleep(1)
+                    os.kill(os.getpid(), signal.SIGKILL)
             self._last_health = self.health
         if len(self.world.entities) > max_entities:
                 log.warn('Too many entities, escaping: %s',

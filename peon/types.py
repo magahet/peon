@@ -82,6 +82,15 @@ HARVESTABLE_BLOCKS = set([
     ('Melon', 0),
     ('Pumpkin', 0),
 ])
+DOORS = set([
+    'Oak Door',
+    'Spruce Door',
+    'Birch Door',
+    'Jungle Door',
+    'Acacia Door',
+    'Dark Oak Door',
+    'Iron Door',
+])
 
 
 class MobTypes(object):
@@ -141,16 +150,19 @@ class ItemTypes(object):
     types_by_name = {}
     blocks_by_id = {}
     blocks_by_name = {}
-    solid_types = set([])
+    non_solid_types = set([])
     non_climbable_types = set([])
+    doors = set([])
     with open(os.path.join(os.path.dirname(__file__), 'types.json')) as _file:
         types = json.load(_file)
     for _, data in types.iteritems():
         if 'blockID' in data:
             blocks_by_id[data.get('blockID')] = data.get('name')
+            if data.get('name') in DOORS:
+                doors.add(data.get('blockID'))
             blocks_by_name[data.get('name')] = data.get('blockID')
-            if data.get('solid', False):
-                solid_types.add(data.get('blockID'))
+            if not data.get('solid', False):
+                non_solid_types.add(data.get('blockID'))
             if not data.get('climbable', True):
                 non_climbable_types.add(data.get('blockID'))
         types_by_id[(data.get('itemID'), None)] = data.get('name')
@@ -180,7 +192,11 @@ class ItemTypes(object):
 
     @classmethod
     def is_solid(cls, block_id):
-        return block_id in cls.solid_types
+        return block_id not in cls.non_solid_types
+
+    @classmethod
+    def is_door(cls, block_id):
+        return block_id in cls.doors
 
     @classmethod
     def is_unbreakable(cls, block_id):
@@ -206,24 +222,28 @@ class ItemTypes(object):
 
     @classmethod
     def is_safe_non_solid(cls, block_id):
-        return all([
-            block_id not in cls.solid_types,
-            cls.blocks_by_name.get(block_id, '') not in DANGER_BLOCKS,
-        ])
+        return (
+            block_id in cls.non_solid_types and
+            cls.blocks_by_name.get(block_id, '') not in DANGER_BLOCKS
+        )
 
     @classmethod
     def is_breathable(cls, block_id):
-        return all([
-            block_id not in cls.solid_types,
-            cls.blocks_by_name.get(block_id, '') not in LIQUID_BLOCKS,
-        ])
+        return (
+            block_id in cls.non_solid_types and
+            cls.get_block_name(block_id) not in LIQUID_BLOCKS
+        )
+
+    @classmethod
+    def is_water(cls, block_id):
+        return cls.get_block_name(block_id) == 'Still Water'
 
     @classmethod
     def is_climbable(cls, block_id):
-        return all([
-            cls.is_solid(block_id),
+        return (
+            cls.is_solid(block_id) and
             block_id not in cls.non_climbable_types
-        ])
+        )
 
 
 class InventoryTypes(object):

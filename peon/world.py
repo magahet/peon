@@ -92,7 +92,24 @@ class World(smpmap.World):
 
     def is_solid_block(self, x, y, z):
         _type = self.get_id(x, y, z)
-        return False if _type is None else ItemTypes.is_solid(_type)
+        if _type is None:
+            return False
+        elif ItemTypes.is_solid(_type):
+            return True
+        elif ItemTypes.is_door(_type):
+            if self.get_meta(x, y, z) >> 2 == 0:
+                print 'closed door', (x, y, z)
+                return True
+            else:
+                print 'open door', (x, y, z)
+                return True
+        return False
+
+    def is_water_block(self, x, y, z):
+        _type = self.get_id(x, y, z)
+        if _type is None:
+            return False
+        return ItemTypes.is_water(_type)
 
     def is_unbreakable_block(self, x, y, z):
         _type = self.get_id(x, y, z)
@@ -104,11 +121,11 @@ class World(smpmap.World):
 
     def is_breathable_block(self, x, y, z):
         _type = self.get_id(x, y, z)
-        return False if _type is None else ItemTypes.is_breathable(_type)
+        return True if _type is None else ItemTypes.is_breathable(_type)
 
     def is_safe_non_solid_block(self, x, y, z):
         _type = self.get_id(x, y, z)
-        return False if _type is None else ItemTypes.is_safe_non_solid(_type)
+        return True if _type is None else ItemTypes.is_safe_non_solid(_type)
 
     def is_liquid_block(self, x, y, z):
         _type = self.get_id(x, y, z)
@@ -297,7 +314,9 @@ class World(smpmap.World):
             #log.info('not safe to break: %s', str((x, y, z)))
             return False
 
-        if with_floor and not self.is_climbable_block(x, y - 1, z):
+        if (with_floor and
+                not self.is_climbable_block(x, y - 1, z) and
+                not self.is_water_block(x, y - 1, z)):
             #log.info('not climbable: %s', str((x, y - 1, z)))
             return False
 
@@ -374,7 +393,10 @@ class World(smpmap.World):
             self.is_breathable_block(x, y + 1, z) and
             self.is_safe_non_solid_block(x, y + 1, z) and
             self.is_safe_non_solid_block(x, y, z) and
-            self.is_climbable_block(x, y - 1, z)
+            (
+                self.is_climbable_block(x, y - 1, z) or
+                self.is_water_block(x, y - 1, z)
+            )
         )
 
     def is_passable(self, x, y, z):
