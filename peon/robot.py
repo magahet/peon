@@ -1,14 +1,16 @@
+"""Provides a Minecraft bot able to perform complex tasks."""
+
 import threading
 import time
 import logging
 import os
 import signal
-#import itertools
 from contextlib import contextmanager
 from player import Player
 import types
 from fastmc.proto import Position
 from scipy.spatial.distance import euclidean
+import bb
 
 
 log = logging.getLogger(__name__)
@@ -16,7 +18,10 @@ log = logging.getLogger(__name__)
 
 class Robot(Player):
 
+    """A Minecraft bot able to perform complex tasks."""
+
     def __init__(self, proto, send_queue, recv_condition, world):
+        """Inherit from base player class and start threads for auto actions."""
         super(Robot, self).__init__(proto, send_queue, recv_condition, world)
         self._pre_enabled_auto_actions = ('fall', 'eat', 'defend', 'escape')
         self._auto_eat_level = 18
@@ -90,6 +95,7 @@ class Robot(Player):
         self.unmineable = set([])
 
     def __repr__(self):
+        """Create a representation of the robot's current state."""
         template = ('Bot(xyz={}, health={}, food={}, xp={}, '
                     'enabled_auto_actions={}, active_auto_actions={})')
         return template.format(
@@ -103,13 +109,26 @@ class Robot(Player):
 
     @property
     def enabled_auto_actions(self):
+        """Get the list of enabled auto actions."""
         return [n for n, e in self._enabled_auto_actions.iteritems() if e.is_set()]
 
     @property
     def active_auto_actions(self):
-        return [n for n, e in self._active_auto_actions.iteritems() if e.is_set()]
+        """Get the list of currently running auto actions."""
+        return [n for n, e in
+                self._active_auto_actions.iteritems() if
+                e.is_set()]
 
     def set_auto_settings(self, *args, **kwargs):
+        """Set the arguments and keyword arguments for an auto action.
+
+        Arguments:
+            first -- the name of the auto action to update (e.g. hunt)
+            *args[1:] -- the arguments that should be passed to the function
+
+        Keyword Arguments:
+            *kwargs -- The set of keyword arguments to pass to the function
+        """
         name = args[0]
         if name not in self._thread_functions:
             return False
@@ -117,10 +136,12 @@ class Robot(Player):
         self._thread_functions[name]['kwargs'] = kwargs
 
     def get_auto_settings(self, name):
+        """Get the currently set settings for auto actions."""
         settings = self._thread_functions.get(name, {})
         return (settings.get('args', ()), settings.get('kwargs', {}))
 
     def start_threads(self):
+        """Start auto action threads."""
         for name in self._thread_functions:
             if name not in self._enabled_auto_actions:
                 self._enabled_auto_actions[name] = threading.Event()
@@ -134,6 +155,7 @@ class Robot(Player):
             self._threads[name] = thread
 
     def _do_auto_action(self, name):
+        """Run the function assigned to an auto action on an interval."""
         auto_event = self._enabled_auto_actions.get(name)
         self._wait_for(
             lambda: None not in (self.inventory, self.food, self.health))
@@ -149,6 +171,7 @@ class Robot(Player):
             time.sleep(interval)
 
     def fall(self):
+        """Move the bot to the next highest solid block."""
         if self._is_moving.is_set():
             return
         with self._move_lock:
@@ -170,6 +193,7 @@ class Robot(Player):
             self.on_ground = self.move_to(x, y + 1, z, speed=13)
 
     def defend(self, mob_types=types.HOSTILE_MOBS):
+        """Attack entities within range."""
         eids_in_range = [e.eid for e in self.iter_entities_in_range(mob_types)]
         if not eids_in_range:
             return False
@@ -190,6 +214,7 @@ class Robot(Player):
         return True
 
     def enable_auto_action(self, name):
+        """Enable an auto action."""
         auto_action = self._enabled_auto_actions.get(name)
         if auto_action is None:
             return False
@@ -197,6 +222,7 @@ class Robot(Player):
         return True
 
     def disable_auto_action(self, name):
+        """Disable an auto action."""
         auto_action = self._enabled_auto_actions.get(name)
         if auto_action is None:
             return False
@@ -205,14 +231,17 @@ class Robot(Player):
 
     @property
     def auto_defend_mob_types(self):
+        """Get the current list of mobs to attack."""
         args, kwargs = self.get_auto_settings('defend')
         return kwargs.get('mob_types', set([]))
 
     def set_auto_defend_mob_types(self, mob_types):
+        """Set the list of mobs to attack."""
         self.set_auto_settings('defend', mob_types=mob_types)
 
     @contextmanager
     def add_mob_types(self, mob_types):
+        """Temporarily Set the list of mobs to attack."""
         original_set = self.auto_defend_mob_types.copy()
         self.set_auto_settings('defend',
                                mob_types=original_set.union(mob_types))
@@ -220,6 +249,7 @@ class Robot(Player):
         self.set_auto_settings('defend', mob_types=original_set)
 
     def eat(self, target=20):
+        """Find food in inventory and consume it."""
         if self.food >= target:
             return True
         with self._inventory_lock:
@@ -248,6 +278,15 @@ class Robot(Player):
         return self.food >= target
 
     def hunt(self, home=None, mob_types=None, space=3, speed=10, _range=50):
+        """Search for certain mob types and hunt them down.
+
+        Keyword Arguments:
+            home -- position to return to after killing a mob
+            mob_types -- names of mobs to hunt
+            space -- how close to get to the mobs
+            speed -- how fast to move
+            _range -- how far out from home position to search
+        """
         with self._mission_lock:
             self.don_armor()
             self.enable_auto_action('defend')
@@ -275,6 +314,7 @@ class Robot(Player):
                 return self.follow_path(path)
 
     def gather(self, items=None, _range=50):
+        """Look for and move to dropped items."""
         if items is None:
             return False
         with self._mission_lock:
@@ -293,6 +333,7 @@ class Robot(Player):
             return self.follow_path(path)
 
     def follow_entity(self, entity, space=3, timeout=None):
+        """Continuously move to an entity's position."""
         with self._move_lock:
             start = time.time()
             while entity.eid in self.world.entities:
@@ -304,7 +345,7 @@ class Robot(Player):
                 time.sleep(0.1)
 
     def don_armor(self):
-        '''Put on best armor in inventory'''
+        """Put on best armor in inventory."""
         if not self._inventory_lock.acquire(False):
             return
         for slot_num, armor in types.ARMOR.iteritems():
@@ -322,16 +363,18 @@ class Robot(Player):
                                               self.inventory.index(armor_name))
         self._inventory_lock.release()
 
-    def move_to_player(self, player_name=None, eid=None, uuid=None):
+    def move_to_player(self, player_name=None):
+        """Move to a player's position."""
         if player_name is None:
             return False
         player_position = self.world.get_player_position(
-            player_name=player_name, eid=eid, uuid=uuid)
+            player_name=player_name)
         if player_position is not None:
             return self.navigate_to(*player_position, space=3)
         return False
 
     def find_items(self, items, invert=False):
+        """Find items in the inventory."""
         if invert:
             return [s.name for s in
                     self.inventory.player_inventory if
@@ -342,6 +385,7 @@ class Robot(Player):
         return []
 
     def drop(self, items=None, position=None, invert=False):
+        """Drop items from inventory."""
         if items is None:
             return False
         items_to_drop = self.find_items(items, invert=invert)
@@ -365,8 +409,7 @@ class Robot(Player):
         return True
 
     def get_items(self, items=None, chest_position=None, dig=False):
-        '''Get items from chest at the specified location.'''
-
+        """Get items from chest at the specified location."""
         if items is None:
             return False
         with self._mission_lock:
@@ -385,8 +428,7 @@ class Robot(Player):
             return True
 
     def get_enchantable_items(self, chest_position=None, dig=False):
-        '''Get items from chest at the specified location.'''
-
+        """Get items from chest at the specified location."""
         with self._mission_lock:
             if None not in self.inventory:
                 log.error('Inventory is full')
@@ -403,6 +445,7 @@ class Robot(Player):
             return True
 
     def move_and_open(self, chest_position, dig=False):
+        """Move to a chest and open it."""
         if chest_position is None:
             # TODO search for nearby chest
             return False
@@ -418,10 +461,14 @@ class Robot(Player):
         return True
 
     def store_items(self, items=None, chest_position=None, invert=False, dig=False):
-        '''Put items from inventory into a chest at the specified location.
-        The invert option will change the behavior so that everything except the
-        items listed will be stored.'''
+        """Put items from inventory into a chest at the specified location.
 
+        Keyword arguments:
+            items -- list of item names to store
+            chest_position -- coordinates of chest to store items in
+            invert -- everything except the items listed will be stored
+            dig -- whether to allow digging to the chest (default False)
+        """
         if items is None:
             return False
         items_to_store = self.find_items(items, invert=invert)
@@ -446,6 +493,7 @@ class Robot(Player):
             return True
 
     def store_enchanted_items(self, chest_position=None, dig=False):
+        """Store only items that have been enchanted."""
         if not self.inventory.player_inventory.get_enchanted():
             log.debug('No items to store')
             return True
@@ -462,6 +510,7 @@ class Robot(Player):
             return True
 
     def escape(self, min_health=10, max_entities=300):
+        """Disconnect if health is low or there are too many entities."""
         if self.health is not None:
             if self.health < self._last_health:
                 log.warn('health is dropping: %s', self.health)
@@ -478,8 +527,9 @@ class Robot(Player):
                 time.sleep(1)
                 os.kill(os.getpid(), signal.SIGKILL)
 
-    def farm(self, items, home=None, _range=10):
-        return
+    def plant(self, items, home=None, _range=10):
+        """Plant crops or tree saplings."""
+        pass
         '''
         #TODO finish this method
         home = self.get_position(floor=True) if home is None else home
@@ -512,8 +562,9 @@ class Robot(Player):
         '''
 
     def harvest(self, home=None, types=types.HARVESTABLE_BLOCKS, _range=10):
-
+        """Find harvestable or given blocks and break them."""
         def try_to_harvest(spot):
+            """Move to block and break it."""
             if self.world.get_name(*spot) in types:
                 self.navigate_to(*spot, space=1, timeout=2)
                 self.break_block(*spot)
@@ -537,6 +588,7 @@ class Robot(Player):
             self.navigate_to(*home)
 
     def mine(self, block_types=None, home=None, num=1, timeout=10):
+        """Look for blocks of given types and dig to them."""
         if None not in self.inventory.player_inventory:
             log.warn('No room in inventory')
             return False
@@ -565,6 +617,7 @@ class Robot(Player):
             return True
 
     def move_to_block_types(self, block_types):
+        """Move to the nearest block of given types."""
         x0, y0, z0 = self.position
         for x, y, z in self.world.iter_nearest_from_block_types(x0, y0, z0, block_types):
             if euclidean(self.position, (x, y, z)) <= 4:
@@ -575,6 +628,7 @@ class Robot(Player):
         return None
 
     def enchant(self, types=types.ENCHANT_ITEMS):
+        """Enchant enchantable items in the inventory."""
         with self._mission_lock:
             if self.xp_level < 30:
                 log.debug('xp too low: %d', self.xp_level)
@@ -639,6 +693,20 @@ class Robot(Player):
             self.close_window()
 
     def dig_to_surface(self):
+        """Find the highest solid block above the bot and dig to it."""
         x0, y0, z0 = self.position
         x, y, z = self.world.get_next_highest_solid_block(x0, 255, z0)
         return self.dig_to(x, y + 1, z)
+
+    def excavate(self, x0, y0, z0, x, y, z):
+        """Excavate an area given two opposite corners."""
+        bounding_box = bb.BoundingBox((x0, y0, z0), x, y, z)
+        for point in bounding_box.iter_points(axis_order=[1, 2, 0],
+                                              assending=False):
+            if (not self.world.is_solid_block(*point) or
+                    self.world.is_safe_to_break(*point)):
+                continue
+            elif self.move_to(*point, space=6):
+                self.break_block(*point)
+            else:
+                self.dig_to(*point)

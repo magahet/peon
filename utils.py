@@ -56,24 +56,6 @@ def start_shear_thread(bot):
     return thread
 
 
-def start_kill_thread(bot, name='kill'):
-    def do_kill_thread(bot, name):
-        while name in bot._active_threads:
-            for entity in bot.player.iter_entities_in_range():
-                bot.send(bot.proto.PlayServerboundUseEntity.id,
-                         target=entity.eid,
-                         type=1
-                         )
-            time.sleep(0.1)
-
-    bot._active_threads.add(name)
-    thread = threading.Thread(target=do_kill_thread, name=name,
-                              args=(bot, name))
-    thread.daemon = True
-    thread.start()
-    return thread
-
-
 def start_chat_interface(bot):
     message = ''
     while message not in ['exit', 'quit']:
@@ -92,50 +74,3 @@ def start_cmd_interface(bot, handlers):
             continue
         if args[0] in handlers:
             handlers[args[0]](bot, *args[1:])
-
-
-def jitter_step(bot):
-    initial_x = bot.player.x
-    bot.send(bot.proto.PlayServerboundPlayerPosition.id,
-             x=initial_x + 0.1,
-             y=bot.player.y,
-             z=bot.player.z,
-             on_ground=bot.player.on_ground
-             )
-    bot.send(bot.proto.PlayServerboundPlayerPosition.id,
-             x=initial_x,
-             y=bot.player.y,
-             z=bot.player.z,
-             on_ground=bot.player.on_ground
-             )
-
-
-def move_to(bot, x, y, z, speed=100):
-    def abs_min(n, delta):
-        if n < 0:
-            return max(n, -delta)
-        else:
-            return min(n, delta)
-
-    dt = 0.1
-    delta = speed * dt
-    while euclidean((x, y, z), bot.player.get_position(floor=True)) > 0.01:
-        dx = x - bot.player.x
-        dy = y - bot.player.y
-        dz = z - bot.player.z
-        args = (abs_min(dx, delta), abs_min(dy, delta), abs_min(dz, delta))
-        bot.player.move(*args)
-        time.sleep(dt)
-
-
-def hunt(bot, types=None, limit=10):
-    entity, dist = bot.player.get_closest_entity(types=types, limit=10)
-    if entity is None:
-        return
-    bot.player.move_to(entity.x, entity.y, entity.z, speed=100)
-    while entity.eid in bot.world.entities:
-        bot.send(bot.proto.PlayServerboundUseEntity.id,
-                 target=entity.eid,
-                 type=1
-                 )
-        time.sleep(0.1)
