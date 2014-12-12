@@ -63,8 +63,6 @@ If hostile mobs enter a 4m radius, he will grab a sword from his inventory, if a
 
 He will search the area for certain mob types, navigate to, and kill them.
 
-Example config:
-
 ```
 - name: hunt
   mob_types: ['Sheep', 'Zombie']   # list of mobs to hunt
@@ -76,12 +74,21 @@ Example config:
 
 He will search for objects of a given type and go collect them.
 
-Example config:
-
 ```
 - name: gather
-  args:                     # gather takes one argument, a list of items to gather
-    - ['Stone', 'Sand']     # list of items to gather
+  items:                    # list of items to gather
+    - Stone
+    - Sand
+  _range: 20                # how far from home to search
+```
+
+
+### Harvest
+
+He will search for grown crops or other block_types to break and collect. Can be used to cut down trees.
+
+```
+- name: harvest
   _range: 20                # how far from home to search
 ```
 
@@ -89,8 +96,6 @@ Example config:
 ### Mine
 
 Finds, digs to, and mines given block types. He has perfect knowledge of the world, so he digs straight to the resources. There's no searching involved.
-
-Example config:
 
 ```
 - name: mine
@@ -101,12 +106,59 @@ Example config:
 ```
 
 
+### Enchant
+
+Finds and moves to an enchanting table and enchants whatever is available in his inventory. Continues to enchant as long as his xp level is 30+ and has 3+ lapis in his inventory. This works very well when used with defend (next to xp farm), get_enchantables, and store_enchanted.
+
+
+### Get
+
+Gets items from a chest at a given position.
+```
+- name: get
+  items:
+    - Cooked Chicken
+  chest_position: [10, 30, 20]
+```
+
+
+### Get Enchantables
+
+Same as Get, but only gets items that can be enchanted.
+
+
+### Store
+
+Stores items in a chest at a given position.
+```
+- name: store
+  items:
+    - Diamonds
+  chest_position: [10, 30, 20]
+```
+
+### Store Enchanted
+
+Same as Store, but only stores items that are enchanted.
+
+
+## Other Fun Stuff
+
+### Mob Spawner Clusters
+
+Peon keeps track of all the interesting blocks in the world, including mob spawners and end portal blocks. This makes him useful for finding strongholds or good places to build spawner xp farms. In addition, he also has the ability to find clusters of mob spawners. This is done using cluster analysis to find groups of spawners with a centroid 16m or less to each spawner.
+
+```
+bot.world.block_entities
+bot.world.get_mob_spawner_clusters()
+```
+
+
 # TODO
 
 So, so much. It would be great to get all the previous peon functionality going again. However, we all have real lives and there are only so many hours in a day. Here are some big items I'm working to get going again:
 
 - clearing land
-- exploring/searching for world features or biomes
 - farming
 - trading
 - building
