@@ -73,10 +73,11 @@ class Cluster(object):
 
 
 def get_clusters(points, radius):
-    tree = ss.KDTree(np.array(points))
+    points = np.array(points)
+    tree = ss.KDTree(points)
     neighbors = [tree.query_ball_point(p, radius * 2) for
                  i, p in enumerate(points)]
     clusters = set([tuple(set(a).intersection(b)) for
                     a, b in itertools.combinations(neighbors, 2)])
     return [Cluster(points[np.array(cluster)]) for
-            cluster in list(clusters) if len(cluster) >= 2]
+            cluster in clusters if len(cluster) >= 2]

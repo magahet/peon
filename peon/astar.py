@@ -17,7 +17,7 @@ F, H, NUM, G, POS, OPEN, VALID, PARENT = xrange(8)
 
 
 def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeout=5,
-          debug=None):
+          debug=None, digging=False):
 
     """Find the shortest path from start to goal.
 
@@ -41,6 +41,19 @@ def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeou
     The function returns the best path found. The returned path excludes the
     starting position.
     """
+
+    def crosses_path(pos):
+        x0, y0, z0 = pos
+        for x, y, z in iter_path():
+            if (x0, z0) == (x, z) and y0 > y and y0 - y < 3:
+                return True
+        return False
+
+    def iter_path():
+        current = best
+        while current[PARENT] is not None:
+            yield current[POS]
+            current = nodes[current[PARENT]]
 
     # Test for one step paths
     for pos in neighbors(start_pos):
@@ -82,6 +95,8 @@ def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeou
             neighbor = nodes.get(neighbor_pos)
             if neighbor is None:
                 if not validate(current[POS], neighbor_pos):
+                    continue
+                if digging and crosses_path(neighbor_pos):
                     continue
 
                 # Limit the search.
@@ -139,11 +154,8 @@ def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeou
         debug(nodes)
 
     # Return the best path as a list.
-    path = []
-    current = best
-    while current[PARENT] is not None:
-        path.append(current[POS])
-        current = nodes[current[PARENT]]
+
+    path = [p for p in iter_path()]
     if not path:
         log.info('no valid path found. search rate: %d/sec', len(nodes) / (time.time() - start_time))
         return None

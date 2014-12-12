@@ -8,6 +8,7 @@ from types import (MobTypes, ItemTypes, ObjectTypes)
 from window import Slot
 import logging
 import time
+import utils
 
 
 log = logging.getLogger(__name__)
@@ -221,7 +222,7 @@ class World(smpmap.World):
     def iter_block_types_in_surrounding_chunks(self, x, y, z, block_types):
         cx, cz = x // 16, z // 16
         for (cx, cz) in self.iter_adjacent_2d(cx, cz, center=True):
-            for position in self.iter_block_types_in_chunk(self, cx, cz, block_types):
+            for position in self.iter_block_types_in_chunk(cx, cz, block_types):
                 yield position
 
     def iter_block_types_in_chunk(self, cx, cz, block_types):
@@ -435,7 +436,8 @@ class World(smpmap.World):
             cost_function,                                  # cost
             lambda p: euclidean(p, (x, y, z)),              # heuristic
             timeout,                                        # timeout
-            debug                                           # debug
+            debug,                                          # debug
+            digging                                         # digging
         )
         if path is not None:
             log.info('Path found in %d sec. %d long.',
@@ -443,40 +445,12 @@ class World(smpmap.World):
         return path
 
     def get_mob_spawner_clusters(self):
-        points = np.array([p for p, b in self.block_entities.iteritems() if
-                           b._type == 'MobSpawner'])
-        kd_tree = ss.KDTree(points)
-        if len(points) < 5:
-            return kd_tree.query_pairs(16)
-        else:
-            voronoi = ss.Voronoi(points)
-            return [(c, kd_tree.query_ball_point(c, 16)) for
-                    c in voronoi.vertices]
-
-
-'''
-class Block(object):
-    def __init__(self, x, y, z, _type, meta):
-        self.x = int(floor(x))
-        self.y = int(floor(y))
-        self.z = int(floor(z))
-        self._type = _type
-        self.meta = meta
-
-    def __repr__(self, x, y, z):
-        return "Block(x={}, y={}, z={}, _type='{}', meta='{}')".format(
-            self.x, self.y, self.z, self._type, str(self.meta))
-
-    @property
-    def position(self):
-        return (self.x, self.y, self.z)
-
-    @property
-    def name(self):
-        return ItemTypes.get_block_name(self._id)
-        self.get_id(self.x, self.y, self.z)
-
-    @property
-    def _id(self):
-        self.get_id(self.x, self.y, self.z)
-'''
+        points = [p for p, b in self.block_entities.iteritems() if
+                  b._type == 'MobSpawner']
+        results = []
+        for cluster in utils.get_clusters(points, 16):
+            cluster.mob_types = [
+                self.block_entities.get(p, {}).get('EntityId') for
+                p in cluster.points]
+            results.append(cluster)
+        return results

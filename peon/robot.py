@@ -634,3 +634,8 @@ class Robot(Player):
                 self.open_window.click(1)
                 self.open_window.click(lapis_slot)
             self.close_window()
+
+    def dig_to_surface(self):
+        x0, y0, z0 = self.position
+        x, y, z = self.world.get_next_highest_solid_block(x0, 255, z0)
+        return self.dig_to(x, y + 1, z)
