@@ -45,7 +45,7 @@ class Robot(Player):
             },
             'gather': {
                 'function': self.gather,
-                'interval': 5,
+                'interval': 1,
             },
             'store': {
                 'function': self.store_items,
@@ -75,6 +75,10 @@ class Robot(Player):
                 'function': self.mine,
                 'interval': 1,
             },
+            'chop': {
+                'function': self.chop,
+                'interval': 1,
+            },
             'enchant': {
                 'function': self.enchant,
                 'interval': 10,
@@ -87,7 +91,7 @@ class Robot(Player):
         self.start_threads()
         self.state = ''
         self._last_health = 0
-        self.unmineable = set([])
+        self.unbreakable = set([])
 
     def __repr__(self):
         template = ('Bot(xyz={}, health={}, food={}, xp={}, '
@@ -274,20 +278,23 @@ class Robot(Player):
                 path.append(home)
                 return self.follow_path(path)
 
-    def gather(self, items=None, _range=50):
+    def gather(self, items=None, _range=50, timeout=10, _return=False):
         if items is None:
             return False
         with self._mission_lock:
             x0, y0, z0 = self.get_position(floor=True)
-            for _object in self.iter_objects_in_range(items=items, reach=_range):
+            for _object in self.iter_objects_in_range(items=items,
+                                                      reach=_range):
                 log.info("gathering object: %s", str(_object))
                 x, y, z = _object.get_position(floor=True)
-                path = self.world.find_path(x0, y0, z0, x, y, z, space=1)
+                path = self.world.find_path(x0, y0, z0, x, y, z, space=1,
+                                            timeout=timeout)
                 if path:
                     break
             else:
                 return False
-            self.follow_path(path)
+            if not _return:
+                return self.follow_path(path)
             path.reverse()
             path.append((x0, y0, z0))
             return self.follow_path(path)
@@ -514,6 +521,7 @@ class Robot(Player):
     def harvest(self, home=None, types=types.HARVESTABLE_BLOCKS, _range=10):
 
         def try_to_harvest(spot):
+            print self.world.get_name(*spot)
             if self.world.get_name(*spot) in types:
                 self.navigate_to(*spot, space=1, timeout=2)
                 self.break_block(*spot)
@@ -536,24 +544,29 @@ class Robot(Player):
                     try_to_harvest(position)
             self.navigate_to(*home)
 
-    def mine(self, block_types=None, home=None, num=1, timeout=10):
+    def break_blocks_by_type(self, block_types=types.ORE, home=None, num=1,
+                             timeout=10, digging=True):
         if None not in self.inventory.player_inventory:
             log.warn('No room in inventory')
             return False
         with self._mission_lock:
             x, y, z = self.get_position(floor=True) if home is None else home
-            block_types = types.ORE if block_types is None else block_types
             block_iter = self.world.iter_nearest_from_block_types(
                 x, y, z, block_types)
             for (x, y, z) in block_iter:
-                if (x, y, z) in self.unmineable:
+                if (x, y, z) in self.unbreakable:
                     continue
                 log.info('Found %s at: %s', self.world.get_name(x, y, z),
                          str((x, y, z)))
-                #timeout = (cityblock(self.get_position(floor=True),
-                                    #(x, y, z)) / 2) ** 3 / 600
-                if not self.dig_to(x, y, z, timeout=timeout):
-                    self.unmineable.add((x, y, z))
+                if digging and not self.dig_to(x, y, z, timeout=timeout):
+                    self.unbreakable.add((x, y, z))
+                    continue
+                elif not self.navigate_to(x, y, z, space=6,
+                                          timeout=timeout):
+                    self.unbreakable.add((x, y, z))
+                    continue
+                elif not self.break_block(x, y, z):
+                    self.unbreakable.add((x, y, z))
                     continue
                 num -= 1
                 if num <= 0:
@@ -563,6 +576,16 @@ class Robot(Player):
                 return False
             time.sleep(0.5)
             return True
+
+    def mine(self, block_types=types.ORE, home=None, num=4, timeout=10):
+        return self.break_blocks_by_type(block_types=block_types, home=home,
+                                         num=num, timeout=timeout, digging=True)
+
+    def chop(self, block_types=None, home=None, num=4, timeout=10):
+        block_types = ('Wood', 'Wood2') if block_types is None else block_types
+        return self.break_blocks_by_type(block_types=block_types,
+                                         home=home, num=num, timeout=timeout,
+                                         digging=False)
 
     def move_to_block_types(self, block_types):
         x0, y0, z0 = self.position

@@ -91,6 +91,14 @@ DOORS = set([
     'Dark Oak Door',
     'Iron Door',
 ])
+TREES = set([
+    'Oak Wood',
+    'Spruce Wood',
+    'Birch Wood',
+    'Jungle Wood',
+    'Acacia Wood',
+    'Dark Oak Wood',
+])
 
 
 class MobTypes(object):

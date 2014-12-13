@@ -1,0 +1,10 @@
+- name: chop_wood
+- name: gather
+  timeout: 2
+  items:
+    - Oak Wood
+    - Spruce Wood
+    - Birch Wood
+    - Jungle Wood
+    - Acacia Wood
+    - Dark Oak Wood

@@ -8,6 +8,7 @@ import threading
 import itertools
 import logging
 from fastmc.proto import Position
+import types
 
 
 log = logging.getLogger(__name__)
@@ -296,6 +297,14 @@ class Player(object):
                 'Iron Shovel',
                 'Stone Shovel',
                 'Wooden Shovel',
+            ])
+        elif block_name in types.TREES:
+            self.equip_any_item_from_list([
+                'Diamond Axe',
+                'Golden Axe',
+                'Iron Axe',
+                'Stone Axe',
+                'Wooden Axe',
             ])
         else:
             self.equip_any_item_from_list([
