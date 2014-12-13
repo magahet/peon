@@ -98,10 +98,8 @@ class World(smpmap.World):
             return True
         elif ItemTypes.is_door(_type):
             if self.get_meta(x, y, z) >> 2 == 0:
-                print 'closed door', (x, y, z)
                 return True
             else:
-                print 'open door', (x, y, z)
                 return True
         return False
 
@@ -226,12 +224,12 @@ class World(smpmap.World):
                 if _range is None or euclidean((x, y, z), neighbor) <= _range:
                     _open.append(neighbor)
 
-    def iter_nearest_from_block_types(self, x, y, z, block_types):
+    def iter_nearest_from_block_types(self, x, y, z, block_types, limit=None):
         points = np.array(
             [p for p in
              self.iter_block_types_in_surrounding_chunks(x, y, z, block_types)])
         tree = ss.KDTree(points)
-        result = tree.query((x, y, z), k=None)
+        result = tree.query((x, y, z), k=limit)
         indexies = result[1]
         for num in xrange(len(indexies)):
             yield (int(i) for i in points[indexies[num]])
@@ -243,7 +241,7 @@ class World(smpmap.World):
                 yield position
 
     def iter_block_types_in_chunk(self, cx, cz, block_types):
-        ids = [ItemTypes.get_block_id(_type) << 4 for
+        ids = [ItemTypes.get_block_id(_type) for
                _type in block_types]
         column = self.columns.get((cx, cz))
         if column is not None:
@@ -251,7 +249,7 @@ class World(smpmap.World):
                 if chunk is None:
                     continue
                 for index, data in enumerate(chunk['block_data'].data):
-                    if data in ids:
+                    if data >> 4 in ids:
                         log.debug('c_index: %d, y_index: %d, (cx, cz): %s',
                                   index, y_index, str((cx, cz)))
                         dy, r = divmod(index, 16 * 16)
@@ -436,14 +434,14 @@ class World(smpmap.World):
                 self.is_safe_to_break(x, y, z) and
                 self.is_safe_to_break(x, y + 1, z)
             ):
-                return []
+                return None
             neighbor_function = iter_diggable_adjacent
             #cost_function = block_breaking_cost
             cost_function = euclidean
             validation_function = is_diggable
         else:
-            if not self.is_standable(x, y, z):
-                return []
+            if space == 0 and not self.is_standable(x, y, z):
+                return None
             neighbor_function = iter_moveable_adjacent
             cost_function = euclidean
             validation_function = is_moveable

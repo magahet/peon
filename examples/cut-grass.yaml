@@ -1,0 +1,7 @@
+- name: chop
+  block_types:
+    - Tall Grass
+    - Flower
+    - Large Flower
+  num: 100
+  timeout: 1
