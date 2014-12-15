@@ -1,4 +1,4 @@
-- name: chop_wood
+- name: chop
 - name: gather
   timeout: 2
   items:

@@ -228,6 +228,8 @@ class World(smpmap.World):
         points = np.array(
             [p for p in
              self.iter_block_types_in_surrounding_chunks(x, y, z, block_types)])
+        if len(points) < 2:
+            return
         tree = ss.KDTree(points)
         result = tree.query((x, y, z), k=limit)
         indexies = result[1]
@@ -428,7 +430,7 @@ class World(smpmap.World):
             return 1 + len(self.get_blocks_to_break(x0, y0, z0, x, y, z)) * 0.5
 
         # TODO pre-check the destination for a spot to stand
-        log.info('looking for path from: %s to %s', str((x0, y0, z0)), str((x, y, z)))
+        log.debug('looking for path from: %s to %s', str((x0, y0, z0)), str((x, y, z)))
         if digging:
             if not (
                 self.is_safe_to_break(x, y, z) and
@@ -460,8 +462,8 @@ class World(smpmap.World):
             digging                                         # digging
         )
         if path is not None:
-            log.info('Path found in %d sec. %d long.',
-                     int(time.time() - start), len(path))
+            log.debug('Path found in %d sec. %d long.',
+                      int(time.time() - start), len(path))
         return path
 
     def get_mob_spawner_clusters(self):

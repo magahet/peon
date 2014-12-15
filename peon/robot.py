@@ -612,7 +612,7 @@ class Robot(Player):
                 if digging and not self.dig_to(x, y, z, timeout=timeout):
                     self.unbreakable.add((x, y, z))
                     continue
-                elif not self.navigate_to(x, y, z, space=6,
+                elif not self.navigate_to(x, y, z, space=5,
                                           timeout=timeout):
                     self.unbreakable.add((x, y, z))
                     continue
@@ -632,7 +632,7 @@ class Robot(Player):
         return self.break_blocks_by_type(block_types=block_types, home=home,
                                          num=num, timeout=timeout, digging=True)
 
-    def chop(self, block_types=None, home=None, num=4, timeout=10):
+    def chop(self, block_types=None, home=None, num=1, timeout=2):
         block_types = ('Wood', 'Wood2') if block_types is None else block_types
         return self.break_blocks_by_type(block_types=block_types,
                                          home=home, num=num, timeout=timeout,
@@ -720,15 +720,26 @@ class Robot(Player):
         x, y, z = self.world.get_next_highest_solid_block(x0, 255, z0)
         return self.dig_to(x, y + 1, z)
 
-    def excavate(self, x0, y0, z0, x, y, z):
+    def excavate(self, corner_a, corner_b):
         """Excavate an area given two opposite corners."""
-        bounding_box = bb.BoundingBox((x0, y0, z0), x, y, z)
+        bounding_box = bb.BoundingBox(corner_a, corner_b)
         for point in bounding_box.iter_points(axis_order=[1, 2, 0],
                                               assending=False):
             if (not self.world.is_solid_block(*point) or
-                    self.world.is_safe_to_break(*point)):
+                    not self.world.is_safe_to_break(*point)):
                 continue
-            elif self.move_to(*point, space=6):
-                self.break_block(*point)
+            elif self.navigate_to(*point, space=4):
+                # See if bot is standing on block to break
+                if point == self.get_position(dy=-1, floor=True):
+                    # Look for a nearby block to stand on
+                    for neighbor in self.world.iter_moveable_adjacent(
+                            *self.position):
+                        if self.move_to(*neighbor, center=True):
+                            self.break_block(*point)
+                            break
+                    else:
+                        continue
+                else:
+                    self.break_block(*point)
             else:
                 self.dig_to(*point)

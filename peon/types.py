@@ -91,6 +91,10 @@ DOORS = set([
     'Dark Oak Door',
     'Iron Door',
 ])
+WOOD = set([
+    'Wood',
+    'Wood2',
+])
 TREES = set([
     'Oak Wood',
     'Spruce Wood',

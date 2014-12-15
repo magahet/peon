@@ -92,12 +92,12 @@ class Player(object):
         x, y, z = floor(x), floor(y), floor(z)
         if euclidean((x0, y0, z0), (x, y, z)) <= space:
             return True
-        log.info('navigating from %s to %s.', str((x0, y0, z0)),
-                 str((x, y, z)))
+        log.debug('navigating from %s to %s.', str((x0, y0, z0)),
+                  str((x, y, z)))
         with self._move_lock:
             path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
                                         timeout=timeout)
-            log.info('path: %s', str(path))
+            log.debug('path: %s', str(path))
             if not path:
                 return False
             return self.follow_path(path)
@@ -111,13 +111,13 @@ class Player(object):
         with self._move_lock:
             path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
                                         timeout=timeout, digging=True)
-            log.info('path: %s', str(path))
+            log.debug('path: %s', str(path))
             if not path:
                 return False
             return self.follow_path(path, digging=True)
 
     def follow_path(self, path, speed=10, digging=False):
-        log.info('following path: %s', str(path))
+        log.debug('following path: %s', str(path))
         with self._move_lock:
             x0, y0, z0 = self.get_position(floor=True)
             for num, (x, y, z) in enumerate(path):
@@ -290,7 +290,8 @@ class Player(object):
         block_name = self.world.get_name(x, y, z)
         if block_name == 'Air':
             return True
-        if self.world.is_falling_block(x, y, z):
+        if (self.world.is_falling_block(x, y, z) or
+                block_name in ('Dirt', 'Grass Block')):
             self.equip_any_item_from_list([
                 'Diamond Shovel',
                 'Golden Shovel',
@@ -298,7 +299,7 @@ class Player(object):
                 'Stone Shovel',
                 'Wooden Shovel',
             ])
-        elif block_name in types.TREES:
+        elif block_name in types.WOOD:
             self.equip_any_item_from_list([
                 'Diamond Axe',
                 'Golden Axe',

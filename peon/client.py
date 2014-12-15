@@ -64,6 +64,8 @@ class Client(object):
             #self.proto.PlayClientboundSetSlot.id,
             #self.proto.PlayClientboundConfirmTransaction.id,
             #self.proto.PlayClientboundUpdateBlockEntity.id,
+            #self.proto.PlayClientboundBlockChange.id,
+            #self.proto.PlayClientboundMultiBlockChange.id,
         ]
         self._handlers = {
             (fastmc.proto.LOGIN, self.proto.LoginClientboundEncryptionRequest.id): self.on_login_encryption_request,
@@ -428,7 +430,7 @@ class Client(object):
             self.world.put(
                 change.x + pkt.chunk_x * 16,
                 change.y,
-                change.x + pkt.chunk_x * 16,
+                change.z + pkt.chunk_z * 16,
                 'block_data',
                 change.block_id
             )
