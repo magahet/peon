@@ -461,9 +461,12 @@ class World(smpmap.World):
             debug,                                          # debug
             digging                                         # digging
         )
-        if path is not None:
+        if path:
             log.debug('Path found in %d sec. %d long.',
                       int(time.time() - start), len(path))
+        else:
+            log.debug('Path not found: %s to %s.',
+                     str((x0, y0, z0)), str((x, y, z)))
         return path
 
     def get_mob_spawner_clusters(self):

@@ -723,8 +723,8 @@ class Robot(Player):
     def excavate(self, corner_a, corner_b):
         """Excavate an area given two opposite corners."""
         bounding_box = bb.BoundingBox(corner_a, corner_b)
-        for point in bounding_box.iter_points(axis_order=[1, 2, 0],
-                                              assending=False):
+        for point in bounding_box.iter_points(
+                axis_order=[1, 2, 0], ascending=False, zig_zag=[0, 2]):
             if (not self.world.is_solid_block(*point) or
                     not self.world.is_safe_to_break(*point)):
                 continue
@@ -741,5 +741,5 @@ class Robot(Player):
                         continue
                 else:
                     self.break_block(*point)
-            else:
-                self.dig_to(*point)
+            elif not self.dig_to(*point):
+                log.info('Could not clear block: %s', str(point))

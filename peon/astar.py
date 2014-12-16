@@ -103,7 +103,8 @@ def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeou
                 #if len(nodes) >= limit:
                     #continue
                 if time.time() - start_time > timeout:
-                    log.info('path finding timed out. search rate: %d/sec', len(nodes) / (time.time() - start_time))
+                    log.info('path finding timed out. search rate: %d/sec',
+                             len(nodes) / (time.time() - start_time))
                     return None
 
                 # We have found a new node.
