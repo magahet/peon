@@ -161,5 +161,5 @@ def astar(start_pos, neighbors, validate, goal, start_g, cost, heuristic, timeou
         log.info('no valid path found. search rate: %d/sec', len(nodes) / (time.time() - start_time))
         return None
     path.reverse()
-    log.info('path found. search rate: %d/sec', len(nodes) / (time.time() - start_time))
+    log.debug('path found. search rate: %d/sec', len(nodes) / (time.time() - start_time))
     return path

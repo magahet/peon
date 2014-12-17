@@ -292,29 +292,32 @@ class Player(object):
             return True
         if (self.world.is_falling_block(x, y, z) or
                 block_name in ('Dirt', 'Grass Block')):
-            self.equip_any_item_from_list([
+            if not self.equip_any_item_from_list([
                 'Diamond Shovel',
                 'Golden Shovel',
                 'Iron Shovel',
                 'Stone Shovel',
                 'Wooden Shovel',
-            ])
+            ]):
+                log.info('No shovels to use')
         elif block_name in types.WOOD:
-            self.equip_any_item_from_list([
+            if not self.equip_any_item_from_list([
                 'Diamond Axe',
                 'Golden Axe',
                 'Iron Axe',
                 'Stone Axe',
                 'Wooden Axe',
-            ])
+            ]):
+                log.info('No axes to use')
         else:
-            self.equip_any_item_from_list([
+            if not self.equip_any_item_from_list([
                 'Diamond Pickaxe',
                 'Golden Pickaxe',
                 'Iron Pickaxe',
                 'Stone Pickaxe',
                 'Wooden Pickaxe',
-            ])
+            ]):
+                log.info('No pickaxes to use')
         self._send(self.proto.PlayServerboundPlayerDigging.id,
                    status=0,
                    location=Position(x, y, z),

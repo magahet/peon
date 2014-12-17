@@ -102,10 +102,13 @@ class Window(object):
 
     def click(self, slot_num, button=0, mode=0):
         action_num = self._action_num_counter.next()
-        slot = self.slots[slot_num]
+        if slot_num == -999:
+            slot = None
+        else:
+            slot = self.slots[slot_num]
         cursor_slot = self.cursor_slot
         log.debug('Sending click window. slot_num: %d action_num: %d',
-                 slot_num, action_num)
+                  slot_num, action_num)
         log.debug('cursor: %s', str(self.cursor_slot))
         log.debug('slot: %s', str(slot))
         fastmc_slot = None if slot is None else slot.as_fastmc()
@@ -124,7 +127,7 @@ class Window(object):
             log.error('Transaction rejected: %d', action_num)
             return False
         log.debug('Confirmation received for %d: %s', action_num,
-                 str(self._confirmations.get(action_num)))
+                  str(self._confirmations.get(action_num)))
         if (mode, button) in self._click_handlers:
             return self._click_handlers[(mode, button)](slot_num, cursor_slot,
                                                         slot)
@@ -136,8 +139,11 @@ class Window(object):
         return self.click(button=1, mode=4)
 
     def _left_click(self, slot_num, cursor_slot, slot):
-        self.slots[slot_num] = cursor_slot
-        self.cursor_slot = slot
+        if slot_num == -999:
+            self.cursor_slot = None
+        else:
+            self.slots[slot_num] = cursor_slot
+            self.cursor_slot = slot
         return True
 
     def _shift_left_click(self, slot_num, cursor_slot, slot):

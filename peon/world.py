@@ -229,12 +229,14 @@ class World(smpmap.World):
             [p for p in
              self.iter_block_types_in_surrounding_chunks(x, y, z, block_types)])
         if len(points) < 2:
-            return
-        tree = ss.KDTree(points)
-        result = tree.query((x, y, z), k=limit)
-        indexies = result[1]
-        for num in xrange(len(indexies)):
-            yield (int(i) for i in points[indexies[num]])
+            for point in points:
+                yield (int(i) for i in point)
+        else:
+            tree = ss.KDTree(points)
+            result = tree.query((x, y, z), k=limit)
+            indexies = result[1]
+            for num in xrange(len(indexies)):
+                yield (int(i) for i in points[indexies[num]])
 
     def iter_block_types_in_surrounding_chunks(self, x, y, z, block_types):
         cx, cz = x // 16, z // 16
@@ -466,7 +468,7 @@ class World(smpmap.World):
                       int(time.time() - start), len(path))
         else:
             log.debug('Path not found: %s to %s.',
-                     str((x0, y0, z0)), str((x, y, z)))
+                      str((x0, y0, z0)), str((x, y, z)))
         return path
 
     def get_mob_spawner_clusters(self):

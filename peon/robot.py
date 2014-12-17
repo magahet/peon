@@ -408,7 +408,10 @@ class Robot(Player):
             while item in self.inventory.player_inventory and tries < 5:
                 num = self.inventory.player_inventory.index(item)
                 log.debug('Item slot: %s', num)
-                if not self.inventory.click(num, button=1, mode=4):
+                if (
+                    not self.inventory.click(num) or
+                    not self.inventory.click(-999)
+                ):
                     return False
                     self.close_window()
                 tries += 1
@@ -681,7 +684,7 @@ class Robot(Player):
                     #print self.open_window
                     lapis_slot = self.open_window.player_inventory.index(
                         'Lapis Lazuli')
-                    print lapis_slot
+                    #print lapis_slot
                     self.open_window.swap_slots(lapis_slot, 1)
                     tries += 1
                     #print 'after'
@@ -694,7 +697,7 @@ class Robot(Player):
                         lambda: self.open_window.get_property(2) is not None,
                         timeout=2):
                     log.error('Window property did not update')
-                    print self.open_window.properties
+                    #print self.open_window.properties
                     self.open_window.swap_slots(slot_num, 0)
                     break
                 log.info('Enchanting %s', slot.name)
@@ -720,9 +723,11 @@ class Robot(Player):
         x, y, z = self.world.get_next_highest_solid_block(x0, 255, z0)
         return self.dig_to(x, y + 1, z)
 
-    def excavate(self, corner_a, corner_b):
+    def excavate(self, corner_a, corner_b, update_rate=64):
         """Excavate an area given two opposite corners."""
         bounding_box = bb.BoundingBox(corner_a, corner_b)
+        last_time = time.time()
+        count = 0
         for point in bounding_box.iter_points(
                 axis_order=[1, 2, 0], ascending=False, zig_zag=[0, 2]):
             if (not self.world.is_solid_block(*point) or
@@ -735,11 +740,20 @@ class Robot(Player):
                     for neighbor in self.world.iter_moveable_adjacent(
                             *self.position):
                         if self.move_to(*neighbor, center=True):
-                            self.break_block(*point)
+                            if self.break_block(*point):
+                                count += 1
                             break
                     else:
                         continue
                 else:
-                    self.break_block(*point)
-            elif not self.dig_to(*point):
+                    if self.break_block(*point):
+                        count += 1
+            elif self.dig_to(*point):
+                count += 1
+            else:
                 log.info('Could not clear block: %s', str(point))
+            if count >= update_rate:
+                log.info('Average block break time: %dms',
+                         int(time.time() - last_time) * 1000 // 64)
+                last_time = time.time()
+                count = 0
