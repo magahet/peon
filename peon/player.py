@@ -337,7 +337,7 @@ class Player(object):
                    status=2,
                    location=Position(x, y, z),
                    face=1)
-        result = self._wait_for(is_changed, timeout=5)
+        result = self._wait_for(is_changed, timeout=10)
         if not result:
             log.info('could not break block: %s', str((x, y, z)))
         return result
