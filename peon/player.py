@@ -88,33 +88,44 @@ class Player(object):
         return self.windows.get(self._open_window_id)
 
     def navigate_to(self, x, y, z, speed=10, space=0, timeout=10):
-        x0, y0, z0 = self.get_position(floor=True)
-        x, y, z = floor(x), floor(y), floor(z)
-        if euclidean((x0, y0, z0), (x, y, z)) <= space:
+        x0, y0, z0 = self.position
+        distance = euclidean(self.position, (x, y, z))
+        if distance <= space:
             return True
         log.debug('navigating from %s to %s.', str((x0, y0, z0)),
                   str((x, y, z)))
         with self._move_lock:
-            path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
-                                        timeout=timeout)
-            log.debug('path: %s', str(path))
-            if not path:
-                return False
-            return self.follow_path(path)
+            while distance > space:
+                space_b = min(space, 100)
+                path = self.world.find_path(x0, y0, z0, x, y, z, space=space_b,
+                                            timeout=timeout)
+                log.debug('path: %s', str(path))
+                if not path:
+                    return False
+                if not self.follow_path(path):
+                    return False
+                distance = euclidean(self.position, (x, y, z))
+        return True
 
     def dig_to(self, x, y, z, speed=10, space=0, timeout=10):
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
         log.debug('digging from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
-        if euclidean((x0, y0, z0), (x, y, z)) <= space:
+        distance = euclidean((x0, y0, z0), (x, y, z))
+        if distance <= space:
             return True
         with self._move_lock:
-            path = self.world.find_path(x0, y0, z0, x, y, z, space=space,
-                                        timeout=timeout, digging=True)
-            log.debug('path: %s', str(path))
-            if not path:
-                return False
-            return self.follow_path(path, digging=True)
+            while distance > space:
+                space_b = min(space, 100)
+                path = self.world.find_path(x0, y0, z0, x, y, z, space=space_b,
+                                            timeout=timeout, digging=True)
+                log.debug('path: %s', str(path))
+                if not path:
+                    return False
+                if not self.follow_path(path, digging=True):
+                    return False
+                distance = euclidean(self.position, (x, y, z))
+        return True
 
     def follow_path(self, path, speed=10, digging=False):
         log.debug('following path: %s', str(path))
