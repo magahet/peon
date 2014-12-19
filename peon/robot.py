@@ -766,7 +766,7 @@ class Robot(Player):
         last_time = time.time()
         count = 0
         for point in bounding_box.iter_points(
-                axis_order=[1, 2, 0], ascending=False, zig_zag=[0, 2]):
+                axis_order=[1, 2, 0], zig_zag=[0, 2]):
             if not self.world.get_name(*point) == 'Air':
                 continue
             elif self.navigate_to(*point, space=4):

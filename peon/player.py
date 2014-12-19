@@ -354,7 +354,7 @@ class Player(object):
 
     def place_block(self, x, y, z, block_type):
         def get_direction(p1, p2):
-            delta = (p2[i] - p1[i] for i in len(p1))
+            delta = tuple(j - i for i, j in zip(p1, p2))
             direction_map = {
                 (0, 1, 0): 0,
                 (0, -1, 0): 1,
@@ -382,8 +382,12 @@ class Player(object):
                     break
             else:
                 return False
+            nx, ny, nz = neighbor
+            print 'neighbor:', neighbor
+            print 'direction:', get_direction((x, y, z), neighbor)
+            print 'position:', Position(int(nx), int(ny), int(nz))
             self._send(self.proto.PlayServerboundBlockPlacement.id,
-                       location=Position(x, y, z),
+                       location=Position(int(nx), int(ny), int(nz)),
                        direction=get_direction((x, y, z), neighbor),
                        held_item=held_item,
                        cursor_x=64,
