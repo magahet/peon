@@ -723,15 +723,18 @@ class Robot(Player):
         x, y, z = self.world.get_next_highest_solid_block(x0, 255, z0)
         return self.dig_to(x, y + 1, z)
 
-    def excavate(self, corner_a, corner_b, update_rate=64):
+    def excavate(self, corner_a, corner_b, update_rate=64, ignore=None):
         """Excavate an area given two opposite corners."""
         bounding_box = bb.BoundingBox(corner_a, corner_b)
         last_time = time.time()
         count = 0
+        if ignore is None:
+            ignore = set([])
         for point in bounding_box.iter_points(
                 axis_order=[1, 2, 0], ascending=False, zig_zag=[0, 2]):
             if (not self.world.is_solid_block(*point) or
-                    not self.world.is_safe_to_break(*point)):
+                    not self.world.is_safe_to_break(*point) or
+                    (ignore and self.world.get_name(*point) in ignore)):
                 continue
             elif self.navigate_to(*point, space=4):
                 # See if bot is standing on block to break
