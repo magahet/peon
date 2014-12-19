@@ -77,6 +77,13 @@ class Window(object):
     def get_property(self, _property):
         return self.properties.get(_property)
 
+    def find(self, term):
+        slots = []
+        for index, slot in enumerate(self.slots):
+            if slot is not None and term in slot.name:
+                slots.append((index, slot))
+        return slots
+
     def set_property(self, _property, value):
         self.properties.update({_property: value})
 

@@ -760,6 +760,10 @@ class Robot(Player):
                          int(time.time() - last_time) * 1000 // 64)
                 last_time = time.time()
                 count = 0
+                for index, slot in self.inventory.find('Diamond'):
+                    if slot.damage > 1000:
+                        log.info('Tool is wearing down: %d: %s',
+                                 index, str(slot))
 
     def fill(self, corner_a, corner_b, block_type, update_rate=64):
         bounding_box = bb.BoundingBox(corner_a, corner_b)
