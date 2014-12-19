@@ -301,43 +301,44 @@ class Player(object):
         block_name = self.world.get_name(x, y, z)
         if block_name == 'Air':
             return True
-        if (self.world.is_falling_block(x, y, z) or
-                block_name in ('Dirt', 'Grass Block')):
-            if not self.equip_any_item_from_list([
-                'Diamond Shovel',
-                'Golden Shovel',
-                'Iron Shovel',
-                'Stone Shovel',
-                'Wooden Shovel',
-            ]):
-                log.info('No shovels to use')
-        elif block_name in types.WOOD:
-            if not self.equip_any_item_from_list([
-                'Diamond Axe',
-                'Golden Axe',
-                'Iron Axe',
-                'Stone Axe',
-                'Wooden Axe',
-            ]):
-                log.info('No axes to use')
-        else:
-            if not self.equip_any_item_from_list([
-                'Diamond Pickaxe',
-                'Golden Pickaxe',
-                'Iron Pickaxe',
-                'Stone Pickaxe',
-                'Wooden Pickaxe',
-            ]):
-                log.info('No pickaxes to use')
-        self._send(self.proto.PlayServerboundPlayerDigging.id,
-                   status=0,
-                   location=Position(x, y, z),
-                   face=1)
-        self._send(self.proto.PlayServerboundPlayerDigging.id,
-                   status=2,
-                   location=Position(x, y, z),
-                   face=1)
-        result = self._wait_for(is_changed, timeout=10)
+        with self._inventory_lock:
+            if (self.world.is_falling_block(x, y, z) or
+                    block_name in ('Dirt', 'Grass Block')):
+                if not self.equip_any_item_from_list([
+                    'Diamond Shovel',
+                    'Golden Shovel',
+                    'Iron Shovel',
+                    'Stone Shovel',
+                    'Wooden Shovel',
+                ]):
+                    log.info('No shovels to use')
+            elif block_name in types.WOOD:
+                if not self.equip_any_item_from_list([
+                    'Diamond Axe',
+                    'Golden Axe',
+                    'Iron Axe',
+                    'Stone Axe',
+                    'Wooden Axe',
+                ]):
+                    log.info('No axes to use')
+            else:
+                if not self.equip_any_item_from_list([
+                    'Diamond Pickaxe',
+                    'Golden Pickaxe',
+                    'Iron Pickaxe',
+                    'Stone Pickaxe',
+                    'Wooden Pickaxe',
+                ]):
+                    log.info('No pickaxes to use')
+            self._send(self.proto.PlayServerboundPlayerDigging.id,
+                       status=0,
+                       location=Position(x, y, z),
+                       face=1)
+            self._send(self.proto.PlayServerboundPlayerDigging.id,
+                       status=2,
+                       location=Position(x, y, z),
+                       face=1)
+            result = self._wait_for(is_changed, timeout=10)
         if not result:
             log.info('could not break block: %s', str((x, y, z)))
         return result
@@ -350,3 +351,46 @@ class Player(object):
             for block in blocks:
                 self.break_block(*block)
         return not bool(blocks)
+
+    def place_block(self, x, y, z, block_type):
+        def get_direction(p1, p2):
+            delta = (p2[i] - p1[i] for i in len(p1))
+            direction_map = {
+                (0, 1, 0): 0,
+                (0, -1, 0): 1,
+                (0, 0, 1): 2,
+                (0, 0, -1): 3,
+                (1, 0, 0): 4,
+                (-1, 0, 0): 5,
+            }
+            return direction_map.get(delta)
+
+        x, y, z = int(x), int(y), int(z)
+        log.debug('placing block: (%d, %d, %d)', x, y, z)
+        block_name = self.world.get_name(x, y, z)
+        if block_name != 'Air':
+            return False
+        with self._inventory_lock:
+            if not self.equip_item(block_type):
+                return False
+            if self.held_item is None:
+                held_item = None
+            else:
+                held_item = self.held_item.as_fastmc()
+            for neighbor in self.world.iter_adjacent(x, y, z, degrees=1):
+                if self.world.is_solid_block(*neighbor):
+                    break
+            else:
+                return False
+            self._send(self.proto.PlayServerboundBlockPlacement.id,
+                       location=Position(x, y, z),
+                       direction=get_direction((x, y, z), neighbor),
+                       held_item=held_item,
+                       cursor_x=64,
+                       cursor_y=64,
+                       cursor_z=64)
+            result = self._wait_for(
+                lambda: self.world.get_name(x, y, z) == block_type, timeout=1)
+        if not result:
+            log.info('could not place block: %s', str((x, y, z)))
+        return result

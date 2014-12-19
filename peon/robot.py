@@ -757,3 +757,34 @@ class Robot(Player):
                          int(time.time() - last_time) * 1000 // 64)
                 last_time = time.time()
                 count = 0
+
+    def fill(self, corner_a, corner_b, block_type, update_rate=64):
+        bounding_box = bb.BoundingBox(corner_a, corner_b)
+        last_time = time.time()
+        count = 0
+        for point in bounding_box.iter_points(
+                axis_order=[1, 2, 0], ascending=False, zig_zag=[0, 2]):
+            if not self.world.get_name(*point) == 'Air':
+                continue
+            elif self.navigate_to(*point, space=4):
+                # See if bot is standing on point to fill
+                if point == self.position:
+                    # Look for a nearby block to stand on
+                    for neighbor in self.world.iter_moveable_adjacent(
+                            *self.position):
+                        if self.move_to(*neighbor, center=True):
+                            if self.place_block(*point, block_type=block_type):
+                                count += 1
+                            break
+                    else:
+                        continue
+                else:
+                    if self.place_block(*point, block_type=block_type):
+                        count += 1
+            else:
+                log.info('Could not place block: %s', str(point))
+            if count >= update_rate:
+                log.info('Average block placement time: %dms',
+                         int(time.time() - last_time) * 1000 // 64)
+                last_time = time.time()
+                count = 0
