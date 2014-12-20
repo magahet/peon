@@ -96,7 +96,8 @@ class Player(object):
                   str((x, y, z)))
         with self._move_lock:
             while distance > space:
-                space_b = min(space, 100)
+                space_b = max(space, distance - 100)
+                x0, y0, z0 = self.position
                 path = self.world.find_path(x0, y0, z0, x, y, z, space=space_b,
                                             timeout=timeout)
                 log.debug('path: %s', str(path))
@@ -383,9 +384,6 @@ class Player(object):
             else:
                 return False
             nx, ny, nz = neighbor
-            print 'neighbor:', neighbor
-            print 'direction:', get_direction((x, y, z), neighbor)
-            print 'position:', Position(int(nx), int(ny), int(nz))
             self._send(self.proto.PlayServerboundBlockPlacement.id,
                        location=Position(int(nx), int(ny), int(nz)),
                        direction=get_direction((x, y, z), neighbor),
