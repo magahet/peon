@@ -4,7 +4,7 @@ import numpy as np
 from math import floor
 import smpmap
 import astar
-from types import (MobTypes, ItemTypes, ObjectTypes)
+from types import (MobTypes, ItemTypes, ObjectTypes, Door, TrapDoor)
 from window import Slot
 import logging
 import time
@@ -97,10 +97,11 @@ class World(smpmap.World):
         elif ItemTypes.is_solid(_type):
             return True
         elif ItemTypes.is_door(_type):
-            if self.get_meta(x, y, z) >> 2 == 0:
-                return True
-            else:
-                return True
+            door = Door(_type, self.get_meta(x, y, z))
+            return door.is_closed()
+        elif ItemTypes.is_trap_door(_type):
+            trap_door = TrapDoor(_type, self.get_meta(x, y, z))
+            return trap_door.is_closed()
         return False
 
     def is_water_block(self, x, y, z):
@@ -263,6 +264,10 @@ class World(smpmap.World):
 
     def get_name(self, x, y, z):
         return ItemTypes.get_block_name(self.get_id(x, y, z))
+
+    def get_height(self, x, y, z):
+        return ItemTypes.get_block_height(self.get_id(x, y, z),
+                                          self.get_meta(x, y, z))
 
     def is_moveable(self, x0, y0, z0, x, y, z, with_floor=True):
         # check target spot

@@ -45,6 +45,7 @@ class Player(object):
         self._move_lock = threading.RLock()
         self._inventory_lock = threading.RLock()
         self.move_corrected_by_server = threading.Event()
+        self.speed = 10
 
     def _wait_for(self, what, timeout=10):
         if what():
@@ -87,7 +88,9 @@ class Player(object):
     def open_window(self):
         return self.windows.get(self._open_window_id)
 
-    def navigate_to(self, x, y, z, speed=10, space=0, timeout=10):
+    def navigate_to(self, x, y, z, speed=None, space=0, timeout=10):
+        if speed is None:
+            speed = self.speed
         x0, y0, z0 = self.position
         distance = euclidean(self.position, (x, y, z))
         if distance <= space:
@@ -108,7 +111,9 @@ class Player(object):
                 distance = euclidean(self.position, (x, y, z))
         return True
 
-    def dig_to(self, x, y, z, speed=10, space=0, timeout=10):
+    def dig_to(self, x, y, z, speed=None, space=0, timeout=10):
+        if speed is None:
+            speed = self.speed
         x0, y0, z0 = self.get_position(floor=True)
         x, y, z = floor(x), floor(y), floor(z)
         log.debug('digging from %s to %s.', str((x0, y0, z0)), str((x, y, z)))
@@ -128,10 +133,13 @@ class Player(object):
                 distance = euclidean(self.position, (x, y, z))
         return True
 
-    def follow_path(self, path, speed=10, digging=False):
+    def follow_path(self, path, speed=None, digging=False):
+        if speed is None:
+            speed = self.speed
         log.debug('following path: %s', str(path))
         with self._move_lock:
             x0, y0, z0 = self.get_position(floor=True)
+            dt = 1.0 / speed
             for num, (x, y, z) in enumerate(path):
                 if digging:
                     if num > 0:
@@ -148,17 +156,21 @@ class Player(object):
                     log.info('position is not moveable: %s',
                              str((x0, y0, z0, x, y, z)))
                     return False
-                if not self.move_to(x, y, z, speed=speed, center=True):
+                if not self._move(x, y, z):
                     log.info('could not move to: %s', str((x, y, z)))
                     return False
+                time.sleep(dt)
             return True
 
-    def move_to(self, x, y, z, speed=10, center=False):
+    def move_to(self, x, y, z, speed=None, center=False):
         def abs_min(n, delta):
             if n < 0:
                 return max(n, -delta)
             else:
                 return min(n, delta)
+
+        if speed is None:
+            speed = self.speed
 
         if center:
             x = floor(x) + 0.5
@@ -175,7 +187,7 @@ class Player(object):
                 dz = z - self.z
                 target = (abs_min(
                     dx, delta), abs_min(dy, delta), abs_min(dz, delta))
-                self.move(*target)
+                self._move_relative(*target)
                 time.sleep(dt)
                 if self.move_corrected_by_server.is_set():
                     self.move_corrected_by_server.clear()
@@ -186,35 +198,58 @@ class Player(object):
         self._is_moving.clear()
         return True
 
-    def move(self, dx=0, dy=0, dz=0):
-
-        def calc_yaw(x0, z0, x, z):
-            l = x - x0
-            w = z - z0
-            c = math.sqrt(l * l + w * w)
-            if c == 0:
-                return 0
-            alpha1 = -math.asin(l / c) / math.pi * 180
-            alpha2 = math.acos(w / c) / math.pi * 180
-            if alpha2 > 90:
-                return 180 - alpha1
-            else:
-                return alpha1
-
+    def _move_relative(self, dx=0, dy=0, dz=0):
         with self._position_update_lock:
-            self.yaw = calc_yaw(self.x, self.z, self.x + dx, self.z + dz)
+            self.yaw = self._calc_yaw(self.x, self.z, self.x + dx, self.z + dz)
             self.x += dx
             self.y += dy
             self.z += dz
             log.debug('moved to: %s', str(self.position))
 
-    def teleport(self, x, y, z, yaw, pitch):
+    def _move(self, x=None, y=None, z=None, center=True):
+        new_x = x if x is not None else self.x
+        new_z = z if z is not None else self.z
+        if y is not None:
+            height = self.world.get_height(int(new_x), int(y) - 1,
+                                           int(new_z))
+            new_y = y + height - 1
+        if center:
+            new_x = floor(new_x) + 0.5
+            new_z = floor(new_z) + 0.5
+        self._is_moving.set()
+        self.move_corrected_by_server.clear()
+        with self._position_update_lock:
+            self.yaw = self._calc_yaw(self.x, self.z, new_x, new_z)
+            self.x = new_x
+            self.y = new_y
+            self.z = new_z
+            log.debug('moved to: %s', str(self.position))
+        self._is_moving.clear()
+        return True
+
+    @staticmethod
+    def _calc_yaw(x0, z0, x, z):
+        l = x - x0
+        w = z - z0
+        c = math.sqrt(l * l + w * w)
+        if c == 0:
+            return 0
+        alpha1 = -math.asin(l / c) / math.pi * 180
+        alpha2 = math.acos(w / c) / math.pi * 180
+        if alpha2 > 90:
+            return 180 - alpha1
+        else:
+            return alpha1
+
+    def teleport(self, x, y, z, yaw=None, pitch=None):
         with self._position_update_lock:
             self.x = x
             self.y = y
             self.z = z
-            self.yaw = yaw
-            self.pitch = pitch
+            if yaw is not None:
+                self.yaw = yaw
+            if pitch is not None:
+                self.pitch = pitch
 
     def iter_entities_in_range(self, types=None, reach=4):
         for entity in self.world.iter_entities(types=types):

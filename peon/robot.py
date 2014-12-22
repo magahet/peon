@@ -93,8 +93,7 @@ class Robot(Player):
                 'interval': 1,
             },
         }
-        self.start_threads()
-        self.state = ''
+        self._start_threads()
         self._last_health = 0
         self.unbreakable = set([])
 
@@ -144,14 +143,14 @@ class Robot(Player):
         settings = self._thread_functions.get(name, {})
         return (settings.get('args', ()), settings.get('kwargs', {}))
 
-    def start_threads(self):
+    def _start_threads(self):
         """Start auto action threads."""
         for name in self._thread_functions:
             if name not in self._enabled_auto_actions:
                 self._enabled_auto_actions[name] = threading.Event()
                 self._active_auto_actions[name] = threading.Event()
             if name in self._pre_enabled_auto_actions:
-                self.enable_auto_action(name)
+                self.start(name)
             thread = threading.Thread(target=self._do_auto_action, name=name,
                                       args=(name,))
             thread.daemon = True
@@ -217,15 +216,17 @@ class Robot(Player):
                        )
         return True
 
-    def enable_auto_action(self, name):
+    def start(self, name, **kwargs):
         """Enable an auto action."""
+        if kwargs:
+            self.set_auto_settings(name, **kwargs)
         auto_action = self._enabled_auto_actions.get(name)
         if auto_action is None:
             return False
         auto_action.set()
         return True
 
-    def disable_auto_action(self, name):
+    def stop(self, name):
         """Disable an auto action."""
         auto_action = self._enabled_auto_actions.get(name)
         if auto_action is None:
@@ -293,8 +294,8 @@ class Robot(Player):
         """
         with self._mission_lock:
             self.don_armor()
-            self.enable_auto_action('defend')
-            mob_types = () if mob_types is None else mob_types
+            self.start('defend')
+            mob_types = types.HOSTILE_MOBS if mob_types is None else mob_types
             home = self.get_position(floor=True) if home is None else home
             if not self.navigate_to(*home, timeout=30):
                 log.warn('failed nav to home')
@@ -342,12 +343,12 @@ class Robot(Player):
     def follow_entity(self, entity, space=3, timeout=None):
         """Continuously move to an entity's position."""
         with self._move_lock:
-            start = time.time()
+            start_time = time.time()
             while entity.eid in self.world.entities:
                 x, y, z = entity.get_position(floor=True)
                 if not self.navigate_to(x, y, z, space=space, timeout=2):
                     break
-                elif timeout is not None and time.time() - start > timeout:
+                elif timeout is not None and time.time() - start_time > timeout:
                     break
                 time.sleep(0.1)
 

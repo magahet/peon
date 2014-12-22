@@ -252,6 +252,7 @@
         }
       }
     }, 
+    "height": 0.5625,
     "itemID": 355, 
     "name": "Bed", 
     "solid": true, 
@@ -519,6 +520,7 @@
         "name": "Black Carpet"
       }
     }, 
+    "height": 0.0625,
     "itemID": 171, 
     "name": "Carpet",
     "solid": true
@@ -1890,8 +1892,7 @@
   "light_weighted_pressure_plate": {
     "blockID": 147, 
     "itemID": 147, 
-    "name": "Weighted Pressure Plate (Light)",
-    "solid": true
+    "name": "Weighted Pressure Plate (Light)"
   }, 
   "lit_furnace": {
     "blockID": 62, 
@@ -3525,8 +3526,7 @@
   "stone_pressure_plate": {
     "blockID": 70, 
     "itemID": 70, 
-    "name": "Stone Pressure Plate",
-    "solid": true
+    "name": "Stone Pressure Plate"
   }, 
   "stone_shovel": {
     "durability": 131, 
@@ -3763,6 +3763,7 @@
   }, 
   "waterlily": {
     "blockID": 111, 
+    "height": 0.015625,
     "itemID": 111, 
     "name": "Lily Pad",
     "solid": true
@@ -3875,8 +3876,7 @@
   "wooden_pressure_plate": {
     "blockID": 72, 
     "itemID": 72, 
-    "name": "Wooden Pressure Plate",
-    "solid": true
+    "name": "Wooden Pressure Plate"
   }, 
   "wooden_shovel": {
     "durability": 59, 

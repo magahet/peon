@@ -23,7 +23,7 @@ def start_auto_bot(host, username, password, actions, port=25565, auth=True,
         disabled = settings.pop('disabled', False)
         bot.set_auto_settings(name, *args, **settings)
         if not disabled:
-            bot.enable_auto_action(name)
+            bot.start(name)
     if chat:
         utils.start_chat_interface(bot)
     return client, bot

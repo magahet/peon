@@ -103,6 +103,8 @@ TREES = set([
     'Acacia Wood',
     'Dark Oak Wood',
 ])
+HALF_SLABS = set([44, 182, 126])
+TRAP_DOORS = set([96, 167])
 
 
 class MobTypes(object):
@@ -162,6 +164,7 @@ class ItemTypes(object):
     types_by_name = {}
     blocks_by_id = {}
     blocks_by_name = {}
+    block_height = {}
     non_solid_types = set([])
     non_climbable_types = set([])
     doors = set([])
@@ -169,14 +172,18 @@ class ItemTypes(object):
         types = json.load(_file)
     for _, data in types.iteritems():
         if 'blockID' in data:
-            blocks_by_id[data.get('blockID')] = data.get('name')
-            if data.get('name') in DOORS:
-                doors.add(data.get('blockID'))
-            blocks_by_name[data.get('name')] = data.get('blockID')
+            _id = data.get('blockID')
+            name = data.get('name')
+            blocks_by_id[_id] = name
+            if name in DOORS:
+                doors.add(_id)
+            blocks_by_name[name] = _id
             if not data.get('solid', False):
-                non_solid_types.add(data.get('blockID'))
+                non_solid_types.add(_id)
             if not data.get('climbable', True):
-                non_climbable_types.add(data.get('blockID'))
+                non_climbable_types.add(_id)
+            if 'height' in data:
+                block_height[_id] = data.get('height')
         types_by_id[(data.get('itemID'), None)] = data.get('name')
         types_by_name[data.get('name')] = (data.get('itemID'), None)
         if 'damageValues' in data:
@@ -197,6 +204,14 @@ class ItemTypes(object):
     @classmethod
     def get_block_name(cls, id_query):
         return cls.blocks_by_id.get(id_query)
+
+    @classmethod
+    def get_block_height(cls, id_query, damage_query=None):
+        if id_query in HALF_SLABS and damage_query < 8:
+            return 0.5
+        elif id_query in TRAP_DOORS and damage_query >> 3 == 0:
+            return 0.1875
+        return cls.block_height.get(id_query, 1.0)
 
     @classmethod
     def get_block_id(cls, name_query):
@@ -320,3 +335,24 @@ class ObjectTypes(object):
             if _id == id_query:
                 return name
         return 'Unknown'
+
+
+class Door(object):
+    def __init__(self, _id, meta):
+        self._id = _id
+        self._meta = meta
+
+    def is_open(self):
+        return self._meta >> 2 == 0
+
+
+class TrapDoor(object):
+    def __init__(self, _id, meta):
+        self._id = _id
+        self._meta = meta
+
+    def is_open(self):
+        return self._meta >> 2 == 0
+
+    def on_bottom(self):
+        return self._meta >> 3 == 0
