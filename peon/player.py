@@ -339,7 +339,7 @@ class Player(object):
             return True
         with self._inventory_lock:
             if (self.world.is_falling_block(x, y, z) or
-                    block_name in ('Dirt', 'Grass Block')):
+                    block_name in ('Dirt', 'Grass Block', 'Farmland')):
                 if not self.equip_any_item_from_list([
                     'Diamond Shovel',
                     'Golden Shovel',

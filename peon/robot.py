@@ -799,3 +799,22 @@ class Robot(Player):
                          int(time.time() - last_time) * 1000 // 64)
                 last_time = time.time()
                 count = 0
+
+    def light_world(self, x0, z0, x1, z1, top=None):
+        bounding_box = bb.BoundingBox((x0, z0), (x1, z1))
+        for x, z in bounding_box.iter_points(zig_zag=[0, 1]):
+            ground = self.world.get_next_highest_solid_block(x, top, z)
+            y = ground[1] + 1
+            name = self.world.get_name(x, y, z)
+            name = 'Air' if name is None else name
+            optimal_spot = self.world.is_optimal_lighting_spot(x, y, z)
+            if optimal_spot and name == 'Air':
+                log.info('Spot needs torch: %s', str((x, y, z)))
+                if self.navigate_to(x, y, z, space=4):
+                    if self.place_block(x, y, z, block_type='Torch'):
+                        log.info('Torch placed: %s', str((x, y, z)))
+            elif not optimal_spot and name == 'Torch':
+                log.info('Spot should not have torch: %s', str((x, y, z)))
+                if self.navigate_to(x, y, z, space=4):
+                    if self.break_block(x, y, z):
+                        log.info('Torch broken: %s', str((x, y, z)))

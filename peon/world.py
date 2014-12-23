@@ -11,6 +11,9 @@ import time
 import utils
 
 
+LIGHT_MATRIX = np.array([[13, 6], [1, 7]])
+
+
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
@@ -486,3 +489,8 @@ class World(smpmap.World):
                 p in cluster.points]
             results.append(cluster)
         return results
+
+    @staticmethod
+    def is_optimal_lighting_spot(x, y, z):
+        s = np.sum(np.linalg.solve(LIGHT_MATRIX, np.array([x, z]))) % 1
+        return s <= 0.001 or s >= 0.999

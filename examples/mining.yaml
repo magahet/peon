@@ -1,14 +1,3 @@
 - name: mine
   block_types:
     - Diamond Ore
-
-- name: store
-  chest_position: [-32, 64, -25]
-  items:
-      - Diamond Pickaxe
-      - Diamond Sword
-      - Diamond Shovel
-      - Cooked Chicken
-  invert: True
-  dig: True
-  disabled: True
