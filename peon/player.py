@@ -404,7 +404,7 @@ class Player(object):
         x, y, z = int(x), int(y), int(z)
         log.debug('placing block: (%d, %d, %d)', x, y, z)
         block_name = self.world.get_name(x, y, z)
-        if block_name != 'Air':
+        if block_name is not None and block_name != 'Air':
             return False
         with self._inventory_lock:
             if not self.equip_item(block_type):

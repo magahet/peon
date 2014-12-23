@@ -226,6 +226,10 @@ class ItemTypes(object):
         return block_id in cls.doors
 
     @classmethod
+    def is_trap_door(cls, block_id):
+        return block_id in TRAP_DOORS
+
+    @classmethod
     def is_unbreakable(cls, block_id):
         name = cls.get_block_name(block_id)
         return name in UNBREAKABLE_BLOCKS

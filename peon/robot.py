@@ -193,7 +193,7 @@ class Robot(Player):
                 return
             self.on_ground = False
             x, y, z = next_pos
-            self.on_ground = self.move_to(x, y + 1, z, speed=13)
+            self.on_ground = self._move(x, y + 1, z)
 
     def defend(self, mob_types=types.HOSTILE_MOBS):
         """Attack entities within range."""
@@ -520,7 +520,7 @@ class Robot(Player):
             self.close_window()
             return True
 
-    def escape(self, min_health=10, max_entities=300):
+    def escape(self, min_health=10, max_entities=500):
         """Disconnect if health is low or there are too many entities."""
         if self.health is not None:
             if self.health < self._last_health:
@@ -743,7 +743,7 @@ class Robot(Player):
                     # Look for a nearby block to stand on
                     for neighbor in self.world.iter_moveable_adjacent(
                             *self.position):
-                        if self.move_to(*neighbor, center=True):
+                        if self._move(*neighbor):
                             if self.break_block(*point):
                                 count += 1
                             break
@@ -772,23 +772,26 @@ class Robot(Player):
         count = 0
         for point in bounding_box.iter_points(
                 axis_order=[1, 2, 0], zig_zag=[0, 2]):
-            if not self.world.get_name(*point) == 'Air':
+            name = self.world.get_name(*point)
+            if name is not None and name != 'Air':
                 continue
             elif self.navigate_to(*point, space=4):
                 # See if bot is standing on point to fill
-                if point == self.position:
-                    # Look for a nearby block to stand on
-                    for neighbor in self.world.iter_moveable_adjacent(
-                            *self.position):
-                        if self.move_to(*neighbor, center=True):
-                            if self.place_block(*point, block_type=block_type):
-                                count += 1
-                            break
-                    else:
-                        continue
-                else:
+                if point != self.position:
                     if self.place_block(*point, block_type=block_type):
                         count += 1
+                    continue
+                # Look for a nearby block to stand on
+                for neighbor in self.world.iter_moveable_adjacent(
+                        *self.position):
+                    if not self._move(*neighbor):
+                        continue
+                    if self.place_block(*point, block_type=block_type):
+                        count += 1
+                        break
+                else:
+                    log.info('Could not place block: %s', str(point))
+                    return False
             else:
                 log.info('Could not place block: %s', str(point))
             if count >= update_rate:
