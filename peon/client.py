@@ -12,6 +12,7 @@ from robot import Robot
 from entity import (Entity, Object, PlayerEntity, BlockEntity)
 from window import Window
 from utils import ThreadSafeCounter
+import chat
 
 
 log = logging.getLogger(__name__)
@@ -22,10 +23,12 @@ class Client(object):
         self.protocol_version = protocol_version
         self.proto = fastmc.proto.protocol(protocol_version)
         self._send_queue = Queue.Queue(10)
+        self._chat_queue = Queue.Queue(10)
         self._recv_condition = threading.Condition()
         self.world = World()
         self.bot = Robot(self.proto,
                          self._send_queue,
+                         self._chat_queue,
                          self._recv_condition,
                          self.world)
         self._sock = None
@@ -298,26 +301,9 @@ class Client(object):
         self.reader.set_compression_threshold(pkt.threshold)
 
     def on_chat_message(self, pkt):
-        def parse_chat_json(json):
-            if json.get('translate') == 'chat.type.text':
-                message_list = []
-                sender = ''
-                for section in json.get('with', []):
-                    if isinstance(section, basestring):
-                        message_list.append(section)
-                    elif isinstance(section, dict):
-                        sender = section.get('text')
-                return '<{}> {}'.format(sender, ' '.join(message_list))
-            elif json.get('translate') in ['multiplayer.player.joined', 'multiplayer.player.left']:
-                event = json.get(
-                    'translate', '').replace('multiplayer.player.', 'player ')
-                player = json.get('with', [{}])[0].get('text', 'UNKNOWN')
-                return '{}: {}'.format(event, player)
-
-        #log.info('chat: %s', str(pkt.chat))
-        clean_message = parse_chat_json(pkt.chat)
-        if clean_message:
-            log.info('chat: %s', clean_message)
+        message = chat.Message(pkt.chat)
+        self._chat_queue.put(message)
+        log.info('chat: %s', str(message))
 
     def on_health_update(self, pkt):
         self.bot.health = pkt.health

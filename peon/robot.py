@@ -20,11 +20,12 @@ class Robot(Player):
 
     """A Minecraft bot able to perform complex tasks."""
 
-    def __init__(self, proto, send_queue, recv_condition, world):
+    def __init__(self, proto, send_queue, chat_queue, recv_condition, world):
         """Inherit from base player class and start threads for auto actions."""
         super(Robot, self).__init__(proto, send_queue, recv_condition, world)
         self._pre_enabled_auto_actions = ('fall', 'eat', 'defend', 'escape')
         self._auto_eat_level = 18
+        self._chat_queue = chat_queue
         self._enabled_auto_actions = {}
         self._active_auto_actions = {}
         self._mission_lock = threading.RLock()
@@ -92,6 +93,10 @@ class Robot(Player):
                 'function': self.move_to_player,
                 'interval': 1,
             },
+            'listen': {
+                'function': self.listen,
+                'interval': 1,
+            },
         }
         self._start_threads()
         self._last_health = 0
@@ -108,6 +113,16 @@ class Robot(Player):
             self.xp_level,
             self.enabled_auto_actions,
             self.active_auto_actions,
+        )
+
+    @property
+    def state(self):
+        template = 'xyz={}, health={}, food={}, xp={}'
+        return template.format(
+            self.get_position(floor=True),
+            int(self.health),
+            int(self.food),
+            int(self.xp_level)
         )
 
     @property
@@ -259,6 +274,7 @@ class Robot(Player):
             return True
         with self._inventory_lock:
             if not self.equip_any_item_from_list(types.FOOD):
+                log.warning('Hungry, but no food')
                 return False
             log.info('Eating: %s', self.held_item.name)
             while self.held_item is not None and self.food < target:
@@ -801,6 +817,10 @@ class Robot(Player):
                 count = 0
 
     def light_world(self, x0, z0, x1, z1, top=None):
+        """Set torches at optimal lighting positions."""
+        if top is None:
+            _, top, _ = self.position
+            top += 16
         bounding_box = bb.BoundingBox((x0, z0), (x1, z1))
         for x, z in bounding_box.iter_points(zig_zag=[0, 1]):
             ground = self.world.get_next_highest_solid_block(x, top, z)
@@ -818,3 +838,39 @@ class Robot(Player):
                 if self.navigate_to(x, y, z, space=4):
                     if self.break_block(x, y, z):
                         log.info('Torch broken: %s', str((x, y, z)))
+
+    def listen(self, name='peon'):
+        message = self._chat_queue.get()
+        log.info('Received message: %s', str(message))
+        if message.message_type != 'message':
+            log.info('Not a chat message.')
+            return
+        tokens = message.message.split()
+        log.info('Tokens: %s', str(tokens))
+        if len(tokens) < 2:
+            return
+        called_name = tokens.pop(0)
+        if called_name != name:
+            return
+        command = tokens.pop(0)
+        args = []
+        kwargs = {}
+        for token in tokens:
+            left, _, right = token.partition('=')
+            if not right:
+                args.append(left)
+            else:
+                kwargs[left] = right
+        if not hasattr(self, command):
+            return self.send_chat_message("I don't understand")
+        attribute = getattr(self, command)
+        if hasattr(attribute, '__call__'):
+            if attribute(*args, **kwargs):
+                return self.send_chat_message('done')
+            else:
+                return self.send_chat_message("I'm having trouble with that")
+        else:
+            return self.send_chat_message(str(attribute))
+
+    def send_chat_message(self, message):
+        self._send(self.proto.PlayServerboundChatMessage.id, chat=message)
