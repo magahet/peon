@@ -105,6 +105,13 @@ TREES = set([
 ])
 HALF_SLABS = set([44, 182, 126])
 TRAP_DOORS = set([96, 167])
+DURABILITY = {
+    'Gold': 33,
+    'Wooden': 60,
+    'Stone': 132,
+    'Iron': 251,
+    'Diamond': 1562,
+}
 
 
 class MobTypes(object):

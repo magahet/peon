@@ -408,11 +408,21 @@ class Robot(Player):
                     self.inventory.player_inventory]
         return []
 
-    def drop(self, items=None, position=None, invert=False):
+    def drop(self, items=None, slot_num=None, position=None, invert=False):
         """Drop items from inventory."""
-        if items is None:
+        def _drop(slot_num):
+            log.debug('Item slot: %s', slot_num)
+            return (
+                self.inventory.click(slot_num) and
+                self.inventory.click(-999)
+            )
+
+        if items is None and slot_num is None:
             return False
-        items_to_drop = self.find_items(items, invert=invert)
+        if slot_num:
+            return _drop(slot_num)
+        if items is not None:
+            items_to_drop = self.find_items(items, invert=invert)
         if not items_to_drop:
             log.debug('No items to drop')
             return True
@@ -424,13 +434,7 @@ class Robot(Player):
             tries = 0
             while item in self.inventory.player_inventory and tries < 5:
                 num = self.inventory.player_inventory.index(item)
-                log.debug('Item slot: %s', num)
-                if (
-                    not self.inventory.click(num) or
-                    not self.inventory.click(-999)
-                ):
-                    return False
-                    self.close_window()
+                _drop(num)
                 tries += 1
         self.close_window()
         return True
@@ -777,10 +781,27 @@ class Robot(Player):
                          int(time.time() - last_time) * 1000 // 64)
                 last_time = time.time()
                 count = 0
-                for index, slot in self.inventory.find('Diamond'):
-                    if slot.damage > 1000:
-                        log.info('Tool is wearing down: %d: %s',
-                                 index, str(slot))
+                self.check_tool_damage()
+        for point in bounding_box.iter_points():
+            if (self.world.is_solid_block(*point) and
+                    self.world.is_safe_to_break(*point) and
+                    (not ignore or self.world.get_name(*point) not in ignore)):
+                return False
+        return True
+
+    def have_damaged_tool(self, warn_level=0.9, error=0.9):
+        tool_at_error_level = False
+        for _type, max_damage in types.DURABILITY.iteritems():
+            for index, slot in self.inventory.find(_type):
+                damage_percent = slot.damage / max_damage
+                if damage_percent >= warn_level:
+                    log.info('Tool is about to break: %d: %s',
+                             index, str(slot))
+                tool_at_error_level = True
+                if damage_percent >= warn_level:
+                    log.info('Tool is wearing down: %d: %s',
+                             index, str(slot))
+        return tool_at_error_level
 
     def fill(self, corner_a, corner_b, block_type, update_rate=64):
         bounding_box = bb.BoundingBox(corner_a, corner_b)
@@ -815,8 +836,13 @@ class Robot(Player):
                          int(time.time() - last_time) * 1000 // 64)
                 last_time = time.time()
                 count = 0
+        for point in bounding_box.iter_points():
+            name = self.world.get_name(*point)
+            if name is None or name == 'Air':
+                return False
+        return True
 
-    def light_world(self, x0, z0, x1, z1, top=None):
+    def light_area(self, x0, z0, x1, z1, top=None):
         """Set torches at optimal lighting positions."""
         if top is None:
             _, top, _ = self.position
@@ -838,6 +864,43 @@ class Robot(Player):
                 if self.navigate_to(x, y, z, space=4):
                     if self.break_block(x, y, z):
                         log.info('Torch broken: %s', str((x, y, z)))
+        for x, z in bounding_box.iter_points():
+            if not self.world.is_optimal_lighting_spot(x, 0, z):
+                continue
+            _, ground, _ = self.world.get_next_highest_solid_block(x, top, z)
+            name = self.world.get_name(x, ground + 1, z)
+            if not name or name != 'Torch':
+                return False
+        return True
+
+    def terraform(self, corner_a, corner_b, fill='Dirt', sub_fill='Stone'):
+        log.info('Excavating to ground level')
+        if not self.excavate(corner_a, corner_b):
+            log.warning('Could not excavate top area')
+            return False
+        ground_level = min(corner_a[1], corner_b[1]) - 1
+        x0, _, z0 = corner_a
+        x1, _, z1 = corner_b
+        log.info('Clearing ground level')
+        if not self.excavate((x0, ground_level, z0), (x1, ground_level, z1),
+                             ignore=['Dirt', 'Grass Block']):
+            log.warning('Could not excavate top area')
+            return False
+        log.info('Filling sub-level')
+        if not self.fill((x0, ground_level - 1, z0), (x1, ground_level - 1, z1),
+                         sub_fill):
+            log.warning('Could not fill sub-terrain')
+            return False
+        log.info('Filling ground level')
+        if not self.fill((x0, ground_level, z0), (x1, ground_level, z1), fill):
+            log.warning('Could not fill terrain')
+            return False
+        log.info('Lighting area')
+        if not self.light_area(x0, z0, x1, z1):
+            log.warning('Could not light area')
+            return False
+        log.info('Terraforming complete')
+        return True
 
     def listen(self, name='peon'):
         message = self._chat_queue.get()
