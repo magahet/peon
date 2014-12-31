@@ -45,7 +45,7 @@ class Player(object):
         self._move_lock = threading.RLock()
         self._inventory_lock = threading.RLock()
         self.move_corrected_by_server = threading.Event()
-        self.speed = 10
+        self.speed = 100
 
     def _wait_for(self, what, timeout=10):
         if what():
@@ -353,7 +353,7 @@ class Player(object):
                     'Wooden Axe',
                 ]):
                     log.info('No axes to use')
-            else:
+            elif self.world.is_solid_block(x, y, z):
                 if not self.equip_any_item_from_list([
                     'Diamond Pickaxe',
                     'Golden Pickaxe',

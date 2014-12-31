@@ -754,7 +754,9 @@ class Robot(Player):
             return False
         for point in bounding_box.iter_points(
                 axis_order=[1, 2, 0], ascending=False, zig_zag=[0, 2]):
-            if (not self.world.is_solid_block(*point) or
+            block_name = self.world.get_name(*point)
+            if (block_name is None or
+                    block_name == 'Air' or
                     not self.world.is_safe_to_break(*point) or
                     (ignore and self.world.get_name(*point) in ignore)):
                 continue
@@ -879,7 +881,7 @@ class Robot(Player):
 
     def terraform(self, corner_a, corner_b, fill='Dirt', sub_fill='Stone'):
         log.info('Excavating to ground level')
-        if not self.excavate(corner_a, corner_b):
+        if not self.excavate(corner_a, corner_b, ignore=['Torch']):
             log.warning('Could not excavate top area')
             return False
         ground_level = min(corner_a[1], corner_b[1]) - 1
