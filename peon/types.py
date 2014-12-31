@@ -112,6 +112,10 @@ DURABILITY = {
     'Iron': 251,
     'Diamond': 1562,
 }
+PLACEABLE = set([
+    'Air',
+    'Tall Grass',
+])
 
 
 class MobTypes(object):

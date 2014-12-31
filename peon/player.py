@@ -35,7 +35,7 @@ class Player(object):
         self._available_enchantments = {}
         self._open_window_id = 0
         self._held_slot_num = 0
-        self._held_slot_cycle = itertools.cycle(range(10))
+        self._held_slot_cycle = itertools.cycle(range(9))
         self._cursor_slot = Slot(-1, None, None, None)
         self.windows = {}
         self.world = world
@@ -400,7 +400,7 @@ class Player(object):
         x, y, z = int(x), int(y), int(z)
         log.debug('placing block: (%d, %d, %d)', x, y, z)
         block_name = self.world.get_name(x, y, z)
-        if block_name is not None and block_name != 'Air':
+        if block_name is not None and block_name not in types.PLACEABLE:
             return False
         with self._inventory_lock:
             if not self.equip_item(block_type):

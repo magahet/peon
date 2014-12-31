@@ -795,6 +795,7 @@ class Robot(Player):
     def has_damaged_tool(self, warn_level=0.8, error_level=0.9):
         tool_at_error_level = False
         for _type, max_damage in types.DURABILITY.iteritems():
+            max_damage = float(max_damage)
             for index, slot in self.inventory.find(_type):
                 damage_percent = slot.damage / max_damage
                 if damage_percent >= error_level:
@@ -813,7 +814,7 @@ class Robot(Player):
         for point in bounding_box.iter_points(
                 axis_order=[1, 2, 0], zig_zag=[0, 2]):
             name = self.world.get_name(*point)
-            if name is not None and name != 'Air':
+            if name is not None and name not in types.PLACEABLE:
                 continue
             elif self.navigate_to(*point, space=4):
                 # See if bot is standing on point to fill
@@ -841,7 +842,7 @@ class Robot(Player):
                 count = 0
         for point in bounding_box.iter_points():
             name = self.world.get_name(*point)
-            if name is None or name == 'Air':
+            if name is None or name in types.PLACEABLE:
                 return False
         return True
 

@@ -136,9 +136,11 @@ class Window(object):
         return False
 
     def ctrl_q_click(self, slot_num):
+        slot = self.slots[slot_num]
         if not self._click(slot_num, 4, 1):
             return False
-        self.slots[slot_num] = None
+        if slot == self.slots[slot_num]:
+            self.slots[slot_num] = None
         return True
 
     def left_click(self, slot_num):
