@@ -251,7 +251,7 @@ class Player(object):
             if pitch is not None:
                 self.pitch = pitch
 
-    def iter_entities_in_range(self, types=None, reach=4):
+    def iter_entities_in_range(self, types=None, reach=5):
         for entity in self.world.iter_entities(types=types):
             if euclidean((self.x, self.y, self.z),
                          (entity.x, entity.y, entity.z)) <= reach:
@@ -285,14 +285,10 @@ class Player(object):
             elif item in self.inventory.held:  # item in held_items
                 self.change_held_item(self.inventory.held.index(item,
                                                                 relative=True))
-            elif item in self.inventory:
-                held_slot = self._held_slot_cycle.next()
-                inventory_held_slot = len(self.inventory.slots) - 1 - held_slot
-                if not self.inventory.swap_slots(inventory_held_slot,
-                                                 self.inventory.index(item)):
-                    return False
-                held_index = self.inventory.held.index(item, relative=True)
-                if held_index is None:
+            elif item in self.inventory.player_inventory:
+                slot_num = self.inventory.index(item)
+                held_index = self._held_slot_cycle.next()
+                if not self.inventory.move_to_held_click(slot_num, held_index):
                     return False
                 self.change_held_item(held_index)
             else:

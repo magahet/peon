@@ -26,11 +26,6 @@ class Window(object):
         self._proto = proto
         self._recv_condition = recv_condition
         self._confirmations = {}
-        self._click_handlers = {
-            (0, 0): self._left_click,
-            (1, 0): self._shift_left_click,
-            (4, 1): self._control_q,
-        }
 
     def __repr__(self):
         slot_strings = []
@@ -107,62 +102,72 @@ class Window(object):
         if len(self.slots) > 9:
             return SlotList(self.slots[-9:], start=len(self.slots) - 9)
 
-    def click(self, slot_num, button=0, mode=0):
-        action_num = self._action_num_counter.next()
+    def _click(self, slot_num, mode, button, retries=2):
         if slot_num == -999:
             slot = None
         else:
             slot = self.slots[slot_num]
-        cursor_slot = self.cursor_slot
-        log.debug('Sending click window. slot_num: %d action_num: %d',
-                  slot_num, action_num)
-        log.debug('cursor: %s', str(self.cursor_slot))
-        log.debug('slot: %s', str(slot))
-        fastmc_slot = None if slot is None else slot.as_fastmc()
-        self._send(self._proto.PlayServerboundClickWindow.id,
-                   window_id=self._id,
-                   slot=slot_num,
-                   button=button,
-                   action_num=action_num,
-                   mode=mode,
-                   clicked_item=fastmc_slot)
-        if not self._wait_for(lambda: action_num in self._confirmations,
-                              timeout=5):
-            log.error('Did not get confirmation')
+        if slot is None or mode in [2, 4]:
+            fastmc_slot = None
+        else:
+            fastmc_slot = slot.as_fastmc()
+        for attempt in xrange(retries):
+            action_num = self._action_num_counter.next()
+            self._send(self._proto.PlayServerboundClickWindow.id,
+                       window_id=self._id,
+                       slot=slot_num,
+                       button=button,
+                       action_num=action_num,
+                       mode=mode,
+                       clicked_item=fastmc_slot)
+            if not self._wait_for(lambda: action_num in self._confirmations,
+                                  timeout=2):
+                log.error('Did not get confirmation')
+                continue
+            elif not self._confirmations.get(action_num):
+                log.error(('Transaction rejected: %d '
+                          '{slot_num: %d, mode: %d, button: %d}'),
+                          action_num, slot_num, mode, button)
+                continue
+            else:
+                log.debug('Confirmation received for %d: %s', action_num,
+                          str(self._confirmations.get(action_num)))
+                return True
+        return False
+
+    def ctrl_q_click(self, slot_num):
+        if not self._click(slot_num, 4, 1):
             return False
-        if not self._confirmations.get(action_num):
-            log.error('Transaction rejected: %d', action_num)
+        self.slots[slot_num] = None
+        return True
+
+    def left_click(self, slot_num):
+        slot, cursor_slot = self.slots[slot_num], self.cursor_slot
+        if not self._click(slot_num, 0, 0):
+            log.error('click failed: %d', slot_num)
             return False
-        log.debug('Confirmation received for %d: %s', action_num,
-                  str(self._confirmations.get(action_num)))
-        if (mode, button) in self._click_handlers:
-            return self._click_handlers[(mode, button)](slot_num, cursor_slot,
-                                                        slot)
-
-    def shift_click(self, slot_num):
-        return self.click(slot_num, mode=1)
-
-    def drop_click(self, slot_num):
-        return self.click(button=1, mode=4)
-
-    def _left_click(self, slot_num, cursor_slot, slot):
         if slot_num == -999:
             self.cursor_slot = None
         else:
-            self.slots[slot_num] = cursor_slot
-            self.cursor_slot = slot
+            self.cursor_slot, self.slots[slot_num] = slot, cursor_slot
         return True
 
-    def _shift_left_click(self, slot_num, cursor_slot, slot):
-        # TODO validate what happens to clicked items base on current inventory
-        return True
-
-    def _control_q(self, slot_num, cursor_slot, slot):
+    def move_to_held_click(self, slot_num, held_index):
+        if not self._click(slot_num, 2, held_index):
+            return False
+        target_index = len(self.slots) - 9 + held_index
+        try:
+            cursor_slot = self.slots[target_index]
+        except IndexError:
+            print target_index, held_index, len(self.slots)
+            raise Exception
+        self.slots[target_index] = self.slots[slot_num]
+        self.slots[slot_num] = cursor_slot
         return True
 
     def swap_slots(self, slot_num_a, slot_num_b):
         for num in [slot_num_a, slot_num_b, slot_num_a]:
-            if not self.click(num):
+            if not self.left_click(num):
                 return False
         return True
 
@@ -218,7 +223,8 @@ class SlotList(list):
     def index(self, _type, relative=False):
         name = self._get_name(_type)
         for index, slot in enumerate(self):
-            if slot is not None and slot.name == name:
+            if ((name, slot) == (None, None) or
+                    (slot is not None and slot.name == name)):
                 if relative:
                     return index
                 else:
@@ -228,7 +234,8 @@ class SlotList(list):
         name = self._get_name(_type)
         count = 0
         for index, slot in enumerate(self):
-            if slot is not None and slot.name == name:
+            if ((name, slot) == (None, None) or
+                    (slot is not None and slot.name == name)):
                 count += slot.count
         return count
 
@@ -250,7 +257,7 @@ class SlotList(list):
         for index, slot in enumerate(self):
             if slot is None or slot.name not in types:
                 continue
-            if slot.has_data():
+            if slot.has_data() and slot.damage == 0:
                 slot_nums.append(index + self.start)
         return slot_nums
 

@@ -1,13 +1,13 @@
 - name: enchant
 
 - name: get_enchantables
-  chest_position: [-336, 36, 835]
+  chest_position: [-2626, 21, 731]
 
 - name: get
-  chest_position: [-336, 36, 835]
+  chest_position: [-2626, 21, 731]
   items:
       - Lapis Lazuli
       - Cooked Chicken
 
 - name: store_enchanted
-  chest_position: [-333, 36, 835]
+  chest_position: [-2630, 21, 731]

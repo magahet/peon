@@ -412,10 +412,7 @@ class Robot(Player):
         """Drop items from inventory."""
         def _drop(slot_num):
             log.debug('Item slot: %s', slot_num)
-            return (
-                self.inventory.click(slot_num) and
-                self.inventory.click(-999)
-            )
+            return self.inventory.ctrl_q_click(slot_num)
 
         if items is None and slot_num is None:
             return False
@@ -431,11 +428,11 @@ class Robot(Player):
             return False
         log.info('Dropping items: %s', str(items_to_drop))
         for item in items_to_drop:
-            tries = 0
-            while item in self.inventory.player_inventory and tries < 5:
-                num = self.inventory.player_inventory.index(item)
-                _drop(num)
-                tries += 1
+            for _ in xrange(self.inventory.player_inventory.count(item)):
+                slot_num = self.inventory.player_inventory.index(item)
+                if slot_num is None:
+                    break
+                _drop(slot_num)
         self.close_window()
         return True
 
@@ -452,9 +449,10 @@ class Robot(Player):
             for item in items:
                 while None in self.open_window.player_inventory:
                     slot_num = self.open_window.custom_inventory.index(item)
-                    if slot_num is None:
+                    target_index = self.open_window.player_inventory.index(None)
+                    if None in (slot_num, target_index):
                         break
-                    self.open_window.shift_click(slot_num)
+                    self.open_window.swap_slots(slot_num, target_index)
             self.close_window()
             return True
 
@@ -467,11 +465,12 @@ class Robot(Player):
             if not self.move_and_open(chest_position, dig):
                 return False
             for slot_num in self.open_window.custom_inventory.get_enchantables():
-                if None not in self.open_window.player_inventory:
+                target_index = self.open_window.player_inventory.index(None)
+                if target_index is None:
                     break
                 log.info('Getting %s from chest',
                          self.open_window.get_slot(slot_num).name)
-                self.open_window.shift_click(slot_num)
+                self.open_window.swap_slots(slot_num, target_index)
             self.close_window()
             return True
 
@@ -511,13 +510,13 @@ class Robot(Player):
                 return False
             log.info('Storing items: %s', str(items_to_store))
             for item in items_to_store:
-                while (self.open_window is not None and
-                       self.open_window.player_inventory is not None and
-                       item in self.open_window.player_inventory and
-                       None in self.open_window.custom_inventory):
-                    num = self.open_window.player_inventory.index(item)
-                    log.debug('Item slot: %s', num)
-                    if not self.open_window.shift_click(num):
+                while None in self.open_window.custom_inventory:
+                    slot_num = self.open_window.player_inventory.index(item)
+                    target_index = self.open_window.custom_inventory.index(None)
+                    if None in (slot_num, target_index):
+                        break
+                    log.debug('Item slot: %s', slot_num)
+                    if not self.open_window.swap_slots(slot_num, target_index):
                         self.close_window()
                         return False
             self.close_window()
@@ -534,7 +533,10 @@ class Robot(Player):
             for slot_num in self.open_window.player_inventory.get_enchanted():
                 log.info('Storing enchanted %s',
                          self.open_window.get_slot(slot_num).name)
-                if not self.open_window.shift_click(slot_num):
+                target_index = self.open_window.custom_inventory.index(None)
+                if target_index is None:
+                    break
+                if not self.open_window.swap_slots(slot_num, target_index):
                     self.close_window()
                     return False
             self.close_window()
@@ -701,24 +703,20 @@ class Robot(Player):
                     continue
                 tries = 0
                 while self.open_window.get_slot_count(1) < 3 and tries < 3:
-                    #print 'before'
-                    #print self.open_window
                     lapis_slot = self.open_window.player_inventory.index(
                         'Lapis Lazuli')
-                    #print lapis_slot
                     self.open_window.swap_slots(lapis_slot, 1)
                     tries += 1
-                    #print 'after'
-                    #print self.open_window
                 if self.open_window.get_slot_count(1) < 3:
                     log.info('Not enough lapis in slot')
                     break
-                self.open_window.swap_slots(slot_num, 0)
+                if not self.open_window.swap_slots(slot_num, 0):
+                    log.error('Could not put item on table: %d', slot_num)
+                    break
                 if not self._wait_for(
                         lambda: self.open_window.get_property(2) is not None,
                         timeout=2):
                     log.error('Window property did not update')
-                    #print self.open_window.properties
                     self.open_window.swap_slots(slot_num, 0)
                     break
                 log.info('Enchanting %s', slot.name)
@@ -734,8 +732,8 @@ class Robot(Player):
                 if self.xp_level < 30:
                     break
             if self.open_window.get_slot_count(1) > 0:
-                self.open_window.click(1)
-                self.open_window.click(lapis_slot)
+                self.open_window.left_click(1)
+                self.open_window.left_click(lapis_slot)
             self.close_window()
 
     def dig_to_surface(self):
@@ -751,6 +749,9 @@ class Robot(Player):
         count = 0
         if ignore is None:
             ignore = set([])
+        if self.has_damaged_tool():
+            log.info('Need new tool')
+            return False
         for point in bounding_box.iter_points(
                 axis_order=[1, 2, 0], ascending=False, zig_zag=[0, 2]):
             if (not self.world.is_solid_block(*point) or
@@ -781,7 +782,9 @@ class Robot(Player):
                          int(time.time() - last_time) * 1000 // 64)
                 last_time = time.time()
                 count = 0
-                self.check_tool_damage()
+                if self.has_damaged_tool():
+                    log.info('Need new tool')
+                    return False
         for point in bounding_box.iter_points():
             if (self.world.is_solid_block(*point) and
                     self.world.is_safe_to_break(*point) and
@@ -789,16 +792,16 @@ class Robot(Player):
                 return False
         return True
 
-    def have_damaged_tool(self, warn_level=0.9, error=0.9):
+    def has_damaged_tool(self, warn_level=0.8, error_level=0.9):
         tool_at_error_level = False
         for _type, max_damage in types.DURABILITY.iteritems():
             for index, slot in self.inventory.find(_type):
                 damage_percent = slot.damage / max_damage
-                if damage_percent >= warn_level:
+                if damage_percent >= error_level:
                     log.info('Tool is about to break: %d: %s',
                              index, str(slot))
-                tool_at_error_level = True
-                if damage_percent >= warn_level:
+                    tool_at_error_level = True
+                elif damage_percent >= warn_level:
                     log.info('Tool is wearing down: %d: %s',
                              index, str(slot))
         return tool_at_error_level
