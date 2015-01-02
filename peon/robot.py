@@ -3,6 +3,7 @@
 import threading
 import time
 import logging
+import random
 import os
 import signal
 from contextlib import contextmanager
@@ -623,8 +624,11 @@ class Robot(Player):
     def break_blocks_by_type(self, block_types=types.ORE, home=None, num=1,
                              timeout=10, digging=True):
         """Break blocks of given types."""
-        if None not in self.inventory.player_inventory:
+        if not self.inventory.player_inventory.has_space_for(block_types):
             log.warn('No room in inventory')
+            return False
+        if self.has_damaged_tool():
+            log.info('Need new tool')
             return False
         with self._mission_lock:
             x, y, z = self.get_position(floor=True) if home is None else home
@@ -943,3 +947,8 @@ class Robot(Player):
 
     def send_chat_message(self, message):
         self._send(self.proto.PlayServerboundChatMessage.id, chat=message)
+
+    def afk(self):
+        while True:
+            self.change_held_item(random.randint(0, 8))
+            time.sleep(15)
