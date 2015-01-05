@@ -51,6 +51,9 @@ class Window(object):
     def count(self, _type):
         return self.slots.count(_type)
 
+    def has_space_for(self, block_types):
+        return self.slots.has_space_for(block_types)
+
     def window_index(self, _type):
         return self.slots.window_index(_type)
 
@@ -73,11 +76,7 @@ class Window(object):
         return self.properties.get(_property)
 
     def find(self, term):
-        slots = []
-        for index, slot in enumerate(self.slots):
-            if slot is not None and term in slot.name:
-                slots.append((index, slot))
-        return slots
+        return self.slots.find(term)
 
     def set_property(self, _property, value):
         self.properties.update({_property: value})
@@ -240,6 +239,22 @@ class SlotList(list):
                     (slot is not None and slot.name == name)):
                 count += slot.count
         return count
+
+    def has_space_for(self, block_types):
+        if None in self:
+            return True
+        for name in block_types:
+            for slot_num, slot in self.find(name):
+                if slot.count < 64:
+                    return True
+        return False
+
+    def find(self, term):
+        slots = []
+        for index, slot in enumerate(self):
+            if slot is not None and term in slot.name:
+                slots.append((index, slot))
+        return slots
 
     def get_enchantables(self, types=None):
         if types is None:
