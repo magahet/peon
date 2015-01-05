@@ -210,7 +210,7 @@ class Robot(Player):
             x, y, z = next_pos
             self.on_ground = self._move(x, y + 1, z)
 
-    def defend(self, mob_types=types.HOSTILE_MOBS):
+    def defend(self, mob_types=types.HOSTILE_MOBS, _filter=None):
         """Attack entities within range."""
         eids_in_range = [e.eid for e in self.iter_entities_in_range(mob_types)]
         if not eids_in_range:
@@ -225,6 +225,10 @@ class Robot(Player):
             ])
             self._inventory_lock.release()
         for eid in eids_in_range:
+            if _filter is not None:
+                entity = self.world.entities.get(eid)
+                if entity is None or not _filter(entity):
+                    continue
             self._send(self.proto.PlayServerboundUseEntity.id,
                        target=eid,
                        type=1

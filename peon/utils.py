@@ -81,3 +81,9 @@ def get_clusters(points, radius):
                     a, b in itertools.combinations(neighbors, 2)])
     return [Cluster(points[np.array(cluster)]) for
             cluster in clusters if len(cluster) >= 2]
+
+
+def is_non_villager_zombie(entity):
+    return (entity.metadata is not None and
+            entity.metadata.get(13, (0, 0)) == (0, 0)
+            )
