@@ -29,3 +29,5 @@ class Message(object):
             return '<{}> {}'.format(self.sender, self.message)
         elif self.message_type == 'event':
             return '{}: {}'.format(self.event, self.player)
+        else:
+            return ''

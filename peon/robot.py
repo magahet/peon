@@ -510,7 +510,7 @@ class Robot(Player):
         if not items_to_store:
             log.debug('No items to store')
             return True
-        with self._mission_lock():
+        with self._mission_lock:
             if not self.move_and_open(chest_position, dig):
                 return False
             log.info('Storing items: %s', str(items_to_store))
